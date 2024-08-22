@@ -3,12 +3,12 @@
   "ShowAllFiles": false,
   "SaveDisabled": false,
   "SSoTmeProjectId": "3c0c0e72-1963-4056-b302-5eff9444481c",
-  "Name": "AICapture-OST-CLI",
+  "Name": "SSoTme-OST-CLI",
   "ProjectSettings": [
     {
-      "ProjectSettingId": "f6564497-eb77-448d-9600-24c35f023f48",
-      "Name": "project-name",
-      "Value": "AICapture-OST-CLI"
+        "ProjectSettingId": "f6564497-eb77-448d-9600-24c35f023f48",
+        "Name": "project-name",
+        "Value": "SSoTme-OST-CLI"
     }
   ],
   "ProjectTranspilers": [
@@ -21,7 +21,7 @@
       "ProjectTranspilerId": "8b69bbe6-ba9e-468f-ad60-e55d5a2771f3",
       "Name": "JsonToHandlebars",
       "RelativePath": "",
-      "CommandLine": "json-to-handlebars -i .\\SSoT\\single-source-of-truth.json -i .\\README.hbrs -o .\\README.md",
+      "CommandLine": "json-to-handlebars -i ./SSoT/single-source-of-truth.json -i ./README.hbrs -o ./README.md",
       "TranspilerGroup": "aic"
     },
     {
@@ -55,7 +55,7 @@
       "ProjectTranspilerId": "90de4191-f578-4573-ae42-3fcc2cb4d4ae",
       "Name": "OdxmlToNodeJSDocs",
       "RelativePath": "/docs/schema",
-      "CommandLine": "odxml42/odxml-to-nodejs-docs -i ..\\..\\ODXML\\DataSchema.odxml"
+      "CommandLine": "odxml42/odxml-to-nodejs-docs -i ../../ODXML/DataSchema.odxml"
     },
     {
       "MatchedTranspiler": {
@@ -66,7 +66,7 @@
       "ProjectTranspilerId": "8c3bfc5f-b195-4a5b-ba51-038ed0855520",
       "Name": "XmlXsltTransform",
       "RelativePath": "/docs",
-      "CommandLine": "xml-xslt-transform -i ..\\ODXML\\DataSchema.odxml -i CreateSSoTmeDocs.xslt"
+      "CommandLine": "xml-xslt-transform -i ../ODXML/DataSchema.odxml -i CreateSSoTmeDocs.xslt"
     },
     {
       "MatchedTranspiler": {
@@ -88,7 +88,7 @@
       "ProjectTranspilerId": "c1a92ab2-7ce3-4825-b35f-d533bde9db88",
       "Name": "XmlXsltTransform",
       "RelativePath": "/docs/seeds",
-      "CommandLine": "xml-xslt-transform -i .\\Seeds.xml -i DescribeSeeds.xslt"
+      "CommandLine": "xml-xslt-transform -i ./Seeds.xml -i DescribeSeeds.xslt"
     }
   ]
 }

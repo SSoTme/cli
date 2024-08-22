@@ -1,34 +1,38 @@
 <html><head><title>Command Line Arguments - summary</title></head><body><h1>Command Line Arguments</h1><p>
-    There are 38 command line arguments defined at this time.  They are:
+    There are 39 command line arguments defined at this time.  They are:
       
       <div style=""><h3>
         -help  or -h    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Show help about how to use the AICapture CLI
+      Show help about how to use the SSoT.me CLI
       </div></div><div style=""><h3>
         -init  [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Initialize the current folder as the root of an AICapture.io project. An Optional parameter of force will create a sub-project.
+      Initialize the current folder as the root of an SSoT.me project. An Optional parameter of force will create a sub-project.
       </div></div><div style=""><h3>
         -install  [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Saves the current command into the AI Capture Project file
+      Saves the current command into the SSoT.me Project file
       </div></div><div style=""><h3>
         -uninstall  [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Removes the current command from the AI Capture Project file
+      Removes the current command from the SSoT.me Project file
       </div></div><div style=""><h3>
-        -build  or -b,replay    [bool]
+        -build  or -b,replay,rebuild    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Build any transpilers in the current folder (or children).
       </div></div><div style=""><h3>
-        -buildAll  or -ba,replayall    [bool]
+        -buildAll  or -ba,replayall,rebuildAll    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Builds all transpilers in the project
       </div></div><div style=""><h3>
+        -buildLocal  or -bl,replaylocal,rebuildLocal    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Builds only the root level transpilers, not the sub-directories.
+      </div></div><div style=""><h3>
         -describe  or -d    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Describes the current AI Capture Project (and all transpilers)
+      Describes the current SSoT.me Project (and all transpilers)
       </div></div><div style=""><h3>
         -descibeAll  or -da    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
@@ -62,7 +66,7 @@
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Lists seeds available to be clones
       </div></div><div style=""><h3>
-        -cloneEAPISeed  or -cs    [string]
+        -cloneSeed  or -cs    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Clones a specified seed
       </div></div><div style=""><h3>
@@ -80,15 +84,15 @@
       </div></div><div style=""><h3>
         -addSetting  or -as    [List of string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Adds a setting to the AI Capture Project
+      Adds a setting to the SSoT.me Project
       </div></div><div style=""><h3>
         -removeSetting  or -rs    [List of string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      REmoves a setting from the AI Capture Project
+      REmoves a setting from the SSoT.me Project
       </div></div><div style=""><h3>
         -keyFile  or -f    [string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      The keyfile to use.  By default it looks for ~/.aicapture/aicapture.key. (or ~/.aicapture/aicapture.{username}.key)
+      The keyfile to use.  By default it looks for ~/.ssotme/ssotme.key. (or ~/.ssotme/ssotme.{username}.key)
       </div></div><div style=""><h3>
         -addTranspiler  [string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
@@ -140,7 +144,7 @@
       </div></div><div style=""><h3>
         -authenticate  or -auth    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Launch the aicapture.io website in order to authenticate (and/or register), and then to link that  user to your aicapture CLI.
+      Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.
       </div></div><div style=""><h3>
         -repoUrl  [string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">

@@ -18,6 +18,8 @@ using System.Collections.Generic;
 //using System.Windows.Forms;
 using System.Threading;
 using EnumList;
+using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 namespace SSoTme.OST.Lib.DataClasses
 {
@@ -289,7 +291,7 @@ namespace SSoTme.OST.Lib.DataClasses
             {
                 try
                 {
-                    File.WriteAllText(this.GetProjectFileName(), projectJson);
+                    File.WriteAllText(this.GetProjectFileName(false), projectJson);
                     break;
                 }
                 catch (System.IO.IOException ioex)
@@ -317,21 +319,21 @@ namespace SSoTme.OST.Lib.DataClasses
                     {
                         transpiler.MatchedTranspiler.TranspilerId = Guid.Empty;
                     }
-                }                
+                }
             });
         }
 
-        protected String GetProjectFileName()
+        protected String GetProjectFileName(bool reverseUpdate)
         {
-            return GetProjectFI().FullName;
+            return GetProjectFI(reverseUpdate).FullName;
         }
 
-        protected FileInfo GetProjectFI()
+        protected FileInfo GetProjectFI(bool reverseUpdate)
         {
-            return GetProjectFIAt(new DirectoryInfo(this.RootPath));
+            return GetProjectFIAt(new DirectoryInfo(this.RootPath), reverseUpdate);
         }
 
-        protected static FileInfo GetProjectFIAt(DirectoryInfo rootDI)
+        protected static FileInfo GetProjectFIAt(DirectoryInfo rootDI, bool reverseUpdate)
         {
             var aiCaptureProjectFI = new FileInfo(Path.Combine(rootDI.FullName, "ssotme.json"));
             var defaultFI = aiCaptureProjectFI;
@@ -345,7 +347,21 @@ namespace SSoTme.OST.Lib.DataClasses
                 }
             }
 
-            return (aiCaptureProjectFI.Exists ? aiCaptureProjectFI : defaultFI);
+            var ssotmeProjectFI = (aiCaptureProjectFI.Exists ? aiCaptureProjectFI : defaultFI);
+            if (!(ssotmeProjectFI is null))
+            {
+                var task =  Task.Run(() => ssotmeProjectFI.Directory.ApplySeedReplacementsAsync(reverseUpdate));
+                try
+                {
+                    task.Wait();
+                    if (!(task.Exception is null)) throw task.Exception;
+                } catch (Exception ex)
+                {
+                    throw new ThreadInterruptedException($"Error applying seed replacments....{ex.Message}", ex);
+                }
+            }
+
+            return ssotmeProjectFI;
         }
 
         private static AICaptureProject Load(FileInfo projectFI, DirectoryInfo requestDirectory = null, bool updateCurrent = true)
@@ -380,7 +396,7 @@ namespace SSoTme.OST.Lib.DataClasses
 
         public void MonitorProjectFile()
         {
-            var projectFI = this.GetProjectFI();
+            var projectFI = this.GetProjectFI(false);
             if (projectFI.Exists)
             {
                 this.ProjectMonitor = new FileSystemWatcher(projectFI.Directory.FullName);
@@ -400,9 +416,9 @@ namespace SSoTme.OST.Lib.DataClasses
             this.CurrentPath = this.GetProjectRelativePath(requestDirectory);
         }
 
-        public static SSoTmeProject LoadOrFail(DirectoryInfo dirToCheck, bool updateCurrent = true)
+        public static SSoTmeProject LoadOrFail(DirectoryInfo dirToCheck, bool updateCurrent = true, bool reverseUpdate = false)
         {
-            var proj = TryToLoad(dirToCheck, dirToCheck, updateCurrent);
+            var proj = TryToLoad(dirToCheck, dirToCheck, updateCurrent, reverseUpdate);
 
             //if (ReferenceEquals(proj, null))
             //{
@@ -432,9 +448,9 @@ namespace SSoTme.OST.Lib.DataClasses
 
         }
 
-        public static AICaptureProject TryToLoad(DirectoryInfo dirToCheck, DirectoryInfo requestDirectory = null, bool updateCurrent = true)
+        public static AICaptureProject TryToLoad(DirectoryInfo dirToCheck, DirectoryInfo requestDirectory = null, bool updateCurrent = true, bool reverseUpdate = false)
         {
-            FileInfo projectFI = GetProjectFIAt(dirToCheck);
+            FileInfo projectFI = GetProjectFIAt(dirToCheck, reverseUpdate);
 
             if (ReferenceEquals(requestDirectory, null)) requestDirectory = dirToCheck;
 
@@ -445,11 +461,6 @@ namespace SSoTme.OST.Lib.DataClasses
                 if (ReferenceEquals(dirToCheck.Parent, null)) return default(AICaptureProject);
                 else return TryToLoad(dirToCheck.Parent, requestDirectory, updateCurrent);
             }
-        }
-
-        private static SSoTmeProject Load(DirectoryInfo rootDI)
-        {
-            return Load(GetProjectFIAt(rootDI));
         }
 
         public void AddSetting(string setting)
@@ -646,6 +657,7 @@ namespace SSoTme.OST.Lib.DataClasses
 
         public void Rebuild(string buildPath, bool includeDisabled, string transpilerGroup)
         {
+            this.CheckIfParentIsRootSeed();
             var currentDirectory = Environment.CurrentDirectory;
             try
             {
@@ -665,11 +677,20 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
+        private void CheckIfParentIsRootSeed()
+        {
+            if (File.Exists("../ssotme.json"))
+            {
+                var p = Process.Start(new ProcessStartInfo("cmd.exe", $"/c ssotme -build -tg root") { WorkingDirectory = ".."});
+                p.WaitForExit(300000);
+            }
+        }
 
         public void Clean(bool preserveZFS)
         {
-            this.Clean(this.RootPath, preserveZFS);
-            this.RemoveEmptyFolders(this.RootPath);
+            var rootPathDI = new DirectoryInfo(this.RootPath);
+            this.Clean(rootPathDI.FullName, preserveZFS);
+            this.RemoveEmptyFolders(rootPathDI.FullName);
         }
 
         public void Clean(string cleanPath, bool preserveZFS)
@@ -711,7 +732,7 @@ namespace SSoTme.OST.Lib.DataClasses
 
                 var files = childDir.GetFiles();
                 if (files.Any()) continue;
-                
+
                 childDir.Delete();
             }
 
@@ -748,7 +769,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 this.ProjectTranspilers.Remove(matchingTranspiler);
                 matchingTranspiler = FindMatchingTranspiler(projectTranspiler);
             }
-            firstIndex = Math.Min(firstIndex, this.ProjectTranspilers.Count - 1);
+            firstIndex = Math.Min(firstIndex, this.ProjectTranspilers.Count);
             if (firstIndex >= 0) this.ProjectTranspilers.Insert(firstIndex, projectTranspiler);
             else if (addIfMissing) this.ProjectTranspilers.Add(projectTranspiler);
             projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name ?? "no-transpiler-found";

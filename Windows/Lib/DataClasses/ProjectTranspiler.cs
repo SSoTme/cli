@@ -26,6 +26,8 @@ namespace SSoTme.OST.Lib.DataClasses
             this.InitPoco();
         }
 
+        public bool IsSSoTTranspiler { get; set; }
+
         public override string ToString()
         {
             var outputFileName = String.Empty;

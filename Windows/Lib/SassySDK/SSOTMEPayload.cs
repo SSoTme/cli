@@ -16,7 +16,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
     {
         static SSOTMEPayload()
         {
-            SSOTMEExtensions.FileWritten += CDVExtensions_FileWritten;
+            //SSOTMEExtensions.FileWritten += CDVExtensions_FileWritten;
         }
 
         private static void CDVExtensions_FileWritten(object sender, EventArgs e)
@@ -113,6 +113,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
                 var previousFileSet = File.ReadAllBytes(zfsFI.FullName);
                 previousFileSet.CleanZippedFileSet();
             }
+
         }
 
 
@@ -153,7 +154,8 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             var relPath = curDir.Substring(this.SSoTmeProject.RootPath.Length);
 
             var ssotmeDI = new DirectoryInfo(String.Format("{0}/.ssotme", this.SSoTmeProject.RootPath));
-            if (!ssotmeDI.Exists) {
+            if (!ssotmeDI.Exists)
+            {
                 ssotmeDI.Create();
                 ssotmeDI.Attributes = FileAttributes.Directory | FileAttributes.Hidden;
             }

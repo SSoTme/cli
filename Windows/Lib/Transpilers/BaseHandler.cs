@@ -33,7 +33,7 @@ namespace SSoTme.OST.Transpilers
             this.OutputFileSet = new FileSet();
             this.OutputFileSet.FileSetId = sourceTranspiler.TranspilerId;
             this.SourceTranspiler = sourceTranspiler;
-            this.RootDirInfo = new DirectoryInfo(Path.Combine("C:\\temp\\", Guid.NewGuid().ToString()));
+            this.RootDirInfo = new DirectoryInfo(Path.Combine("/temp/", Guid.NewGuid().ToString()));
             this.RootDirInfo.Create();
 
             if (String.IsNullOrEmpty(this.Payload.CLIInputFileSetXml) && !String.IsNullOrEmpty(this.Payload.CLIInputFileSetJson))
@@ -199,12 +199,19 @@ namespace SSoTme.OST.Transpilers
 
         public string GetParameterByName(string parameterName)
         {
-            var matchingKey = this.Parameters.Keys.FirstOrDefault(fodKey => fodKey.Equals(parameterName, StringComparison.OrdinalIgnoreCase));
+            var matchingKey = Parameters.Keys.FirstOrDefault(fodKey => CompareKeys(parameterName, fodKey));
             if (!String.IsNullOrEmpty(matchingKey))
             {
                 return this.Parameters[matchingKey];
             }
             else return String.Empty;
+        }
+
+        private static bool CompareKeys(string parameterName, string fodKey)
+        {
+            parameterName = $"{parameterName}".Replace("-", "").ToLower();
+            fodKey = $"{fodKey}".Replace("-", "").ToLower();
+            return fodKey == parameterName;
         }
 
         public void AddOutputFile(string relativePath, byte[] fileContents, bool alwaysOverwrite = true)
@@ -578,7 +585,7 @@ namespace SSoTme.OST.Transpilers
                 this.Payload.CLIInput = new List<string>();
                 if (!ReferenceEquals(this.InputFileSet, null) && this.InputFileSet.FileSetFiles.Any())
                 {
-                    this.Payload.CLIInput.Add(this.InputFileSet.FileSetFiles.First().RelativePath);
+                    this.Payload.CLIInput = this.InputFileSet.FileSetFiles.Select(fsf => fsf.RelativePath).ToList();
                 }
                 else this.Payload.CLIInput.Add("input.txt");
             }

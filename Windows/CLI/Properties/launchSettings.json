@@ -3,7 +3,7 @@
     "DotNetStandardCLI": {
       "commandName": "Project",
       "commandLineArgs": "-build",
-      "workingDirectory": "C:\\Users\\auto1\\go\\src\\github.com\\eejai42\\advent-of-code-2023\\day22\\OriginalPrompts\\raw-simm"
+      "workingDirectory": "C:\\Users\\auto1\\go\\src\\github.com\\ssotme\\seed-sandbox\\seed-dotnet-starter"
     }
   }
 }

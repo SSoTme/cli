@@ -1,18 +1,18 @@
 {
-  "name": "aicapture",
-  "version": "2023.11.05",
+  "name": "ssotme",
+  "version": "2024.08.23",
   "description": "",
   "devDependencies": {
   },
     "bin": {
+        "ssotme": "cli.js",
         "aicapture": "cli.js",
-        "aic": "cli.js",
-        "ssotme": "cli.js"
+        "aic": "cli.js"
     },
     "scripts": {
         "build": "",
-        "start": "dotnet Windows/CLI/bin/Release/netcoreapp3.1/AICapture.OST.CLI.dll",
-        "postinstall": "dotnet build AICapture-OST-CLI.sln --configuration Release"
+        "start": "dotnet Windows/CLI/bin/Release/net7.0/SSoTme.OST.CLI.dll",
+        "postinstall": "dotnet build SSoTme-OST-CLI.sln --configuration Release"
     },
   "keywords": [],
   "author": "",
