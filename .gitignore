@@ -9,12 +9,12 @@
 /Windows/Lib/go-live.ps1
 /AICapture/Backup/*.zip
 /package-lock.json
-
 *.DS_Store
-*.egg-info
-build/
 .idea/
 
+# pip install stuff
+*.egg-info
 *.pyc
 ssotme/lib/
 ssotme/*.json
+

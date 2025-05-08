@@ -5,7 +5,7 @@ import os
 import platform
 import subprocess
 
-from ssotme.cli import BASE_SUPPORTED_DOTNET, get_release_path, get_base_version_str
+from ssotme.cli import BASE_SUPPORTED_DOTNET, get_release_path, get_base_version_str, get_home_ssotme_dir
 
 
 class DotNetInstallError(Exception):
@@ -17,6 +17,7 @@ class Installer:
         self.BASE_VERSION = "2024.08.23"  # fallback if package.json is not found
         self.BASE_SUPPORTED_DOTNET = BASE_SUPPORTED_DOTNET
         self._dotnet_executable_path = None
+        self.home_dir, self.ssotme_dir = get_home_ssotme_dir()
 
     @property
     def dotnet_executable_path(self):
@@ -38,9 +39,8 @@ class Installer:
 
     def get_dotnet_executable_path(self):
         """Get the absolute path to the dotnet executable."""
-        user_home = os.path.expanduser("~")
-        dotnet_path = os.path.join(user_home, ".dotnet", "dotnet")
-        dotnet_windows_path = os.path.join(user_home, ".dotnet", "dotnet.exe")
+        dotnet_path = os.path.join(self.home_dir, ".dotnet", "dotnet")
+        dotnet_windows_path = os.path.join(self.home_dir, ".dotnet", "dotnet.exe")
 
         # Check if the dotnet executable exists
         if os.path.isfile(dotnet_path) and os.access(dotnet_path, os.X_OK):
@@ -209,13 +209,9 @@ class Installer:
     def install_dotnet(self, version: str):
         """Attempt to install .NET SDK of a specific version."""
         try:
-            home = os.path.expanduser("~")
-            # create .ssotme directory for installation artifacts
-            ssotme_dir = os.path.join(home, '.ssotme')
-            os.makedirs(ssotme_dir, exist_ok=True)
             print("Installing DotNet...")
             if self.is_macos or self.is_linux:
-                script_path = self._install_dotnet_sh_script(ssotme_dir)
+                script_path = self._install_dotnet_sh_script(self.ssotme_dir)
                 try:
                     os.chmod(script_path, 0o755)  # make the sh script executable
                 except Exception:
@@ -238,8 +234,8 @@ class Installer:
                         
             elif self.is_windows:
                 try:
-                    install_script = os.path.join(ssotme_dir, "dotnet-install.ps1")
-                    dotnet_install_dir = os.path.join(home, ".dotnet")
+                    install_script = os.path.join(self.ssotme_dir, "dotnet-install.ps1")
+                    dotnet_install_dir = os.path.join(self.home_dir, ".dotnet")
 
                     # download install script - ensure directory exists
                     os.makedirs(os.path.dirname(install_script), exist_ok=True)
@@ -290,19 +286,18 @@ class Installer:
             return []
 
     def save_dotnet_info(self, version):
-        """Save the .NET SDK information to a file."""
+        # create a custom dotnet configuration in the user's home directory
+        ssotme_version = self.get_package_version()
         sdk_versions = self.get_installed_sdk_versions()
-
         exe_path = self._dotnet_executable_path
         exe_path = exe_path if exe_path is not None else "dotnet"
         info = {
             "installed_versions": sdk_versions,
             "using_version": version,
-            "executable_path": exe_path
+            "executable_path": exe_path,
+            "ssotme_version": ssotme_version,
         }
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        cli_dir = os.path.join(base_dir, "ssotme")
-        with open(os.path.join(cli_dir, "dotnet_info.json"), "w") as f:
+        with open(os.path.join(self.ssotme_dir, "dotnet_info.json"), "w") as f:
             json.dump(info, f, indent=2)
         print(f"Saved .NET SDK information to dotnet_info.json")
 
@@ -338,18 +333,6 @@ class Installer:
             self.save_dotnet_info(supported_version)
 
             # create global.json, which tells dotnet commands ran in this dir to use the specific sdk version
-            # ensure the directory exists
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            cli_dir = os.path.join(base_dir, "ssotme")
-            os.makedirs(cli_dir, exist_ok=True)
-            global_json_path = os.path.join(cli_dir, "global.json")
-            try:
-                with open(global_json_path, "w") as f:
-                    f.write(f"""{{"sdk": {{"version": "{supported_version}"}}}}""")
-                print(f"Created global.json at {global_json_path} to use version {supported_version}")
-            except Exception as e:
-                print(f"Warning: Could not create global.json: {e}")
-                # technically a non-fatal error, so continue with installation
 
             # build dotnet project
             build_result = self.build_dotnet_project()
@@ -371,6 +354,9 @@ class Installer:
                 )
 
             # create the cli/ssotme/lib/Windows/CLI/bin/Release/net7.0 dir structure
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            cli_dir = os.path.join(base_dir, "ssotme")
+            os.makedirs(cli_dir, exist_ok=True)
             windows_dir = os.path.join(cli_dir, "lib", "Windows", "CLI", "bin", "Release", f"net{get_base_version_str(supported_version)}")
             try:
                 os.makedirs(windows_dir, exist_ok=True)
@@ -410,14 +396,14 @@ def run_setup():
         setup_config = {
             "name": "ssotme",
             "version": installer.get_package_version(),
-            "description": "Python wrapper for SSoTme CLI tools",
+            "description": "Python wrapper for installing SSoTme CLI tools",
             "author": "SSoTme",
-            "author_email": "",
+            "author_email": "michael@ssot.me",
+            "url": "https://ssot.me",
             "license": "GNU",
             "include_package_data": True,
             "packages": ["ssotme"],
             "package_data": {
-                "ssotme": ["global.json", "dotnet_info.json"],
                 "ssotme/lib": ["lib/**/*"]
             },
             "entry_points": {

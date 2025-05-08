@@ -71,7 +71,7 @@ For example: `aicapture.codee42.key`
 
 You can also install this tool using pip: 
 
-`pip install -U git+https://github.com/SSoTme/cli`
+`pip install -U git+https://github.com/ssotme/cli`
 
 This will also attempt to automatically install the required .NET version into your system.
 
@@ -80,13 +80,17 @@ After installation, the commands `ssotme`, `aicapture`, and `aic` will be usable
 ### Troubleshooting the PIP install
 
 - To use PIP, you must have Python installed on your system. To make things as consistent as possible it's recommended to download & install Python directly from https://python.org instead of using an external package manager. **Make sure to check off the box that says "Add Python to your PATH"**
-- For Linux and MacOS, in some versions of pip you may need to use `pip install git+https://github.com/SSoTme/cli --break-system-packages`
+- For Linux and MacOS, in some versions of pip you may need to use `pip install git+https://github.com/ssotme/cli --break-system-packages`
 - After the installer finishes, it may give a warning: 
         ```WARNING: The scripts aic, aicapture and ssotme are installed in '<home directory>' which is not on PATH.```
   - To fix this, you can run the following command depending on your system:
   - **MacOS** `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc`
   - **Linux** `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`
   - This behavior shouldn't occur on Windows, but if Python ever changes this in the future, you can resolve it by simply adding your Python installation to your system PATH.
+
+### Uninstall with PIP
+
+If you've installed through pip, you can uninstall by simply running: `pip uninstall ssotme -y`. Note that the DotNet SDK that was installed along with `ssotme` won't be uninstalled automatically, though.
 
 ## Syntax: `aicapture -help`
 This command will show the following help.

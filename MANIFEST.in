@@ -1,4 +1,2 @@
-include ssotme/global.json
-include ssotme/dotnet_info.json
 recursive-include ssotme/lib/Windows *
 recursive-include ssotme/lib/Windows/CLI/bin/Release *
