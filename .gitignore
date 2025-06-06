@@ -28,3 +28,4 @@ ssotme.spec
 Windows/Installer/Resources
 macOS/Installer/Resources
 
+**/ssotme-win64-inno-msi/publish/**

@@ -1,6 +1,6 @@
 {
   "name": "ssotme",
-  "version": "2025.06.05-3-latest",
+  "version": "2025.06.06",
   "dotnet": "8.0.410",
   "description": "",
   "bin": {

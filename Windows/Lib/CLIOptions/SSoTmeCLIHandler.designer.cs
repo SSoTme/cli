@@ -14,6 +14,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions")]
     public partial class SSoTmeCLIHandler
     {
+        
         [CommandLineOption(Description = "Show help about how to use the SSoT.me CLI", MinOccurs = 0, Aliases = "h")]
         public bool help { get; set; }
         
@@ -37,6 +38,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         
         [CommandLineOption(Description = "Builds whenever a trigger is invoked (see readme for URL)", MinOccurs = 0, Aliases = "bot")]
         public string buildOnTrigger { get; set; }
+        
+        [CommandLineOption(Description = "Connect to copilot SSoTme agent for with the baseId given to buildOnTrigger", MinOccurs = 0, Aliases = "cc")]
+        public bool copilotConnect { get; set; }
         
         [CommandLineOption(Description = "Describes the current SSoT.me Project (and all transpilers)", MinOccurs = 0, Aliases = "d")]
         public bool describe { get; set; }
@@ -133,6 +137,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         
         [CommandLineOption(Description = "Skips the build part of cloning a Seed repository", MinOccurs = 0, Aliases = "")]
         public bool skipBuild { get; set; }
+        
+        [CommandLineOption(Description = "this is info for python", MinOccurs = 0, Aliases = "")]
+        public bool info { get; set; }
         
     }
 }

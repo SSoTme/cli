@@ -1,7 +1,7 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
     xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal"
     xmlns:netfx="http://wixtoolset.org/schemas/v4/wxs/netfx">
-    <Bundle Name="SSoTme CLI Installer" Version="225.6.5" Manufacturer="EffortlessAPI" UpgradeCode="EB59dEFF-B979-464F-B36A-57F272E872A1">
+    <Bundle Name="SSoTme CLI Installer" Version="225.6.6" Manufacturer="EffortlessAPI" UpgradeCode="EB59dEFF-B979-464F-B36A-57F272E872A1">
         <BootstrapperApplication>
             <bal:WixStandardBootstrapperApplication Theme="rtfLicense" LicenseFile="Assets\LICENSE.rtf" LogoFile="Assets\Icon.ico" />
         </BootstrapperApplication>

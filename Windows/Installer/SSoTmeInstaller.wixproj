@@ -4,7 +4,7 @@
 		<OutputName>CLI_Installer</OutputName>
 		<OutputType>Package</OutputType>
 		<Platform>x86</Platform>
-		<SSoTmeVersion>225.6.5</SSoTmeVersion>
+		<SSoTmeVersion>225.6.6</SSoTmeVersion>
 		<EnableDefaultItems>false</EnableDefaultItems>
 	</PropertyGroup>
 

@@ -30,6 +30,8 @@ using System.Drawing.Drawing2D;
 using OfficeOpenXml.FormulaParsing.Excel.Functions.Information;
 using HtmlAgilityPack;
 using System.ComponentModel;
+using Newtonsoft.Json;
+using OfficeOpenXml.FormulaParsing.Exceptions;
 
 namespace SSoTme.OST.Lib.CLIOptions
 {
@@ -558,8 +560,28 @@ Seed Url: ");
                     if (ReferenceEquals(key.APIKeys, null)) key.APIKeys = new Dictionary<String, String>();
                     var apiKey = this.setAccountAPIKey.SafeToString().Replace("=", "/");
                     var values = apiKey.Split("/".ToCharArray());
-                    if (!values.Skip(1).Any()) throw new Exception("Sytnax: -setAccountAPIKey=account/KEY");
-                    key.APIKeys[values[0]] = values[1];
+
+                    if (values[0].Equals("baserow", StringComparison.OrdinalIgnoreCase))
+                    { // special case for baserow, where we need the username and password
+                        // -setAccountAPIKey=baserow/username/password
+                        if (values.Length < 3)
+                        {
+                            ShowError("Syntax for \"baserow\": -setAccountAPIKey=baserow/username/password");
+                            return -1;
+                        }
+
+                        var baserowConf = new { username = values[1], password = values[2] };
+                        key.APIKeys["baserow"] = JsonConvert.SerializeObject(baserowConf);
+                    }
+                    else
+                    {
+                        if (!values.Skip(1).Any())
+                        {
+                            ShowError("Default Syntax: -setAccountAPIKey=account/KEY");
+                            return -1;
+                        }
+                        key.APIKeys[values[0]] = values[1];
+                    }
                     SSOTMEKey.SetSSoTmeKey(key, this.runAs);
                 }
                 else if (!String.IsNullOrEmpty(this.execute))
@@ -579,11 +601,11 @@ Seed Url: ");
                 }
                 else if (this.build || this.buildLocal)
                 {
-                    this.AICaptureProject.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.buildLocal);
+                    this.AICaptureProject.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
                 }
                 else if (this.buildAll)
                 {
-                    this.AICaptureProject.RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.buildLocal);
+                    this.AICaptureProject.RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
                 }
                 else if (this.discuss)
                 {
