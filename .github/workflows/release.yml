@@ -1,6 +1,7 @@
 name: Release
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches: [ "main" ]
 
 jobs:
@@ -9,6 +10,7 @@ jobs:
   release:
     name: Publish Package
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true
     permissions:
       contents: write
       pull-requests: write
@@ -16,6 +18,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Get PR Description
+        id: pr_info
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+          if [ -z "$PR_BODY" ]; then
+            PR_BODY="No description provided"
+          fi
+          echo "description<<EOF" >> $GITHUB_OUTPUT
+          echo "$PR_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
         
       - name: Fetch Package Version
         id: version
@@ -40,7 +55,9 @@ jobs:
         run: |
           gh release create ${{ steps.version.outputs.version }} \
             --title "Release ${{ steps.version.outputs.version }}" \
-            --notes "Automated release from ${{ github.ref_name }} branch" \
+            --notes "Automated release from ${{ github.ref_name }} branch
+
+                    ${{ steps.pr_info.outputs.description }}" \
             --target ${{ github.sha }} \
             --prerelease
 

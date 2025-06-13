@@ -15,6 +15,7 @@ namespace SSoTme.OST.Core.Lib.External
         private string _username;
         private string _password;
         private string _authToken;
+        private string _refreshToken;
         private DateTime _tokenExpiry;
 
         public BaserowBackend(string username, string password)
@@ -48,34 +49,52 @@ namespace SSoTme.OST.Core.Lib.External
         
         private async Task<string> GetValidTokenAsync()
         {
-            // Check if we have a valid token (expires after 60 minutes)
             if (!string.IsNullOrEmpty(_authToken) && DateTime.UtcNow < _tokenExpiry)
             {
+                // we already have a valid token
                 return _authToken;
             }
 
-            // Request new JWT token
-            using (var httpClient = new HttpClient())
+            string responseContent, endpoint;
+            using var httpClient = new HttpClient();
+            if (!string.IsNullOrEmpty(_authToken) && DateTime.UtcNow >= _tokenExpiry)
             {
-                var loginData = new { username = _username, password = _password };
+                // token expired -> refresh it
+                Console.WriteLine($"Refreshing BaseRow JWT Auth token for {_username}");
+                var tokenData = new { refresh_token = _refreshToken };
+                var json = JsonConvert.SerializeObject(tokenData);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                endpoint = "/user/token-refresh/";
+                var response = await httpClient.PostAsync($"{_baseUrl}{endpoint}", content);
+                responseContent = await response.Content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"Failed to refresh Baserow token: {response.StatusCode} - {responseContent}");
+                }
+            }
+            else {
+                // request new token
+                var loginData = new { email = _username, password = _password };
                 var json = JsonConvert.SerializeObject(loginData);
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
                 Console.WriteLine($"Requesting new BaseRow JWT Auth token for {_username}");
-                var response = await httpClient.PostAsync($"{_baseUrl}/user/token-auth/", content);
-                var responseContent = await response.Content.ReadAsStringAsync();
-                
+                endpoint = "/user/token-auth/";
+                var response = await httpClient.PostAsync($"{_baseUrl}{endpoint}", content);
+                responseContent = await response.Content.ReadAsStringAsync();
                 if (!response.IsSuccessStatusCode)
                 {
                     throw new Exception($"Failed to authenticate with Baserow: {response.StatusCode} - {responseContent}");
                 }
-                
-                var authResponse = JsonConvert.DeserializeObject<dynamic>(responseContent);
-                _authToken = authResponse.token;
-                _tokenExpiry = DateTime.UtcNow.AddMinutes(58); // Refresh 2 minutes before expiry
-                
-                return _authToken;
             }
+            var authResponse = JsonConvert.DeserializeObject<dynamic>(responseContent);
+            _authToken = authResponse.access_token;
+            _tokenExpiry = DateTime.UtcNow.AddMinutes(9); // Refresh 1 minute before expiry
+            if (endpoint == "/user/token-auth/")
+            {
+                // set the refresh token only if requesting a new token (valid for 168 hours)
+                _refreshToken = authResponse.refresh_token;
+            }
+            return _authToken;
         }
 
         public JToken GetAvailableBases()

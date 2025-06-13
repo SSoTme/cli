@@ -1036,7 +1036,7 @@ namespace SSoTme.OST.Lib.Extensions
                             {
                                 byte[] data = Convert.FromBase64String(contents);
 
-                                var finalName = Path.Combine(basePath, fileName.InnerText.SafeToString().Trim("/".ToCharArray()));
+                                var finalName = Path.Combine(basePath, fileName.InnerText.SafeToString().Trim("/\\".ToCharArray()));
                                 var fileInfo = new FileInfo(finalName);
 
                                 if (!fileInfo.Directory.Exists) fileInfo.Directory.Create();

@@ -21,20 +21,26 @@ namespace SSoTme.OST.ConApp
     {
         static int Main(string[] args)
         {
-            // Thread.Sleep(20000);
-            var returnValue = -1;
-            var handler = SSoTmeCLIHandler.CreateHandler(args);
-            if (!handler.SuppressTranspile) returnValue = handler.TranspileProject();
-
-            if (returnValue != 0)
+            try
             {
-                Console.WriteLine("\n\nPress any key to continue.");
-                Console.ReadKey();
+                // Thread.Sleep(20000);
+                var returnValue = -1;
+                var handler = SSoTmeCLIHandler.CreateHandler(args);
+                if (!handler.SuppressTranspile) returnValue = handler.TranspileProject();
+
+                if (returnValue != 0)
+                {
+                    Console.WriteLine("\n\nPress any key to continue.");
+                    Console.ReadKey();
+                }
+
+                return returnValue;
             }
-            return returnValue;
+            catch (ProjectNotConfiguredException ex)
+            {
+                return -1; // don't print stack trace
+            }
+            // other exceptions throw normally
         }
-
-
-
     }
 }
