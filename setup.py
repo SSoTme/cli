@@ -379,7 +379,7 @@ class Installer:
                     "This may indicate a problem with the .NET build process."
                 )
 
-            # create the cli/ssotme/lib/Windows/CLI/bin/Release/net8.0 dir structure
+            # create the cli/ssotme/lib/Windows/CLI/bin/Release/net7.0 dir structure
             base_dir = os.path.dirname(os.path.abspath(__file__))
             cli_dir = os.path.join(base_dir, "ssotme")
             os.makedirs(cli_dir, exist_ok=True)
