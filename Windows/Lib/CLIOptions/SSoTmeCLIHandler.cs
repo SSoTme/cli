@@ -46,7 +46,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.07.19-v3";
+        public string CLI_VERSION = "2025.07.19";
         
         private SSOTMEPayload result;
 
