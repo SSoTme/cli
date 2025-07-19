@@ -15,6 +15,8 @@ using System.Threading;
 using SassyMQ.SSOTME.Lib.RMQActors;
 using SSoTme.OST.Lib.Extensions;
 using AIC.SassyMQ.Lib;
+using System.Reflection;
+using System.Xml.Linq;
 
 namespace SassyMQ.Lib.RabbitMQ.Payload
 {
@@ -82,10 +84,10 @@ namespace SassyMQ.Lib.RabbitMQ.Payload
 
         public void AutoConnect()
         {
-            String virtualHost = ConfigurationManager.AppSettings["rmq_virtual_host"];
-            String username = ConfigurationManager.AppSettings["rmq_username"];
+            String virtualHost = GetConfigValue("rmq_virtual_host");
+            String username = GetConfigValue("rmq_username");
             if (String.IsNullOrEmpty(username)) username = "guest";
-            String password = ConfigurationManager.AppSettings["rmq_password"];
+            String password = GetConfigValue("rmq_password");
             if (String.IsNullOrEmpty(password)) password = "guest";
 
             this.Connect(virtualHost, username, password);
@@ -100,7 +102,7 @@ namespace SassyMQ.Lib.RabbitMQ.Payload
             this.VirtualHost = virtualHost;
             this.Username = username;
             this.Password = password;
-            this.RabbitEndpoint = ConfigurationManager.AppSettings["rmq_endpoint"];
+            this.RabbitEndpoint = GetConfigValue("rmq_endpoint");
             this.SenderId = Guid.NewGuid();
             if (string.IsNullOrEmpty(this.AllExchange)) throw new ArgumentException("actor.AllExchange property must be assigned before connect can be called.");
             this.AllExchange = this.AllExchange;
@@ -258,6 +260,56 @@ namespace SassyMQ.Lib.RabbitMQ.Payload
 
         public static bool CustomInvokeScheme { get; set; }
         public static event System.EventHandler<InvokeEventArgs<T>> HandleInvokeExternal;
+
+        private static string GetConfigValue(string key)
+        {
+            // Try ConfigurationManager first (for backwards compatibility)
+            var value = ConfigurationManager.AppSettings[key];
+            if (!string.IsNullOrEmpty(value)) return value;
+            
+            // Fall back to embedded resource
+            try
+            {
+                // Try different assemblies - the resource might be in the main CLI assembly
+                Assembly[] assembliesToCheck = {
+                    Assembly.GetExecutingAssembly(),
+                    Assembly.GetEntryAssembly(),
+                    Assembly.GetCallingAssembly()
+                };
+                
+                string[] possibleNames = {
+                    "SSoTme.OST.CLI.App.config",
+                    "App.config",
+                    "SSoTme.OST.Core.Lib.App.config"
+                };
+                
+                foreach (var assembly in assembliesToCheck.Where(a => a != null))
+                {
+                    foreach (var resourceName in possibleNames)
+                    {
+                        using var stream = assembly.GetManifestResourceStream(resourceName);
+                        if (stream != null)
+                        {
+                            var doc = XDocument.Load(stream);
+                            var setting = doc.Descendants("add")
+                                .FirstOrDefault(x => x.Attribute("key")?.Value == key);
+                            var result = setting?.Attribute("value")?.Value;
+                            if (!string.IsNullOrEmpty(result)) 
+                            {
+                                return result;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine($"Error reading embedded config: {ex.Message}");
+            }
+            
+            // If we get here, config loading failed completely
+            return null;
+        }
 
         protected void Invoke(System.EventHandler<PayloadEventArgs<T>> methodDelegate, PayloadEventArgs<T> plea)
         {
