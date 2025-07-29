@@ -229,6 +229,7 @@ try {
         exit 1
     }
     Write-Host "MSI built successfully: $MsiPath" -ForegroundColor Green
+    Invoke-Item (Split-Path -Parent $MsiPath)
 }
 catch {
     Write-Error "Failed to build WiX installer: $_"

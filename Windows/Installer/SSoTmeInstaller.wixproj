@@ -4,7 +4,7 @@
 		<OutputName>SSoTme-Installer_win-x64</OutputName>
 		<OutputType>Package</OutputType>
 		<Platform>x86</Platform>
-		<SSoTmeVersion>225.7.15</SSoTmeVersion>
+		<SSoTmeVersion>225.7.19</SSoTmeVersion>
 		<EnableDefaultItems>false</EnableDefaultItems>
 	</PropertyGroup>
 
