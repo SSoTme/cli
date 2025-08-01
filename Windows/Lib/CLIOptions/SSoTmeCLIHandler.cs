@@ -36,18 +36,18 @@ namespace SSoTme.OST.Lib.CLIOptions
         public ProjectNotConfiguredException()
             : base("No ssotme project is configured in this directory.") { }
     }
-
+    
     public class NoStackException : Exception
     {
         public NoStackException(string msg)
             : base(msg) { }
     }
-
+    
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
         public string CLI_VERSION = "2025.07.19";
-
+        
         private SSOTMEPayload result;
 
         public SMQAccountHolder AccountHolder { get; private set; }
@@ -64,7 +64,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             this.addSetting = new List<string>();
             this.removeSetting = new List<string>();
         }
-
+        
         private SSoTmeProject GetProjectOrThrow()
         {
             if (this.AICaptureProject == null)
@@ -73,7 +73,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             }
             return this.AICaptureProject;
         }
-
+        
         public static SSoTmeCLIHandler CreateHandler(string commandLine)
         {
             var cliHandler = new SSoTmeCLIHandler();
@@ -108,7 +108,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 Console.WriteLine($"\nSSoTme CLI Version {this.CLI_VERSION}\n\nConfiguration for `{runas}`:");
                 Console.WriteLine($"Email Address: {key.EmailAddress}");
                 Console.WriteLine($"Secret: {key.Secret}");
-
+                
                 // Display API keys if they exist
                 if (key.APIKeys != null && key.APIKeys.Count > 0)
                 {
@@ -150,17 +150,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                     this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
                     if (this.transpiler.Contains("/"))
                     {
-                        if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
-                            (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
-                        {
-                            // If this not a URL, assume it's a transpiler name with an account prefix
-                            this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
-                            this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
-                        }
-                        else
-                        {
-                            this.transpiler = "remote transpiler";
-                        }
+                        this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+                        this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
                     }
                 }
 
@@ -235,7 +226,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                             // warn user for clarity
                             ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
                         }
-
+                        
                         // still can continue with basic transpilers
                         foreach (var projectSetting in this.AICaptureProject?.ProjectSettings ?? new BindingList<ProjectSetting>())
                         {
@@ -244,7 +235,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 this.parameters.Add(String.Format("{0}={1}", projectSetting.Name, projectSetting.Value));
                             }
                         }
-
+                        
                     }
                     this.LoadInputFiles();
 
@@ -463,7 +454,7 @@ Syntax:
                     {
                         string name = repo["name"].ToString();
                         string description = repo["description"].ToString();
-                        var repoMetaData = new GitRepo() { Name = name, Description = description };
+                        var repoMetaData = new GitRepo() { Name = name, Description = description } ;
                         reposList.Add(repoMetaData);
                     }
                 }
@@ -992,7 +983,7 @@ Seed Url: ");
         public FileSet OutputFileSet { get; private set; }
         public bool SuppressTranspile { get; private set; }
         public bool SuppressKeyPress { get; private set; }
-
+        
         public string AICaptureHost
         {
             get
