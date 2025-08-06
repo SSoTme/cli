@@ -29,17 +29,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_BODY="${{ github.event.pull_request.body }}"
-          
-          # Write PR description to file for release notes
-          echo "$PR_BODY" > notes.txt
-          
-          # Set it as a step output for later steps
+          # Save PR body to a file
+          printf '%s\n' "${{ github.event.pull_request.body }}" > notes.txt
+
+          # Safely write multiline PR body to the output
           {
             echo "description<<EOF"
-            echo "$PR_BODY"
+            cat notes.txt
             echo "EOF"
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
       - name: Who am I
         run: git config --list && git remote -v
