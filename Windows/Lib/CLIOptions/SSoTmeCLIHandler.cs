@@ -49,6 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string CLI_VERSION = "2025.07.19";
         
         private SSOTMEPayload result;
+        private List<string> isTargetUrlProcessing = new List<string>();
 
         public SMQAccountHolder AccountHolder { get; private set; }
         public DMProxy CoordinatorProxy { get; private set; }
@@ -947,6 +948,7 @@ Seed Url: ");
             var currentSSoTmeKey = SSOTMEKey.GetSSoTmeKey(this.runAs);
             result = null;
 
+            Console.WriteLine("add account holder reply to");
             this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
             this.AccountHolder.Init(currentSSoTmeKey.EmailAddress, currentSSoTmeKey.Secret);
 
@@ -1122,12 +1124,39 @@ Seed Url: ");
             }
         }
 
+        private void conditionallyPopulateTranspiler(SSOTMEPayload payload, string transpilerName)
+        {
+            // Always initialize the Transpiler property to avoid NullReferenceException
+            if (payload.Transpiler == null)
+            {
+                payload.Transpiler = new Transpiler();
+                
+                // Set a name based on the transpiler string if available
+                if (!string.IsNullOrEmpty(this.transpiler))
+                {
+                    payload.Transpiler.Name = this.transpiler;
+                    // LowerHyphenName is typically derived from Name in the Transpiler class
+                    // If it's not automatically set, we would set it here
+                }
+                else
+                {
+                    // Use passed transpiler name
+                    payload.Transpiler.Name = transpilerName;
+                }
+            }
+        }
+
         private async void AccountHolder_ReplyTo(object sender, SassyMQ.Lib.RabbitMQ.PayloadEventArgs<SSOTMEPayload> e)
         {
+            
             var payload = AccountHolder.CreatePayload();
             payload.SaveCLIOptions(this);
             if (!String.IsNullOrEmpty(this.TargetUrl))
             {
+                // Prevent multiple concurrent processing of this event handler
+                if (isTargetUrlProcessing.Contains(this.TargetUrl) || result != null) return;
+                isTargetUrlProcessing.Add(this.TargetUrl);
+                this.conditionallyPopulateTranspiler(payload, "integrated-tools");
                 using var client = new HttpClient();
                 payload.TranspileRequest = new TranspileRequest();
                 payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
@@ -1146,6 +1175,11 @@ Seed Url: ");
                             var finalResult = result.SaveFileSet(this.skipClean);
                         }
                     }
+                }
+                // Safely remove the URL from processing list if it exists
+                if (!String.IsNullOrEmpty(this.TargetUrl) && isTargetUrlProcessing.Contains(this.TargetUrl))
+                {
+                    isTargetUrlProcessing.Remove(this.TargetUrl);
                 }
             }
             if (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_ping_ssotmecoordinator))
