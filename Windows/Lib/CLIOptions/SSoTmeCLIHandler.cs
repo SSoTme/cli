@@ -159,7 +159,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         }
                         else
                         {
-                            this.transpiler = "remote transpiler";
+                            this.transpiler = "remote-transpiler";
                         }
                     }
                 }
@@ -656,6 +656,17 @@ Seed Url: ");
                         key.APIKeys[values[0]] = values[1];
                     }
                     SSOTMEKey.SetSSoTmeKey(key, this.runAs);
+                }
+                else if (this.install && this.transpiler == "remote-transpiler")
+                {
+                    result = new SSOTMEPayload()
+                    {
+                        Transpiler = new Transpiler()
+                        {
+                            Name = "remotetranspiler"
+                        }
+                    };
+                    this.AICaptureProject.Install(result, this.transpilerGroup);
                 }
                 else if (!String.IsNullOrEmpty(this.execute))
                 {
