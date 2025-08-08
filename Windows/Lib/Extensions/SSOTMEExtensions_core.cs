@@ -963,6 +963,7 @@ namespace SSoTme.OST.Lib.Extensions
             int retryCount = 0;
             bool success = false;
             
+            IOException lastException = null;
             while (!success && retryCount < maxRetries)
             {
                 try
@@ -976,18 +977,27 @@ namespace SSoTme.OST.Lib.Extensions
                     }
                     success = true;
                 }
-                catch (IOException ex) when (retryCount < maxRetries - 1)
+                catch (IOException ex)
                 {
-                    // Only retry if it's a sharing violation or lock conflict
-                    if (IsFileLockException(ex))
+                    // Save the exception for potential re-throw
+                    lastException = ex;
+                    
+                    // Only retry if it's a sharing violation or lock conflict and we haven't reached max retries
+                    if (IsFileLockException(ex) && retryCount < maxRetries - 1)
                     {
                         retryCount++;
                         System.Threading.Thread.Sleep(retryDelayMs * retryCount);
                     }
+                    else if (!IsFileLockException(ex))
+                    {
+                        // Re-throw immediately if it's not a file lock exception
+                        throw;
+                    }
                     else
                     {
-                        // Re-throw if it's not a sharing violation
-                        throw;
+                        // This is a file lock exception but we've reached max retries
+                        // Will be thrown after the loop
+                        retryCount++;
                     }
                 }
             }
@@ -995,6 +1005,11 @@ namespace SSoTme.OST.Lib.Extensions
             if (success)
             {
                 OnFileWritten(fileName);
+            }
+            else if (lastException != null)
+            {
+                // If all retries failed, throw the last exception with additional context
+                throw new IOException($"Failed to write to file '{fileName}' after {maxRetries} attempts: {lastException.Message}", lastException);
             }
         }
         
@@ -1195,8 +1210,48 @@ namespace SSoTme.OST.Lib.Extensions
 
         public static void SplitFileSetFile(this String fileSetFileName, String basePath)
         {
-            String fileContents = File.ReadAllText(fileSetFileName);
-            SplitFileSetXml(fileContents, false, basePath);
+            const int maxRetries = 5;
+            const int retryDelayMs = 100;
+            int retryCount = 0;
+            IOException lastException = null;
+            
+            while (retryCount < maxRetries)
+            {
+                try
+                {
+                    // Use FileShare.ReadWrite to allow other processes to access the file while we're reading it
+                    using (var fileStream = new FileStream(fileSetFileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    using (var streamReader = new StreamReader(fileStream, Encoding.UTF8))
+                    {
+                        String fileContents = streamReader.ReadToEnd();
+                        SplitFileSetXml(fileContents, false, basePath);
+                        return; // Success - exit the method
+                    }
+                }
+                catch (IOException ex)
+                {
+                    lastException = ex;
+                    // Only retry if it's a sharing violation or lock conflict
+                    if (IsFileLockException(ex))
+                    {
+                        retryCount++;
+                        if (retryCount < maxRetries)
+                        {
+                            System.Threading.Thread.Sleep(retryDelayMs * retryCount);
+                        }
+                    }
+                    else
+                    {
+                        throw; // Not a file lock exception, rethrow immediately
+                    }
+                }
+            }
+            
+            // If we've exhausted all retries, throw a meaningful exception
+            if (lastException != null)
+            {
+                throw new IOException($"Failed to read from file '{fileSetFileName}' after {maxRetries} attempts: {lastException.Message}", lastException);
+            }
         }
 
         public static string FullFromRelative(this string rootFullPath, string relativeFileName)
