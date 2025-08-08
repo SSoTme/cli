@@ -1003,7 +1003,13 @@ namespace SSoTme.OST.Lib.Extensions
             // Check for common file locking error messages
             return ex.Message.Contains("being used by another process") ||
                    ex.Message.Contains("access is denied") ||
-                   ex.HResult == -2147024864; // 0x80070020 - ERROR_SHARING_VIOLATION
+        private const int ERROR_SHARING_VIOLATION_HRESULT = -2147024864; // 0x80070020
+        private static bool IsFileLockException(IOException ex)
+        {
+            // Check for common file locking error messages
+            return ex.Message.Contains("being used by another process") ||
+                   ex.Message.Contains("access is denied") ||
+                   ex.HResult == ERROR_SHARING_VIOLATION_HRESULT; // ERROR_SHARING_VIOLATION
         }
 
         public static void SplitFileSetXml(this string fileSetXml, String basePath)
