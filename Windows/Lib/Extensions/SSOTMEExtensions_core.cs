@@ -998,11 +998,6 @@ namespace SSoTme.OST.Lib.Extensions
             }
         }
         
-        private static bool IsFileLockException(IOException ex)
-        {
-            // Check for common file locking error messages
-            return ex.Message.Contains("being used by another process") ||
-                   ex.Message.Contains("access is denied") ||
         private const int ERROR_SHARING_VIOLATION_HRESULT = -2147024864; // 0x80070020
         private static bool IsFileLockException(IOException ex)
         {
