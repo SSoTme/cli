@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string CLI_VERSION = "2025.08.07.1";
 
         private SSOTMEPayload result;
-        private List<string> isTargetUrlProcessing = new List<string>();
+        private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
 
         public SMQAccountHolder AccountHolder { get; private set; }
         public DMProxy CoordinatorProxy { get; private set; }
@@ -1161,9 +1161,8 @@ Seed Url: ");
             payload.SaveCLIOptions(this);
             if (!String.IsNullOrEmpty(this.TargetUrl))
             {
-                // Prevent multiple concurrent processing of this event handler
-                if (isTargetUrlProcessing.Contains(this.TargetUrl) || result != null) return;
-                isTargetUrlProcessing.Add(this.TargetUrl);
+                // Prevent multiple concurrent processing of this event handler using thread-safe approach
+                if (result != null || !isTargetUrlProcessing.TryAdd(this.TargetUrl, 0)) return;
                 this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
                 using var client = new HttpClient();
                 payload.TranspileRequest = new TranspileRequest();
@@ -1185,9 +1184,10 @@ Seed Url: ");
                     }
                 }
                 // Safely remove the URL from processing list if it exists
-                if (!String.IsNullOrEmpty(this.TargetUrl) && isTargetUrlProcessing.Contains(this.TargetUrl))
+                if (!String.IsNullOrEmpty(this.TargetUrl))
                 {
-                    isTargetUrlProcessing.Remove(this.TargetUrl);
+                    // TryRemove handles both checking and removing in a thread-safe way
+                    isTargetUrlProcessing.TryRemove(this.TargetUrl, out _);
                 }
             }
             if (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_ping_ssotmecoordinator))
