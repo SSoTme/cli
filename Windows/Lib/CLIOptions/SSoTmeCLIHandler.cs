@@ -948,7 +948,6 @@ Seed Url: ");
             var currentSSoTmeKey = SSOTMEKey.GetSSoTmeKey(this.runAs);
             result = null;
 
-            Console.WriteLine("add account holder reply to");
             this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
             this.AccountHolder.Init(currentSSoTmeKey.EmailAddress, currentSSoTmeKey.Secret);
 
