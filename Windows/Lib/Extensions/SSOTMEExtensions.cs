@@ -1,4 +1,4 @@
-﻿/*****************************
+/*****************************
 Project:    SSoTme - Open Source Tools (OST)
 Created By: EJ Alexandra - 2016
             An Abstract Level, llc
@@ -1198,11 +1198,53 @@ namespace SSoTme.OST.Lib.Extensions
         {
             var fi = new FileInfo(fileName);
             if (!fi.Directory.Exists) fi.Directory.Create();
-            using (StreamWriter sw = new StreamWriter(File.Open(fileName, FileMode.Create), new UTF8Encoding(false)))
+            
+            const int maxRetries = 5;
+            const int retryDelayMs = 100;
+            int retryCount = 0;
+            bool success = false;
+            
+            while (!success && retryCount < maxRetries)
             {
-                sw.Write(fileContents.UnwrapCDATA());
+                try
+                {
+                    // More permissive sharing mode - allow read and write access from other processes
+                    using (StreamWriter sw = new StreamWriter(File.Open(fileName, FileMode.Create, FileAccess.Write, FileShare.ReadWrite), new UTF8Encoding(false)))
+                    {
+                        sw.Write(fileContents.UnwrapCDATA());
+                        // Explicitly flush and close
+                        sw.Flush();
+                    }
+                    success = true;
+                }
+                catch (IOException ex) when (retryCount < maxRetries - 1)
+                {
+                    // Only retry if it's a sharing violation or lock conflict
+                    if (IsFileLockException(ex))
+                    {
+                        retryCount++;
+                        System.Threading.Thread.Sleep(retryDelayMs * retryCount);
+                    }
+                    else
+                    {
+                        // Re-throw if it's not a sharing violation
+                        throw;
+                    }
+                }
             }
-            OnFileWritten(fileName);
+            
+            if (success)
+            {
+                OnFileWritten(fileName);
+            }
+        }
+        
+        private static bool IsFileLockException(IOException ex)
+        {
+            // Check for common file locking error messages
+            return ex.Message.Contains("being used by another process") ||
+                   ex.Message.Contains("access is denied") ||
+                   ex.HResult == -2147024864; // 0x80070020 - ERROR_SHARING_VIOLATION
         }
 
         public static void SplitFileSetXml(this string fileSetXml, String basePath)
