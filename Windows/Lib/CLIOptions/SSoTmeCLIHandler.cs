@@ -1164,7 +1164,7 @@ Seed Url: ");
                 // Prevent multiple concurrent processing of this event handler
                 if (isTargetUrlProcessing.Contains(this.TargetUrl) || result != null) return;
                 isTargetUrlProcessing.Add(this.TargetUrl);
-                this.conditionallyPopulateTranspiler(payload, "integrated-tools");
+                this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
                 using var client = new HttpClient();
                 payload.TranspileRequest = new TranspileRequest();
                 payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
