@@ -159,6 +159,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         }
                         else
                         {
+                            this.TargetUrl = this.transpiler;
                             this.transpiler = "remote-transpiler";
                         }
                     }
