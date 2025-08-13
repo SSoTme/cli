@@ -664,7 +664,7 @@ Seed Url: ");
                     {
                         Transpiler = new Transpiler()
                         {
-                            Name = "remotetranspiler"
+                            Name = "remote-" + this.TargetUrl,
                         }
                     };
                     this.AICaptureProject.Install(result, this.transpilerGroup);
