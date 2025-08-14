@@ -1,6 +1,5 @@
 import asyncio
 import pyairtable
-from pyairtable.formulas import match
 import logging
 import time
 import os
@@ -30,8 +29,7 @@ class AirtableBaseConnector:
         """Check if circuit breaker should be opened or closed."""
         if self.is_circuit_open:
             # Check if enough time has passed to attempt reset
-            if (self.circuit_breaker_last_failure and
-                    time.time() - self.circuit_breaker_last_failure > self.circuit_breaker_reset_time):
+            if (self.circuit_breaker_last_failure and time.time() - self.circuit_breaker_last_failure > self.circuit_breaker_reset_time):
                 self.is_circuit_open = False
                 self.circuit_breaker_failures = 0
                 logger.info("Circuit breaker reset - attempting Airtable connection")
@@ -121,7 +119,7 @@ def generate_installer_urls(version: str, github_repo: str) -> dict:
     base_url = f"https://github.com/{github_repo}/releases/download/v{version}"
     return {
         'WindowsInstaller': f"{base_url}/SSoTme-Installer_win-x64.msi",
-        'WindowsArmInstaller': f"{base_url}/SSoTme-Installer_win-arm64.msi", 
+        'WindowsArmInstaller': f"{base_url}/SSoTme-Installer_win-arm64.msi",
         'MacInstaller': f"{base_url}/SSoTme-Installer-x86_64.pkg",
         'MacArmInstaller': f"{base_url}/SSoTme-Installer-arm64.pkg"
     }
