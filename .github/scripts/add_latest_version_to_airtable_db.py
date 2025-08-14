@@ -166,10 +166,10 @@ async def main():
         release_index = datetime.now().strftime('%Y%m%d%H%M%S')  # timestamp-based index
         
         fields = {
-            'Name': f"Release v{args.version}",
-            'Description': f"CLI Release {args.version} - Cross-platform installers for SSoTme",
+            'Name': f"v{args.version}",
+            'Description': "",  # should be updated manually in airtable
             'Date': current_date,
-            'Version': args.version,
+            'Version': args.version.replace('.', ''),
             'ReleaseIndex': release_index,
             'InstallerId': f"cli-{args.version}-{release_index}",
             **installer_urls
