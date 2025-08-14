@@ -2,7 +2,7 @@ name: Build Windows Installers
 
 on:
   push:
-    branches: [ '*' ]
+    branches: [ 'main' ]
 
 jobs:
   build-x64:
