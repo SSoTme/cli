@@ -54,7 +54,7 @@ jobs:
         sed -i '' "s/DEV_INS_KEYCHAIN_ID=\".*\"/DEV_INS_KEYCHAIN_ID=\"${{ secrets.DEV_INS_KEYCHAIN_ID }}\"/" build-package.sh
         sed -i '' "s/DEV_APP_KEYCHAIN_ID=\".*\"/DEV_APP_KEYCHAIN_ID=\"${{ secrets.DEV_APP_KEYCHAIN_ID }}\"/" build-package.sh
         sed -i '' "s/NOTARYPASS=\".*\"/NOTARYPASS=\"${{ secrets.NOTARY_PASSWORD }}\"/" build-package.sh
-        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLE_ID }}\"/" build-package.sh
+        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLEID }}\"/" build-package.sh
         ./build-package.sh
     
     - name: Upload Intel Installer
