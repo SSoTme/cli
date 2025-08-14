@@ -1,0 +1,120 @@
+name: Build macOS Installer
+
+on:
+  push:
+    branches: [ * ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-intel:
+    runs-on: macos-13  # Intel architecture
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Import Developer Certificate
+      env:
+        DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
+        DEV_CERT_PASSWORD: ${{ secrets.DEV_CERT_PASSWORD }}
+        DEV_INSTALLER_CERT_P12: ${{ secrets.DEVCERTIFICATE }}
+        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.DEV_INSTALLER_CERT_PASSWORD }}
+      run: |
+        # Create temporary keychain
+        security create-keychain -p temp_password temp_keychain
+        security set-keychain-settings -lut 21600 temp_keychain
+        security unlock-keychain -p temp_password temp_keychain
+        
+        # Import developer certificates
+        echo "$DEV_CERT_P12" | base64 --decode > dev_cert.p12
+        echo "$DEV_INSTALLER_CERT_P12" | base64 --decode > dev_installer_cert.p12
+        
+        security import dev_cert.p12 -k temp_keychain -P "$DEV_CERT_PASSWORD" -T /usr/bin/codesign
+        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productssign
+        
+        # Set keychain as default
+        security list-keychains -s temp_keychain
+        security default-keychain -s temp_keychain
+        
+        # Allow codesign to access the keychain
+        security set-key-partition-list -S apple-tool:,apple: -s -k temp_password temp_keychain
+        
+        # Clean up certificate files
+        rm dev_cert.p12 dev_installer_cert.p12
+    
+    - name: Build macOS Installer
+      run: |
+        chmod +x ./build-package.sh
+        # Update build-package.sh to use GitHub secrets instead of hardcoded values
+        sed -i '' "s/DEV_INS_KEYCHAIN_ID=\".*\"/DEV_INS_KEYCHAIN_ID=\"${{ secrets.DEV_INS_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/DEV_APP_KEYCHAIN_ID=\".*\"/DEV_APP_KEYCHAIN_ID=\"${{ secrets.DEV_APP_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/NOTARYPASS=\".*\"/NOTARYPASS=\"${{ secrets.NOTARY_PASSWORD }}\"/" build-package.sh
+        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLE_ID }}\"/" build-package.sh
+        ./build-package.sh
+    
+    - name: Upload Intel Installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: SSoTme-Installer-x86_64
+        path: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
+
+  build-arm:
+    runs-on: macos-14  # Apple Silicon architecture
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Import Developer Certificate
+      env:
+        DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
+        DEV_CERT_PASSWORD: ${{ secrets.DEV_CERT_PASSWORD }}
+        DEV_INSTALLER_CERT_P12: ${{ secrets.DEVCERTIFICATE }}
+        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.DEV_INSTALLER_CERT_PASSWORD }}
+      run: |
+        # Create temporary keychain
+        security create-keychain -p temp_password temp_keychain
+        security set-keychain-settings -lut 21600 temp_keychain
+        security unlock-keychain -p temp_password temp_keychain
+        
+        # Import developer certificates
+        echo "$DEV_CERT_P12" | base64 --decode > dev_cert.p12
+        echo "$DEV_INSTALLER_CERT_P12" | base64 --decode > dev_installer_cert.p12
+        
+        security import dev_cert.p12 -k temp_keychain -P "$DEV_CERT_PASSWORD" -T /usr/bin/codesign
+        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productssign
+        
+        # Set keychain as default
+        security list-keychains -s temp_keychain
+        security default-keychain -s temp_keychain
+        
+        # Allow codesign to access the keychain
+        security set-key-partition-list -S apple-tool:,apple: -s -k temp_password temp_keychain
+        
+        # Clean up certificate files
+        rm dev_cert.p12 dev_installer_cert.p12
+    
+    - name: Build macOS Installer
+      run: |
+        chmod +x ./build-package.sh
+        # Update build-package.sh to use GitHub secrets instead of hardcoded values
+        sed -i '' "s/DEV_INS_KEYCHAIN_ID=\".*\"/DEV_INS_KEYCHAIN_ID=\"${{ secrets.DEV_INS_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/DEV_APP_KEYCHAIN_ID=\".*\"/DEV_APP_KEYCHAIN_ID=\"${{ secrets.DEV_APP_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/NOTARYPASS=\".*\"/NOTARYPASS=\"${{ secrets.NOTARY_PASSWORD }}\"/" build-package.sh
+        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLEID }}\"/" build-package.sh
+        ./build-package.sh
+    
+    - name: Upload ARM Installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: SSoTme-Installer-arm64
+        path: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
