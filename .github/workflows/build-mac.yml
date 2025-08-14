@@ -21,9 +21,9 @@ jobs:
     - name: Import Developer Certificate
       env:
         DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
-        DEV_CERT_PASSWORD: ${{ secrets.DEV_CERT_PASSWORD }}
+        DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
         DEV_INSTALLER_CERT_P12: ${{ secrets.DEVCERTIFICATE }}
-        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.DEV_INSTALLER_CERT_PASSWORD }}
+        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
       run: |
         # Create temporary keychain
         security create-keychain -p temp_password temp_keychain
@@ -77,9 +77,9 @@ jobs:
     - name: Import Developer Certificate
       env:
         DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
-        DEV_CERT_PASSWORD: ${{ secrets.DEV_CERT_PASSWORD }}
+        DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
         DEV_INSTALLER_CERT_P12: ${{ secrets.DEVCERTIFICATE }}
-        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.DEV_INSTALLER_CERT_PASSWORD }}
+        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
       run: |
         # Create temporary keychain
         security create-keychain -p temp_password temp_keychain
