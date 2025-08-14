@@ -11,17 +11,56 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Get release tag from package.json
+      id: get_tag_early
+      run: |
+        $packageJson = Get-Content package.json | ConvertFrom-Json
+        $version = $packageJson.version
+        $tagName = "v$version"
+        echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+        Write-Host "Checking release: $tagName"
+      shell: powershell
+    
+    - name: Early check if release has assets
+      id: early_check
+      run: |
+        $tagName = "${{ steps.get_tag_early.outputs.tag_name }}"
+        try {
+          $release = gh release view $tagName --json assets 2>$null
+          if ($release) {
+            $assets = ($release | ConvertFrom-Json).assets
+            $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
+            echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $nonSourceCount non-source assets"
+            if ($nonSourceCount -gt 0) {
+              Write-Host "::notice::Skipping build - release $tagName already has $nonSourceCount assets"
+            }
+          } else {
+            echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName does not exist - proceeding with build"
+          }
+        } catch {
+          echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+          Write-Host "Release $tagName does not exist - proceeding with build"
+        }
+      shell: powershell
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Setup .NET
+      if: steps.early_check.outputs.non_source_count == '0'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Build Windows Installer (x64)
+      if: steps.early_check.outputs.non_source_count == '0'
       run: |
         ./build-installer.ps1
       shell: powershell
     
     - name: Upload x64 Installer
+      if: steps.early_check.outputs.non_source_count == '0'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-win-x64
@@ -75,12 +114,50 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Get release tag from package.json
+      id: get_tag_early_arm
+      run: |
+        $packageJson = Get-Content package.json | ConvertFrom-Json
+        $version = $packageJson.version
+        $tagName = "v$version"
+        echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+        Write-Host "Checking release: $tagName"
+      shell: powershell
+    
+    - name: Early check if release has assets
+      id: early_check_arm
+      run: |
+        $tagName = "${{ steps.get_tag_early_arm.outputs.tag_name }}"
+        try {
+          $release = gh release view $tagName --json assets 2>$null
+          if ($release) {
+            $assets = ($release | ConvertFrom-Json).assets
+            $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
+            echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $nonSourceCount non-source assets"
+            if ($nonSourceCount -gt 0) {
+              Write-Host "::notice::Skipping build - release $tagName already has $nonSourceCount assets"
+            }
+          } else {
+            echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName does not exist - proceeding with build"
+          }
+        } catch {
+          echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+          Write-Host "Release $tagName does not exist - proceeding with build"
+        }
+      shell: powershell
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Setup .NET
+      if: steps.early_check_arm.outputs.non_source_count == '0'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Force ARM64 Architecture
+      if: steps.early_check_arm.outputs.non_source_count == '0'
       run: |
         # Override architecture detection to build ARM64 version
         $buildScript = Get-Content "Windows/Installer/Scripts/build.ps1" -Raw
@@ -89,11 +166,13 @@ jobs:
       shell: powershell
     
     - name: Build Windows Installer (ARM64)
+      if: steps.early_check_arm.outputs.non_source_count == '0'
       run: |
         ./build-installer.ps1
       shell: powershell
     
     - name: Upload ARM64 Installer
+      if: steps.early_check_arm.outputs.non_source_count == '0'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-win-arm64

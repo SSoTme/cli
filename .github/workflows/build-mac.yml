@@ -11,12 +11,40 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Get release tag from package.json
+      id: get_tag_early
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Checking release: $TAG_NAME"
+    
+    - name: Early check if release has assets
+      id: early_check
+      run: |
+        TAG_NAME="${{ steps.get_tag_early.outputs.tag_name }}"
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
+          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+          if [ "$NON_SOURCE" -gt 0 ]; then
+            echo "::notice::Skipping build - release $TAG_NAME already has $NON_SOURCE assets"
+          fi
+        else
+          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - proceeding with build"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Setup .NET
+      if: steps.early_check.outputs.non_source_count == '0'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Import Developer Certificate
+      if: steps.early_check.outputs.non_source_count == '0'
       env:
         DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
         DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
@@ -46,6 +74,7 @@ jobs:
         rm dev_cert.p12 dev_installer_cert.p12
     
     - name: Build macOS Installer
+      if: steps.early_check.outputs.non_source_count == '0'
       run: |
         chmod +x ./build-package.sh
         # Update build-package.sh to use GitHub secrets instead of hardcoded values
@@ -56,6 +85,7 @@ jobs:
         ./build-package.sh
     
     - name: Upload Intel Installer
+      if: steps.early_check.outputs.non_source_count == '0'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-x86_64
@@ -100,12 +130,40 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Get release tag from package.json
+      id: get_tag_early_arm
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Checking release: $TAG_NAME"
+    
+    - name: Early check if release has assets
+      id: early_check_arm
+      run: |
+        TAG_NAME="${{ steps.get_tag_early_arm.outputs.tag_name }}"
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
+          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+          if [ "$NON_SOURCE" -gt 0 ]; then
+            echo "::notice::Skipping build - release $TAG_NAME already has $NON_SOURCE assets"
+          fi
+        else
+          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - proceeding with build"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Setup .NET
+      if: steps.early_check_arm.outputs.non_source_count == '0'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Import Developer Certificate
+      if: steps.early_check_arm.outputs.non_source_count == '0'
       env:
         DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
         DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
@@ -135,6 +193,7 @@ jobs:
         rm dev_cert.p12 dev_installer_cert.p12
     
     - name: Build macOS Installer
+      if: steps.early_check_arm.outputs.non_source_count == '0'
       run: |
         chmod +x ./build-package.sh
         # Update build-package.sh to use GitHub secrets instead of hardcoded values
