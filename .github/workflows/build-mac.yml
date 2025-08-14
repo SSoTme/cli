@@ -1,10 +1,8 @@
-name: Build macOS Installer
+name: Build macOS Installers
 
 on:
   push:
     branches: [ '*' ]
-  pull_request:
-    branches: [ 'main' ]
 
 jobs:
   build-intel:
@@ -63,22 +61,35 @@ jobs:
         name: SSoTme-Installer-x86_64
         path: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
 
+    - name: Get release tag from package.json
+      id: get_tag
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Will upload to release: $TAG_NAME"
+    
     - name: Check if release has non-source assets
-      if: startsWith(github.ref, 'refs/tags/v')
       id: check_release
       run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        # Count assets that are NOT source code (exclude .zip and .tar.gz)
-        NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
-        echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
-        echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+        TAG_NAME="${{ steps.get_tag.outputs.tag_name }}"
+        # Check if release exists and count non-source assets
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
+          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+        else
+          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - will create it"
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload to Release
-      if: startsWith(github.ref, 'refs/tags/v') && steps.check_release.outputs.non_source_count == '0'
+      if: steps.check_release.outputs.non_source_count == '0'
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ steps.get_tag.outputs.tag_name }}
         files: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -139,22 +150,35 @@ jobs:
         name: SSoTme-Installer-arm64
         path: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
 
+    - name: Get release tag from package.json
+      id: get_tag_arm
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Will upload to release: $TAG_NAME"
+    
     - name: Check if release has non-source assets
-      if: startsWith(github.ref, 'refs/tags/v')
       id: check_release_arm
       run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        # Count assets that are NOT source code (exclude .zip and .tar.gz)
-        NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
-        echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
-        echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+        TAG_NAME="${{ steps.get_tag_arm.outputs.tag_name }}"
+        # Check if release exists and count non-source assets
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
+          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+        else
+          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - will create it"
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload to Release
-      if: startsWith(github.ref, 'refs/tags/v') && steps.check_release_arm.outputs.non_source_count == '0'
+      if: steps.check_release_arm.outputs.non_source_count == '0'
       uses: softprops/action-gh-release@v1
       with:
+        tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
         files: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
