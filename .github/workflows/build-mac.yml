@@ -35,7 +35,7 @@ jobs:
         echo "$DEV_INSTALLER_CERT_P12" | base64 --decode > dev_installer_cert.p12
         
         security import dev_cert.p12 -k temp_keychain -P "$DEV_CERT_PASSWORD" -T /usr/bin/codesign
-        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productssign
+        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productsign
         
         # Set keychain as default
         security list-keychains -s temp_keychain
@@ -91,7 +91,7 @@ jobs:
         echo "$DEV_INSTALLER_CERT_P12" | base64 --decode > dev_installer_cert.p12
         
         security import dev_cert.p12 -k temp_keychain -P "$DEV_CERT_PASSWORD" -T /usr/bin/codesign
-        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productssign
+        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productsign
         
         # Set keychain as default
         security list-keychains -s temp_keychain
