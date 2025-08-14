@@ -156,6 +156,6 @@ echo "$SCRIPT_DIR/notarize.sh" "$BIN_DIR/signed/$THE_INSTALLER_FILENAME" $APPLE_
 /bin/bash "$SCRIPT_DIR/notarize.sh" "$BIN_DIR/signed/$THE_INSTALLER_FILENAME" $APPLE_EMAIL $NOTARYPASS
 
 # run on the x86 one too
-echo "$SCRIPT_DIR/notarize.sh" "$HOME/Downloads/SSoTme-Installer-x86_64.pkg" $APPLE_EMAIL $NOTARYPASS
-/bin/bash "$SCRIPT_DIR/notarize.sh" "$HOME/Downloads/SSoTme-Installer-x86_64.pkg" $APPLE_EMAIL $NOTARYPASS
-open "$BIN_DIR/signed" -a Finder
+#echo "$SCRIPT_DIR/notarize.sh" "$HOME/Downloads/SSoTme-Installer-x86_64.pkg" $APPLE_EMAIL $NOTARYPASS
+#/bin/bash "$SCRIPT_DIR/notarize.sh" "$HOME/Downloads/SSoTme-Installer-x86_64.pkg" $APPLE_EMAIL $NOTARYPASS
+#open "$BIN_DIR/signed" -a Finder
