@@ -3,10 +3,6 @@ name: Update Airtable with Latest Version
 on:
   push:
     branches: [ 'main' ]
-  workflow_run:
-    workflows: ["Build macOS Installers", "Build Windows Installers"]
-    types:
-      - completed
 
 jobs:
   update-airtable:

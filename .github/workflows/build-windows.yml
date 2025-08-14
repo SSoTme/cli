@@ -30,24 +30,18 @@ jobs:
           if ($release) {
             $assets = ($release | ConvertFrom-Json).assets
             $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
-            if ($msiFiles.Count -gt 0) {
-              Write-Host "::error::Release $tagName contains .msi files - this is not allowed"
-              $msiFileNames = $msiFiles | ForEach-Object { $_.name }
-              Write-Host "::error::Found .msi files: $($msiFileNames -join ', ')"
-              exit 1
-            }
-            $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
-            echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
-            Write-Host "Release $tagName has $nonSourceCount non-source assets"
-            if ($nonSourceCount -gt 0) {
-              Write-Host "::notice::Skipping build - release $tagName already has $nonSourceCount assets"
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
+            if ($msiCount -ge 2) {
+              Write-Host "::notice::Skipping build - release $tagName already has $msiCount .msi files"
             }
           } else {
-            echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
             Write-Host "Release $tagName does not exist - proceeding with build"
           }
         } catch {
-          echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
           Write-Host "Release $tagName does not exist - proceeding with build"
         }
       shell: powershell
@@ -55,19 +49,19 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Setup .NET
-      if: steps.early_check.outputs.non_source_count == '0'
+      if: steps.early_check.outputs.msi_count < '2'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Build Windows Installer (x64)
-      if: steps.early_check.outputs.non_source_count == '0'
+      if: steps.early_check.outputs.msi_count < '2'
       run: |
         ./build-installer.ps1
       shell: powershell
     
     - name: Upload x64 Installer
-      if: steps.early_check.outputs.non_source_count == '0'
+      if: steps.early_check.outputs.msi_count < '2'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-win-x64
@@ -83,7 +77,7 @@ jobs:
         Write-Host "Will upload to release: $tagName"
       shell: powershell
     
-    - name: Check if release has non-source assets
+    - name: Check if release already has these installers
       id: check_release
       run: |
         $tagName = "${{ steps.get_tag.outputs.tag_name }}"
@@ -91,15 +85,16 @@ jobs:
           $release = gh release view $tagName --json assets 2>$null
           if ($release) {
             $assets = ($release | ConvertFrom-Json).assets
-            $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
-            echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
-            Write-Host "Release $tagName has $nonSourceCount non-source assets"
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
           } else {
-            echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
             Write-Host "Release $tagName does not exist - will create it"
           }
         } catch {
-          echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
           Write-Host "Release $tagName does not exist - will create it"
         }
       shell: powershell
@@ -107,7 +102,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload to Release
-      if: steps.check_release.outputs.non_source_count == '0'
+      if: steps.check_release.outputs.msi_count < '2'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag_name }}
@@ -140,24 +135,18 @@ jobs:
           if ($release) {
             $assets = ($release | ConvertFrom-Json).assets
             $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
-            if ($msiFiles.Count -gt 0) {
-              Write-Host "::error::Release $tagName contains .msi files - this is not allowed"
-              $msiFileNames = $msiFiles | ForEach-Object { $_.name }
-              Write-Host "::error::Found .msi files: $($msiFileNames -join ', ')"
-              exit 1
-            }
-            $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
-            echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
-            Write-Host "Release $tagName has $nonSourceCount non-source assets"
-            if ($nonSourceCount -gt 0) {
-              Write-Host "::notice::Skipping build - release $tagName already has $nonSourceCount assets"
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
+            if ($msiCount -ge 2) {
+              Write-Host "::notice::Skipping build - release $tagName already has $msiCount .msi files"
             }
           } else {
-            echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
             Write-Host "Release $tagName does not exist - proceeding with build"
           }
         } catch {
-          echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
           Write-Host "Release $tagName does not exist - proceeding with build"
         }
       shell: powershell
@@ -165,13 +154,13 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Setup .NET
-      if: steps.early_check_arm.outputs.non_source_count == '0'
+      if: steps.early_check_arm.outputs.msi_count < '2'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Force ARM64 Architecture
-      if: steps.early_check_arm.outputs.non_source_count == '0'
+      if: steps.early_check_arm.outputs.msi_count < '2'
       run: |
         # Override architecture detection to build ARM64 version
         $buildScript = Get-Content "Windows/Installer/Scripts/build.ps1" -Raw
@@ -180,13 +169,13 @@ jobs:
       shell: powershell
     
     - name: Build Windows Installer (ARM64)
-      if: steps.early_check_arm.outputs.non_source_count == '0'
+      if: steps.early_check_arm.outputs.msi_count < '2'
       run: |
         ./build-installer.ps1
       shell: powershell
     
     - name: Upload ARM64 Installer
-      if: steps.early_check_arm.outputs.non_source_count == '0'
+      if: steps.early_check_arm.outputs.msi_count < '2'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-win-arm64
@@ -202,7 +191,7 @@ jobs:
         Write-Host "Will upload to release: $tagName"
       shell: powershell
     
-    - name: Check if release has non-source assets
+    - name: Check if release already has these installers
       id: check_release_arm
       run: |
         $tagName = "${{ steps.get_tag_arm.outputs.tag_name }}"
@@ -210,15 +199,16 @@ jobs:
           $release = gh release view $tagName --json assets 2>$null
           if ($release) {
             $assets = ($release | ConvertFrom-Json).assets
-            $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
-            echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
-            Write-Host "Release $tagName has $nonSourceCount non-source assets"
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
           } else {
-            echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
             Write-Host "Release $tagName does not exist - will create it"
           }
         } catch {
-          echo "non_source_count=0" >> $env:GITHUB_OUTPUT
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
           Write-Host "Release $tagName does not exist - will create it"
         }
       shell: powershell
@@ -226,7 +216,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload to Release
-      if: steps.check_release_arm.outputs.non_source_count == '0'
+      if: steps.check_release_arm.outputs.msi_count < '2'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}

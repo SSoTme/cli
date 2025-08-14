@@ -25,33 +25,26 @@ jobs:
         TAG_NAME="${{ steps.get_tag_early.outputs.tag_name }}"
         if gh release view "$TAG_NAME" &>/dev/null; then
           PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
-          if [ "$PKG_FILES" -gt 0 ]; then
-            echo "::error::Release $TAG_NAME contains .pkg files - this is not allowed"
-            PKG_NAMES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$")) | .name] | join(", ")')
-            echo "::error::Found .pkg files: $PKG_NAMES"
-            exit 1
-          fi
-          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
-          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
-          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
-          if [ "$NON_SOURCE" -gt 0 ]; then
-            echo "::notice::Skipping build - release $TAG_NAME already has $NON_SOURCE assets"
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
+          if [ "$PKG_FILES" -ge 2 ]; then
+            echo "::notice::Skipping build - release $TAG_NAME already has $PKG_FILES .pkg files"
           fi
         else
-          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
           echo "Release $TAG_NAME does not exist - proceeding with build"
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Setup .NET
-      if: steps.early_check.outputs.non_source_count == '0'
+      if: steps.early_check.outputs.pkg_count < '2'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Import Developer Certificate
-      if: steps.early_check.outputs.non_source_count == '0'
+      if: steps.early_check.outputs.pkg_count < '2'
       env:
         DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
         DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
@@ -81,7 +74,7 @@ jobs:
         rm dev_cert.p12 dev_installer_cert.p12
     
     - name: Build macOS Installer
-      if: steps.early_check.outputs.non_source_count == '0'
+      if: steps.early_check.outputs.pkg_count < '2'
       run: |
         chmod +x ./build-package.sh
         # Update build-package.sh to use GitHub secrets instead of hardcoded values
@@ -92,7 +85,7 @@ jobs:
         ./build-package.sh
     
     - name: Upload Intel Installer
-      if: steps.early_check.outputs.non_source_count == '0'
+      if: steps.early_check.outputs.pkg_count < '2'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-x86_64
@@ -106,24 +99,24 @@ jobs:
         echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
         echo "Will upload to release: $TAG_NAME"
     
-    - name: Check if release has non-source assets
+    - name: Check if release already has these installers
       id: check_release
       run: |
         TAG_NAME="${{ steps.get_tag.outputs.tag_name }}"
-        # Check if release exists and count non-source assets
+        # Check if release exists and count .pkg files
         if gh release view "$TAG_NAME" &>/dev/null; then
-          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
-          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
-          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
         else
-          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
           echo "Release $TAG_NAME does not exist - will create it"
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload to Release
-      if: steps.check_release.outputs.non_source_count == '0'
+      if: steps.check_release.outputs.pkg_count < '2'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag_name }}
@@ -151,33 +144,26 @@ jobs:
         TAG_NAME="${{ steps.get_tag_early_arm.outputs.tag_name }}"
         if gh release view "$TAG_NAME" &>/dev/null; then
           PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
-          if [ "$PKG_FILES" -gt 0 ]; then
-            echo "::error::Release $TAG_NAME contains .pkg files - this is not allowed"
-            PKG_NAMES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$")) | .name] | join(", ")')
-            echo "::error::Found .pkg files: $PKG_NAMES"
-            exit 1
-          fi
-          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
-          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
-          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
-          if [ "$NON_SOURCE" -gt 0 ]; then
-            echo "::notice::Skipping build - release $TAG_NAME already has $NON_SOURCE assets"
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
+          if [ "$PKG_FILES" -ge 2 ]; then
+            echo "::notice::Skipping build - release $TAG_NAME already has $PKG_FILES .pkg files"
           fi
         else
-          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
           echo "Release $TAG_NAME does not exist - proceeding with build"
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Setup .NET
-      if: steps.early_check_arm.outputs.non_source_count == '0'
+      if: steps.early_check_arm.outputs.pkg_count < '2'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
     
     - name: Import Developer Certificate
-      if: steps.early_check_arm.outputs.non_source_count == '0'
+      if: steps.early_check_arm.outputs.pkg_count < '2'
       env:
         DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
         DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
@@ -207,7 +193,7 @@ jobs:
         rm dev_cert.p12 dev_installer_cert.p12
     
     - name: Build macOS Installer
-      if: steps.early_check_arm.outputs.non_source_count == '0'
+      if: steps.early_check_arm.outputs.pkg_count < '2'
       run: |
         chmod +x ./build-package.sh
         # Update build-package.sh to use GitHub secrets instead of hardcoded values
@@ -231,24 +217,24 @@ jobs:
         echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
         echo "Will upload to release: $TAG_NAME"
     
-    - name: Check if release has non-source assets
+    - name: Check if release already has these installers
       id: check_release_arm
       run: |
         TAG_NAME="${{ steps.get_tag_arm.outputs.tag_name }}"
-        # Check if release exists and count non-source assets
+        # Check if release exists and count .pkg files
         if gh release view "$TAG_NAME" &>/dev/null; then
-          NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
-          echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
-          echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
         else
-          echo "non_source_count=0" >> $GITHUB_OUTPUT
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
           echo "Release $TAG_NAME does not exist - will create it"
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload to Release
-      if: steps.check_release_arm.outputs.non_source_count == '0'
+      if: steps.check_release_arm.outputs.pkg_count < '2'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
