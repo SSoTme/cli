@@ -37,19 +37,13 @@ echo "Using version: $SSOTME_VERSION from package.json"
 # Update the version in the .csproj file
 CSPROJ_FILE="$ROOT_DIR/Windows/CLI/SSoTme.OST.CLI.csproj"
 CLIHANDLER_FILE="$ROOT_DIR/Windows/Lib/CLIOptions/SSoTmeCLIHandler.cs"
-if [ -f "$CSPROJ_FILE" ]; then
-    echo "Current package.json version: $SSOTME_VERSION"
-    read -p "Enter new csproj version (leave blank to inherit): " NEW_CSPROJ_VERSION
-    
-    if [ -z "$NEW_CSPROJ_VERSION" ]; then
-        NEW_CSPROJ_VERSION="$SSOTME_VERSION"
-        echo "Using package.json version: $NEW_CSPROJ_VERSION"
-    else
-        echo "Using custom version: $NEW_CSPROJ_VERSION"
-    fi
-else
+
+# Always use package.json version
+NEW_CSPROJ_VERSION="$SSOTME_VERSION"
+echo "Using package.json version: $NEW_CSPROJ_VERSION"
+
+if [ ! -f "$CSPROJ_FILE" ]; then
     echo "WARNING: $CSPROJ_FILE not found"
-    read -p "Enter new csproj version: " NEW_CSPROJ_VERSION
 fi
 
 echo "Updating version in $CSPROJ_FILE to $NEW_CSPROJ_VERSION"
