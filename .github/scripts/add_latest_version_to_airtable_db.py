@@ -150,8 +150,8 @@ async def main():
         # Check if version already exists
         last_row = await connector.get_last_row_of_table(table_name, "Date")
 
-        should_update = last_row.get("Version").strip() == f"v{args.version.strip()}"
-        logger.info(f"Checking if '{last_row.get('Version').strip()}' == 'v{args.version.strip()}' => {should_update}")
+        should_update = last_row.get("Name").strip() == f"v{args.version.strip()}"
+        logger.info(f"Checking if '{last_row.get('Name').strip()}' == 'v{args.version.strip()}' => {should_update}")
         if last_row and should_update:
             logger.info(f"Version {args.version} already exists in Airtable - skipping")
             return 0
