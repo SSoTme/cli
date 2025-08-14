@@ -2,7 +2,7 @@ name: Build Windows Installers
 
 on:
   push:
-    branches: [ 'main' ]
+    branches: [ '*' ]
 
 jobs:
   build-x64:
@@ -29,6 +29,13 @@ jobs:
           $release = gh release view $tagName --json assets 2>$null
           if ($release) {
             $assets = ($release | ConvertFrom-Json).assets
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            if ($msiFiles.Count -gt 0) {
+              Write-Host "::error::Release $tagName contains .msi files - this is not allowed"
+              $msiFileNames = $msiFiles | ForEach-Object { $_.name }
+              Write-Host "::error::Found .msi files: $($msiFileNames -join ', ')"
+              exit 1
+            }
             $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
             echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
             Write-Host "Release $tagName has $nonSourceCount non-source assets"
@@ -132,6 +139,13 @@ jobs:
           $release = gh release view $tagName --json assets 2>$null
           if ($release) {
             $assets = ($release | ConvertFrom-Json).assets
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            if ($msiFiles.Count -gt 0) {
+              Write-Host "::error::Release $tagName contains .msi files - this is not allowed"
+              $msiFileNames = $msiFiles | ForEach-Object { $_.name }
+              Write-Host "::error::Found .msi files: $($msiFileNames -join ', ')"
+              exit 1
+            }
             $nonSourceCount = ($assets | Where-Object { $_.name -notmatch '\.(zip|tar\.gz)$' }).Count
             echo "non_source_count=$nonSourceCount" >> $env:GITHUB_OUTPUT
             Write-Host "Release $tagName has $nonSourceCount non-source assets"
