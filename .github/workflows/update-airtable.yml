@@ -1,0 +1,47 @@
+name: Update Airtable with Latest Version
+
+on:
+  push:
+    branches: [ 'main' ]
+  workflow_run:
+    workflows: ["Build macOS Installers", "Build Windows Installers"]
+    types:
+      - completed
+
+jobs:
+  update-airtable:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r .github/scripts/requirements.txt
+    
+    - name: Get version from package.json
+      id: get_version
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Extracted version: $VERSION"
+    
+    - name: Update Airtable with new version
+      run: |
+        python .github/scripts/add_latest_version_to_airtable_db.py --version "${{ steps.get_version.outputs.version }}"
+      env:
+        AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+        SSOT_BASE_ID: ${{ secrets.SSOT_BASE_ID }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+    
+    - name: Workflow summary
+      run: |
+        echo "## Airtable Update Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Version: ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Repository: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Timestamp: $(date -u)" >> $GITHUB_STEP_SUMMARY
