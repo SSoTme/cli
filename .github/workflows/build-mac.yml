@@ -24,6 +24,13 @@ jobs:
       run: |
         TAG_NAME="${{ steps.get_tag_early.outputs.tag_name }}"
         if gh release view "$TAG_NAME" &>/dev/null; then
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          if [ "$PKG_FILES" -gt 0 ]; then
+            echo "::error::Release $TAG_NAME contains .pkg files - this is not allowed"
+            PKG_NAMES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$")) | .name] | join(", ")')
+            echo "::error::Found .pkg files: $PKG_NAMES"
+            exit 1
+          fi
           NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
           echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
           echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
@@ -143,6 +150,13 @@ jobs:
       run: |
         TAG_NAME="${{ steps.get_tag_early_arm.outputs.tag_name }}"
         if gh release view "$TAG_NAME" &>/dev/null; then
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          if [ "$PKG_FILES" -gt 0 ]; then
+            echo "::error::Release $TAG_NAME contains .pkg files - this is not allowed"
+            PKG_NAMES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$")) | .name] | join(", ")')
+            echo "::error::Found .pkg files: $PKG_NAMES"
+            exit 1
+          fi
           NON_SOURCE=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.(zip|tar\\.gz)$") | not)] | length')
           echo "non_source_count=$NON_SOURCE" >> $GITHUB_OUTPUT
           echo "Release $TAG_NAME has $NON_SOURCE non-source assets"
