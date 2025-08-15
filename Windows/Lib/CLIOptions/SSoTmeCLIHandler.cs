@@ -1145,39 +1145,45 @@ Seed Url: ");
 
         private async void AccountHolder_ReplyTo(object sender, SassyMQ.Lib.RabbitMQ.PayloadEventArgs<SSOTMEPayload> e)
         {
+            // Console.WriteLine("DirectMessageQueue: {0},  Exchange: {1}, LexiconTerm: {2}, RoutingKey: {3}, SenderId: {4}", 
+            //     e.Payload.DirectMessageQueue, e.Payload.Exchange, e.Payload.LexiconTerm, e.Payload.RoutingKey, e.Payload.SenderId);
             var payload = AccountHolder.CreatePayload();
             payload.SaveCLIOptions(this);
-            if (!String.IsNullOrEmpty(this.TargetUrl))
+            
+            if (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_ping_ssotmecoordinator))
             {
-                using var client = new HttpClient();
-                payload.TranspileRequest = new TranspileRequest();
-                payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
-                var response = await client.PostAsJsonAsync($"{this.TargetUrl}", payload);
-                if (response != null)
+                if (!String.IsNullOrEmpty(this.TargetUrl) )
                 {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
-                    result = responsePayload;
-                    if (result != null)
+                    using var client = new HttpClient();
+                    payload.TranspileRequest = new TranspileRequest();
+                    payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
+               
+                    var response = await client.PostAsJsonAsync($"{this.TargetUrl}", payload);
+                    if (response != null)
                     {
-                        result.SSoTmeProject = this.AICaptureProject;
-                        if (this.clean) result.CleanFileSet();
-                        else
+                        var responseContent = await response.Content.ReadAsStringAsync();
+                        var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+                        result = responsePayload;
+                        if (result != null)
                         {
-                            var finalResult = result.SaveFileSet(this.skipClean);
+                            result.SSoTmeProject = this.AICaptureProject;
+                            if (this.clean) result.CleanFileSet();
+                            else
+                            {
+                                var finalResult = result.SaveFileSet(this.skipClean);
+                            }
                         }
                     }
                 }
-            }
-            if (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_ping_ssotmecoordinator))
-            {
-                CoordinatorProxy = new DMProxy(e.Payload.DirectMessageQueue);
-                //Console.WriteLine("Got ping response");
+                else
+                {
+                    CoordinatorProxy = new DMProxy(e.Payload.DirectMessageQueue);
 
-                payload.TranspileRequest = new TranspileRequest();
-                payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
-                payload.CLIInputFileContents = String.Empty;
-                AccountHolder.AccountHolderCommandLineTranspile(payload, CoordinatorProxy);
+                    payload.TranspileRequest = new TranspileRequest();
+                    payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
+                    payload.CLIInputFileContents = String.Empty;
+                    AccountHolder.AccountHolderCommandLineTranspile(payload, CoordinatorProxy);
+                }
             }
             else if (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_commandlinetranspile_ssotmecoordinator) ||
                     (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_requesttranspile_ssotmecoordinator)))
