@@ -1,0 +1,227 @@
+name: Build Windows Installers
+
+on:
+  push:
+    tags:
+      - 'v*'  # e.g., v1.2.3
+  workflow_dispatch:
+
+jobs:
+  build-x64:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Get release tag from package.json
+      id: get_tag_early
+      run: |
+        $packageJson = Get-Content package.json | ConvertFrom-Json
+        $version = $packageJson.version
+        $tagName = "v$version"
+        echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+        Write-Host "Checking release: $tagName"
+      shell: powershell
+    
+    - name: Early check if release has assets
+      id: early_check
+      run: |
+        $tagName = "${{ steps.get_tag_early.outputs.tag_name }}"
+        try {
+          $release = gh release view $tagName --json assets 2>$null
+          if ($release) {
+            $assets = ($release | ConvertFrom-Json).assets
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
+            if ($msiCount -ge 2) {
+              Write-Host "::notice::Skipping build - release $tagName already has $msiCount .msi files"
+            }
+          } else {
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName does not exist - proceeding with build"
+          }
+        } catch {
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
+          Write-Host "Release $tagName does not exist - proceeding with build"
+        }
+      shell: powershell
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup .NET
+      if: steps.early_check.outputs.msi_count < '2'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Build Windows Installer (x64)
+      if: steps.early_check.outputs.msi_count < '2'
+      run: |
+        ./build-installer.ps1
+      shell: powershell
+    
+    - name: Upload x64 Installer
+      if: steps.early_check.outputs.msi_count < '2'
+      uses: actions/upload-artifact@v4
+      with:
+        name: SSoTme-Installer-win-x64
+        path: Windows/Installer/bin/Release/SSoTme-Installer_win-x64.msi
+
+    - name: Get release tag from package.json
+      id: get_tag
+      run: |
+        $packageJson = Get-Content package.json | ConvertFrom-Json
+        $version = $packageJson.version
+        $tagName = "v$version"
+        echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+        Write-Host "Will upload to release: $tagName"
+      shell: powershell
+    
+    - name: Check if release already has these installers
+      id: check_release
+      run: |
+        $tagName = "${{ steps.get_tag.outputs.tag_name }}"
+        try {
+          $release = gh release view $tagName --json assets 2>$null
+          if ($release) {
+            $assets = ($release | ConvertFrom-Json).assets
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
+          } else {
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName does not exist - will create it"
+          }
+        } catch {
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
+          Write-Host "Release $tagName does not exist - will create it"
+        }
+      shell: powershell
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload to Release
+      if: steps.check_release.outputs.msi_count < '2'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag_name }}
+        files: Windows/Installer/bin/Release/SSoTme-Installer_win-x64.msi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-arm64:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Get release tag from package.json
+      id: get_tag_early_arm
+      run: |
+        $packageJson = Get-Content package.json | ConvertFrom-Json
+        $version = $packageJson.version
+        $tagName = "v$version"
+        echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+        Write-Host "Checking release: $tagName"
+      shell: powershell
+    
+    - name: Early check if release has assets
+      id: early_check_arm
+      run: |
+        $tagName = "${{ steps.get_tag_early_arm.outputs.tag_name }}"
+        try {
+          $release = gh release view $tagName --json assets 2>$null
+          if ($release) {
+            $assets = ($release | ConvertFrom-Json).assets
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
+            if ($msiCount -ge 2) {
+              Write-Host "::notice::Skipping build - release $tagName already has $msiCount .msi files"
+            }
+          } else {
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName does not exist - proceeding with build"
+          }
+        } catch {
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
+          Write-Host "Release $tagName does not exist - proceeding with build"
+        }
+      shell: powershell
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup .NET
+      if: steps.early_check_arm.outputs.msi_count < '2'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Force ARM64 Architecture
+      if: steps.early_check_arm.outputs.msi_count < '2'
+      run: |
+        # Override architecture detection to build ARM64 version
+        $buildScript = Get-Content "Windows/Installer/Scripts/build.ps1" -Raw
+        $buildScript = $buildScript -replace '\$arch = \(Get-CimInstance Win32_OperatingSystem\)\.OSArchitecture', '$arch = "ARM 64-bit"'
+        Set-Content "Windows/Installer/Scripts/build.ps1" $buildScript -NoNewline
+      shell: powershell
+    
+    - name: Build Windows Installer (ARM64)
+      if: steps.early_check_arm.outputs.msi_count < '2'
+      run: |
+        ./build-installer.ps1
+      shell: powershell
+    
+    - name: Upload ARM64 Installer
+      if: steps.early_check_arm.outputs.msi_count < '2'
+      uses: actions/upload-artifact@v4
+      with:
+        name: SSoTme-Installer-win-arm64
+        path: Windows/Installer/bin/Release/SSoTme-Installer_win-arm64.msi
+
+    - name: Get release tag from package.json
+      id: get_tag_arm
+      run: |
+        $packageJson = Get-Content package.json | ConvertFrom-Json
+        $version = $packageJson.version
+        $tagName = "v$version"
+        echo "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+        Write-Host "Will upload to release: $tagName"
+      shell: powershell
+    
+    - name: Check if release already has these installers
+      id: check_release_arm
+      run: |
+        $tagName = "${{ steps.get_tag_arm.outputs.tag_name }}"
+        try {
+          $release = gh release view $tagName --json assets 2>$null
+          if ($release) {
+            $assets = ($release | ConvertFrom-Json).assets
+            $msiFiles = ($assets | Where-Object { $_.name -match '\.msi$' })
+            $msiCount = $msiFiles.Count
+            echo "msi_count=$msiCount" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName has $msiCount .msi files"
+          } else {
+            echo "msi_count=0" >> $env:GITHUB_OUTPUT
+            Write-Host "Release $tagName does not exist - will create it"
+          }
+        } catch {
+          echo "msi_count=0" >> $env:GITHUB_OUTPUT
+          Write-Host "Release $tagName does not exist - will create it"
+        }
+      shell: powershell
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload to Release
+      if: steps.check_release_arm.outputs.msi_count < '2'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
+        files: Windows/Installer/bin/Release/SSoTme-Installer_win-arm64.msi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

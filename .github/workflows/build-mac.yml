@@ -1,0 +1,245 @@
+name: Build macOS Installers
+
+on:
+  push:
+    tags:
+      - 'v*'  # e.g., v1.2.3
+  workflow_dispatch:
+
+jobs:
+  build-intel:
+    runs-on: macos-13  # Intel architecture
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Get release tag from package.json
+      id: get_tag_early
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Checking release: $TAG_NAME"
+    
+    - name: Early check if release has assets
+      id: early_check
+      run: |
+        TAG_NAME="${{ steps.get_tag_early.outputs.tag_name }}"
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
+          if [ "$PKG_FILES" -ge 2 ]; then
+            echo "::notice::Skipping build - release $TAG_NAME already has $PKG_FILES .pkg files"
+          fi
+        else
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - proceeding with build"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup .NET
+      if: steps.early_check.outputs.pkg_count < '2'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Import Developer Certificate
+      if: steps.early_check.outputs.pkg_count < '2'
+      env:
+        DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
+        DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        DEV_INSTALLER_CERT_P12: ${{ secrets.DEVCERTIFICATE }}
+        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+      run: |
+        # Create temporary keychain
+        security create-keychain -p temp_password temp_keychain
+        security set-keychain-settings -lut 21600 temp_keychain
+        security unlock-keychain -p temp_password temp_keychain
+        
+        # Import developer certificates
+        echo "$DEV_CERT_P12" | base64 --decode > dev_cert.p12
+        echo "$DEV_INSTALLER_CERT_P12" | base64 --decode > dev_installer_cert.p12
+        
+        security import dev_cert.p12 -k temp_keychain -P "$DEV_CERT_PASSWORD" -T /usr/bin/codesign
+        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productsign
+        
+        # Set keychain as default
+        security list-keychains -s temp_keychain
+        security default-keychain -s temp_keychain
+        
+        # Allow codesign to access the keychain
+        security set-key-partition-list -S apple-tool:,apple: -s -k temp_password temp_keychain
+        
+        # Clean up certificate files
+        rm dev_cert.p12 dev_installer_cert.p12
+    
+    - name: Build macOS Installer
+      if: steps.early_check.outputs.pkg_count < '2'
+      run: |
+        chmod +x ./build-package.sh
+        # Update build-package.sh to use GitHub secrets instead of hardcoded values
+        sed -i '' "s/DEV_INS_KEYCHAIN_ID=\".*\"/DEV_INS_KEYCHAIN_ID=\"${{ secrets.DEV_INS_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/DEV_APP_KEYCHAIN_ID=\".*\"/DEV_APP_KEYCHAIN_ID=\"${{ secrets.DEV_APP_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/NOTARYPASS=\".*\"/NOTARYPASS=\"${{ secrets.NOTARY_PASSWORD }}\"/" build-package.sh
+        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLEID }}\"/" build-package.sh
+        ./build-package.sh
+    
+    - name: Upload Intel Installer
+      if: steps.early_check.outputs.pkg_count < '2'
+      uses: actions/upload-artifact@v4
+      with:
+        name: SSoTme-Installer-x86_64
+        path: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
+
+    - name: Get release tag from package.json
+      id: get_tag
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Will upload to release: $TAG_NAME"
+    
+    - name: Check if release already has these installers
+      id: check_release
+      run: |
+        TAG_NAME="${{ steps.get_tag.outputs.tag_name }}"
+        # Check if release exists and count .pkg files
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
+        else
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - will create it"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload to Release
+      if: steps.check_release.outputs.pkg_count < '2'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag_name }}
+        files: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-arm:
+    runs-on: macos-14  # Apple Silicon architecture
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Get release tag from package.json
+      id: get_tag_early_arm
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Checking release: $TAG_NAME"
+    
+    - name: Early check if release has assets
+      id: early_check_arm
+      run: |
+        TAG_NAME="${{ steps.get_tag_early_arm.outputs.tag_name }}"
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
+          if [ "$PKG_FILES" -ge 2 ]; then
+            echo "::notice::Skipping build - release $TAG_NAME already has $PKG_FILES .pkg files"
+          fi
+        else
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - proceeding with build"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup .NET
+      if: steps.early_check_arm.outputs.pkg_count < '2'
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Import Developer Certificate
+      if: steps.early_check_arm.outputs.pkg_count < '2'
+      env:
+        DEV_CERT_P12: ${{ secrets.APPCERTIFICATE }}
+        DEV_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        DEV_INSTALLER_CERT_P12: ${{ secrets.DEVCERTIFICATE }}
+        DEV_INSTALLER_CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+      run: |
+        # Create temporary keychain
+        security create-keychain -p temp_password temp_keychain
+        security set-keychain-settings -lut 21600 temp_keychain
+        security unlock-keychain -p temp_password temp_keychain
+        
+        # Import developer certificates
+        echo "$DEV_CERT_P12" | base64 --decode > dev_cert.p12
+        echo "$DEV_INSTALLER_CERT_P12" | base64 --decode > dev_installer_cert.p12
+        
+        security import dev_cert.p12 -k temp_keychain -P "$DEV_CERT_PASSWORD" -T /usr/bin/codesign
+        security import dev_installer_cert.p12 -k temp_keychain -P "$DEV_INSTALLER_CERT_PASSWORD" -T /usr/bin/productsign
+        
+        # Set keychain as default
+        security list-keychains -s temp_keychain
+        security default-keychain -s temp_keychain
+        
+        # Allow codesign to access the keychain
+        security set-key-partition-list -S apple-tool:,apple: -s -k temp_password temp_keychain
+        
+        # Clean up certificate files
+        rm dev_cert.p12 dev_installer_cert.p12
+    
+    - name: Build macOS Installer
+      if: steps.early_check_arm.outputs.pkg_count < '2'
+      run: |
+        chmod +x ./build-package.sh
+        # Update build-package.sh to use GitHub secrets instead of hardcoded values
+        sed -i '' "s/DEV_INS_KEYCHAIN_ID=\".*\"/DEV_INS_KEYCHAIN_ID=\"${{ secrets.DEV_INS_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/DEV_APP_KEYCHAIN_ID=\".*\"/DEV_APP_KEYCHAIN_ID=\"${{ secrets.DEV_APP_KEYCHAIN_ID }}\"/" build-package.sh
+        sed -i '' "s/NOTARYPASS=\".*\"/NOTARYPASS=\"${{ secrets.NOTARY_PASSWORD }}\"/" build-package.sh
+        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLEID }}\"/" build-package.sh
+        ./build-package.sh
+    
+    - name: Upload ARM Installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: SSoTme-Installer-arm64
+        path: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
+
+    - name: Get release tag from package.json
+      id: get_tag_arm
+      run: |
+        VERSION=$(grep '"version"' package.json | cut -d'"' -f4)
+        TAG_NAME="v$VERSION"
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Will upload to release: $TAG_NAME"
+    
+    - name: Check if release already has these installers
+      id: check_release_arm
+      run: |
+        TAG_NAME="${{ steps.get_tag_arm.outputs.tag_name }}"
+        # Check if release exists and count .pkg files
+        if gh release view "$TAG_NAME" &>/dev/null; then
+          PKG_FILES=$(gh release view "$TAG_NAME" --json assets --jq '[.assets[] | select(.name | test("\\.pkg$"))] | length')
+          echo "pkg_count=$PKG_FILES" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME has $PKG_FILES .pkg files"
+        else
+          echo "pkg_count=0" >> $GITHUB_OUTPUT
+          echo "Release $TAG_NAME does not exist - will create it"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload to Release
+      if: steps.check_release_arm.outputs.pkg_count < '2'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
+        files: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

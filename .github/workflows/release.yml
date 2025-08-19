@@ -6,7 +6,7 @@ on:
 
 jobs:
 
-  # On PR merge into main, create a prerelease with the PR description
+  # On PR merge into main, create a release with the PR description
   release:
     name: Publish Package
     runs-on: ubuntu-latest
@@ -39,9 +39,6 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Who am I
-        run: git config --list && git remote -v
-
       - name: Fetch Package Version
         id: version
         env:
@@ -60,7 +57,7 @@ jobs:
           fi
 
       # Create initial pre-release
-      - name: Create Pre-Release
+      - name: Create Release
         if: steps.version.outputs.skip == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -68,5 +65,4 @@ jobs:
           gh release create ${{ steps.version.outputs.version }} \
             --title "Release ${{ steps.version.outputs.version }}" \
             --notes-file notes.txt \
-            --target ${{ github.sha }} \
-            --prerelease
+            --target ${{ github.sha }}
