@@ -49,6 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string CLI_VERSION = "2025.08.07";
 
         private SSOTMEPayload result;
+        private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
 
         public SMQAccountHolder AccountHolder { get; private set; }
         public DMProxy CoordinatorProxy { get; private set; }
@@ -1143,6 +1144,28 @@ Seed Url: ");
             }
         }
 
+        private void conditionallyPopulateTranspiler(SSOTMEPayload payload, string transpilerName)
+        {
+            // Always initialize the Transpiler property to avoid NullReferenceException
+            if (payload.Transpiler == null)
+            {
+                payload.Transpiler = new Transpiler();
+                
+                // Set a name based on the transpiler string if available
+                if (!string.IsNullOrEmpty(this.transpiler))
+                {
+                    payload.Transpiler.Name = this.transpiler;
+                    // LowerHyphenName is typically derived from Name in the Transpiler class
+                    // If it's not automatically set, we would set it here
+                }
+                else
+                {
+                    // Use passed transpiler name
+                    payload.Transpiler.Name = transpilerName;
+                }
+            }
+        }
+
         private async void AccountHolder_ReplyTo(object sender, SassyMQ.Lib.RabbitMQ.PayloadEventArgs<SSOTMEPayload> e)
         {
             // Console.WriteLine("DirectMessageQueue: {0},  Exchange: {1}, LexiconTerm: {2}, RoutingKey: {3}, SenderId: {4}", 
@@ -1154,6 +1177,7 @@ Seed Url: ");
             {
                 if (!String.IsNullOrEmpty(this.TargetUrl) )
                 {
+                    this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
                     using var client = new HttpClient();
                     payload.TranspileRequest = new TranspileRequest();
                     payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
