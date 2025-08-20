@@ -17,6 +17,7 @@ using SSoTme.OST.Lib.Extensions;
 using AIC.SassyMQ.Lib;
 using System.Reflection;
 using System.Xml.Linq;
+using System.Security.Authentication;
 
 namespace SassyMQ.Lib.RabbitMQ.Payload
 {
@@ -146,7 +147,7 @@ namespace SassyMQ.Lib.RabbitMQ.Payload
                 this.RMQConnection = null;
             }
 
-            this.RMQFactory = new ConnectionFactory() { HostName = this.RabbitEndpoint, Port = 5671, VirtualHost = this.VirtualHost, UserName = this.Username, Password = this.Password, Ssl = new SslOption() { ServerName = "explore.ssot.me", Enabled = true } };
+            this.RMQFactory = new ConnectionFactory() { HostName = this.RabbitEndpoint, Port = 5671, VirtualHost = this.VirtualHost, UserName = this.Username, Password = this.Password, Ssl = new SslOption() { ServerName = "explore.ssot.me", Enabled = true, Version = SslProtocols.None } };
             this.RMQConnection = this.RMQFactory.CreateConnection();
             this.RMQChannel = this.RMQConnection.CreateModel();
 
