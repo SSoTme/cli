@@ -534,6 +534,10 @@ Seed Url: ");
                 case "clone":
                     this.cloneSeed = true;
                     break;
+                
+                case "dryRun":
+                    this.dryRun = true;
+                    break;
 
                 case "listseeds":
                     this.listSeeds = true;
@@ -668,7 +672,7 @@ Seed Url: ");
                             Name = "remote-" + this.TargetUrl,
                         }
                     };
-                    this.AICaptureProject.Install(result, this.transpilerGroup);
+                    this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
                 }
                 else if (!String.IsNullOrEmpty(this.execute))
                 {
@@ -682,7 +686,7 @@ Seed Url: ");
                                 Name = "-execute"
                             }
                         };
-                        this.AICaptureProject.Install(result, this.transpilerGroup);
+                        this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
                     }
                 }
                 else if (this.build || this.buildLocal)
@@ -772,7 +776,7 @@ Seed Url: ");
                 if (!ReferenceEquals(AccountHolder, null)) AccountHolder.Disconnect();
                 if (updateProject)
                 {
-                    if (this.install) this.AICaptureProject.Install(result, this.transpilerGroup);
+                    if (this.install) this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
                     else if (!ReferenceEquals(projectTranspiler, null))
                     {
                         GetProjectOrThrow().Update(projectTranspiler, result);
