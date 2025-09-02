@@ -640,14 +640,14 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void Install(SSOTMEPayload result, string transpilerGroup)
+        public void Install(SSOTMEPayload result, string transpilerGroup, bool dryRun)
         {
             string relativePath = this.GetProjectRelativePath(Environment.CurrentDirectory);
 
             var projectTranspiler = new ProjectTranspiler(relativePath, result);
             projectTranspiler.TranspilerGroup = transpilerGroup;
 
-            this.IntegrateNewTranspiler(projectTranspiler);
+            this.IntegrateNewTranspiler(projectTranspiler, dryRun);
 
             this.Save();
         }
@@ -971,17 +971,34 @@ namespace SSoTme.OST.Lib.DataClasses
 
         private void IntegrateExistingTranspiler(ProjectTranspiler projectTranspiler)
         {
-            this.IntegrateTranspiler(projectTranspiler, false);
+            this.IntegrateTranspiler(projectTranspiler, false, false);
         }
 
-        private void IntegrateNewTranspiler(ProjectTranspiler projectTranspiler)
+        private void IntegrateNewTranspiler(ProjectTranspiler projectTranspiler, bool dryRun)
         {
-            this.IntegrateTranspiler(projectTranspiler, true);
+            this.IntegrateTranspiler(projectTranspiler, true, dryRun);
         }
 
-        private void IntegrateTranspiler(ProjectTranspiler projectTranspiler, bool addIfMissing)
+        private void IntegrateTranspiler(ProjectTranspiler projectTranspiler, bool addIfMissing, bool dryRun)
         {
             ProjectTranspiler matchingTranspiler = FindMatchingTranspiler(projectTranspiler);
+
+            if (dryRun)
+            {
+                Console.WriteLine($"DRY RUN: Installing {projectTranspiler.Name}");
+                
+                if (matchingTranspiler is null)
+                {
+                    Console.WriteLine($"DRY RUN: The {projectTranspiler.Name} transpiler will be installed in path {projectTranspiler.RelativePath}");
+                }
+                else
+                {
+                    Console.WriteLine($"DRY RUN: The existing {projectTranspiler.Name} transpiler be replaced in path {projectTranspiler.RelativePath}");
+                }
+
+                return;
+            }
+            
             int firstIndex = -1;
             while (!ReferenceEquals(matchingTranspiler, null))
             {

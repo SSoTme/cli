@@ -72,6 +72,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Clones a specified seed", MinOccurs = 0, Aliases = "cs,clone")]
         public bool cloneSeed { get; set; }
         
+        [CommandLineOption(Description = "Dry run", MinOccurs = 0, Aliases = "dr")]
+        public bool dryRun { get; set; }
+        
         [CommandLineOption(Description = "The account which the transpiler belongs to", MinOccurs = 0, Aliases = "a")]
         public string account { get; set; }
         
