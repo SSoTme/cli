@@ -1,9 +1,8 @@
 name: Build macOS Installers
 
 on:
-  push:
-    tags:
-      - 'v*'  # e.g., v1.2.3
+  release:
+    types: [ prereleased, released ]
   workflow_dispatch:
 
 jobs:
