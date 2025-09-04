@@ -30,8 +30,7 @@ namespace SSoTme.OST.ConApp
 
                 if (returnValue != 0 && !handler.SuppressKeyPress)
                 {
-                    Console.WriteLine("\n\nPress any key to continue.");
-                    Console.ReadKey();
+                    SafeReadKey();
                 }
 
                 return returnValue;
@@ -48,6 +47,22 @@ namespace SSoTme.OST.ConApp
             // other exceptions throw normally
         }
         
+        private static void SafeReadKey()
+        {
+            try
+            {
+                if (!Console.IsInputRedirected && Environment.UserInteractive)
+                {
+                    Console.WriteLine("\n\nPress any key to continue.");
+                    Console.ReadKey();
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // Silently continue - we're in a redirected environment
+            }
+        }
+
         private static void ShowError(string msg, ConsoleColor color = ConsoleColor.Red)
         {
             var curColor = Console.ForegroundColor;
