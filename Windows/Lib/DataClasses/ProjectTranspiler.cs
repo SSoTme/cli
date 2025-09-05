@@ -21,6 +21,12 @@ namespace SSoTme.OST.Lib.DataClasses
         public Transpiler MatchedTranspiler { get; set; }
         public SSoTmeCLIHandler CLIHandler { get; private set; }
 
+        // Fields used by the my.effortlessapi tool marketplace that should get preserved during builds
+        // CLI doesn't use these fields, just preserves if they exist
+        public string MarketToolName { get; set; }
+        public string LastUsed { get; set; }
+        public string NumExecutions { get; set; }
+
         public ProjectTranspiler()
         {
             this.InitPoco();

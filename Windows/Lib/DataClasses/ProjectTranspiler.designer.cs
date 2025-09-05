@@ -51,16 +51,6 @@ namespace SSoTme.OST.Lib.DataClasses
     
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "TranspilerGroup")]
         public String TranspilerGroup { get; set; }
-        
-        // Fields used by the my.effortlessapi tool marketplace that should get preserved during builds
-        // CLI doesn't use these fields, just preserves if they exist
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Include, PropertyName = "MarketToolName")]
-        public string MarketToolName { get; set; }
-        
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Include, PropertyName = "LastUsed")]
-        public string LastUsed { get; set; }
-        
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Include, PropertyName = "NumExecutions")]
-        public string NumExecutions { get; set; }
+
     }
 }
