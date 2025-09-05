@@ -14,7 +14,6 @@ namespace SSoTme.OST.Lib.DataClasses
             
             this.ProjectTranspilerId = Guid.NewGuid();
             
-
         }
         
         partial void AfterGet();
@@ -22,9 +21,6 @@ namespace SSoTme.OST.Lib.DataClasses
         partial void AfterInsert();
         partial void BeforeUpdate();
         partial void AfterUpdate();
-
-        
-
         
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "ProjectTranspilerId")]
         public Guid ProjectTranspilerId { get; set; }
@@ -47,7 +43,7 @@ namespace SSoTme.OST.Lib.DataClasses
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "LastTranspilerRequestId")]
         public Guid LastTranspilerRequestId { get; set; }
     
-        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "IsDisabled")]
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Include, PropertyName = "IsDisabled")]
         public Boolean IsDisabled { get; set; }
     
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "SortOrder")]
@@ -55,12 +51,16 @@ namespace SSoTme.OST.Lib.DataClasses
     
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "TranspilerGroup")]
         public String TranspilerGroup { get; set; }
-    
-
         
-
+        // Fields used by the my.effortlessapi tool marketplace that should get preserved during builds
+        // CLI doesn't use these fields, just preserves if they exist
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Include, PropertyName = "MarketToolName")]
+        public string MarketToolName { get; set; }
         
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Include, PropertyName = "LastUsed")]
+        public string LastUsed { get; set; }
         
-        
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Include, PropertyName = "NumExecutions")]
+        public string NumExecutions { get; set; }
     }
 }
