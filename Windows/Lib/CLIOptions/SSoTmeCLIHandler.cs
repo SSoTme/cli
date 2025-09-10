@@ -604,7 +604,17 @@ Seed Url: ");
                 else if (this.localGuide)
                 {
                     var effortlessAPIService = new MyEffortlessAPIService();
-                    effortlessAPIService.HandleLocalGuide();
+                    
+                    // Get project name from transpiler argument or current directory
+                    string projectName = this.transpiler;
+                    if (string.IsNullOrEmpty(projectName))
+                    {
+                        // Try to infer project name from current directory
+                        projectName = Path.GetFileName(Environment.CurrentDirectory);
+                        Console.WriteLine($"No project name specified, using current directory: {projectName}");
+                    }
+                    
+                    effortlessAPIService.HandleLocalGuide(projectName).Wait();
                     this.SuppressTranspile = true;
                     this.SuppressKeyPress = true;
                     return 0;
