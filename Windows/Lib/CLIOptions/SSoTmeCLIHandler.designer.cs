@@ -66,14 +66,14 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Don't clean the output before cooking", MinOccurs = 0, Aliases = "sc")]
         public bool skipClean { get; set; }
         
+        [CommandLineOption(Description = "A local guide that will connect to the my.effortlessapi.com Guide", MinOccurs = 0, Aliases = "lg")]
+        public bool localGuide { get; set; }
+        
         [CommandLineOption(Description = "Lists seeds available to be clones", MinOccurs = 0, Aliases = "lsd")]
         public bool listSeeds { get; set; }
         
         [CommandLineOption(Description = "Clones a specified seed", MinOccurs = 0, Aliases = "cs,clone")]
         public bool cloneSeed { get; set; }
-        
-        [CommandLineOption(Description = "Dry run", MinOccurs = 0, Aliases = "dr")]
-        public bool dryRun { get; set; }
         
         [CommandLineOption(Description = "The account which the transpiler belongs to", MinOccurs = 0, Aliases = "a")]
         public string account { get; set; }
@@ -143,13 +143,15 @@ namespace SSoTme.OST.Lib.CLIOptions
         
         [CommandLineOption(Description = "Show configured settings", MinOccurs = 0, Aliases = "")]
         public bool info { get; set; }
-
-        [CommandLineOption(Description = "target url", MinOccurs = 0, Aliases = "t")]
-        public string TargetUrl { get; set; }
-
         
         [CommandLineOption(Description = "Show CLI version", MinOccurs = 0, Aliases = "v")]
         public bool version { get; set; }
+        
+        [CommandLineOption(Description = "Dry run of a buid", MinOccurs = 0, Aliases = "dr")]
+        public bool dryRun { get; set; }
+        
+        [CommandLineOption(Description = "TargetUrl of the tool bing invoked", MinOccurs = 0, Aliases = "g")]
+        public string targetUrl { get; set; }
         
     }
 }

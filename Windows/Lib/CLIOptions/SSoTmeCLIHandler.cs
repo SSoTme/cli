@@ -160,7 +160,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         }
                         else
                         {
-                            this.TargetUrl = this.transpiler;
+                            this.targetUrl = this.transpiler;
                             this.transpiler = "remote-transpiler";
                         }
                     }
@@ -669,7 +669,7 @@ Seed Url: ");
                     {
                         Transpiler = new Transpiler()
                         {
-                            Name = "remote-" + this.TargetUrl,
+                            Name = "remote-" + this.targetUrl,
                         }
                     };
                     this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
@@ -729,7 +729,7 @@ Seed Url: ");
                     this.AICaptureProject?.CleanAll(this.preserveZFS);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
-                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.TargetUrl))
+                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl))
                 {
                     ShowError("Missing argument name of transpiler");
                     return -1;
@@ -1179,14 +1179,14 @@ Seed Url: ");
             
             if (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_ping_ssotmecoordinator))
             {
-                if (!String.IsNullOrEmpty(this.TargetUrl) )
+                if (!String.IsNullOrEmpty(this.targetUrl) )
                 {
                     this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
                     using var client = new HttpClient();
                     payload.TranspileRequest = new TranspileRequest();
                     payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
                
-                    var response = await client.PostAsJsonAsync($"{this.TargetUrl}", payload);
+                    var response = await client.PostAsJsonAsync($"{this.targetUrl}", payload);
                     if (response != null)
                     {
                         var responseContent = await response.Content.ReadAsStringAsync();

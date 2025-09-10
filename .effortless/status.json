@@ -1,0 +1,24 @@
+{
+  "current_operations": {
+    "conversion": {
+      "active": false,
+      "type": null,
+      "started_at": null,
+      "progress": null
+    },
+    "marketplace": {
+      "active": false,
+      "tool_id": null,
+      "started_at": null,
+      "progress": null
+    },
+    "indexing": {
+      "active": false,
+      "started_at": null,
+      "progress": null
+    }
+  },
+  "last_operations": {},
+  "errors": [],
+  "updated_at": "2025-09-09T10:19:58.571623"
+}

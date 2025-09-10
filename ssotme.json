@@ -18,6 +18,7 @@
       "Name": "JsonToHandlebars",
       "RelativePath": "",
       "CommandLine": "json-to-handlebars -i ./SSoT/single-source-of-truth.json -i ./README.hbrs -o ./README.md",
+      "IsDisabled": false,
       "TranspilerGroup": "aic"
     },
     {
@@ -28,7 +29,8 @@
       "IsSSoTTranspiler": false,
       "Name": "OdxmlToCSharpPOCOs",
       "RelativePath": "/Windows/Lib/DataClasses",
-      "CommandLine": "ODXMLToCSharpPOCOs -i ../../../ODXML/DataSchema.odxml -p namespace=SSoTme.OST.Lib.DataClasses -p include-load-methods=false"
+      "CommandLine": "ODXMLToCSharpPOCOs -i ../../../ODXML/DataSchema.odxml -p namespace=SSoTme.OST.Lib.DataClasses -p include-load-methods=false",
+      "IsDisabled": true
     },
     {
       "MatchedTranspiler": {
@@ -38,7 +40,8 @@
       "IsSSoTTranspiler": false,
       "Name": "GSheetToPlossumCmdLineOptions",
       "RelativePath": "/Windows/Lib/CLIOptions",
-      "CommandLine": "GSheetToPlossumCmdLineOptions https://docs.google.com/spreadsheets/d/1v3pAQu6h3FYAaNqAmcL6j38ohckACRUSOVC33okFwI0/export?gid=1074048491&format=csv -p handlerName=SSoTmeCLIHandler -p namespace=SSoTme.OST.Lib.CLIOptions -p \"application=SSoTme CLI\" -p \"copyright=Copyright 2025, EffortlessAPI.com\""
+      "CommandLine": "GSheetToPlossumCmdLineOptions https://docs.google.com/spreadsheets/d/1v3pAQu6h3FYAaNqAmcL6j38ohckACRUSOVC33okFwI0/export?gid=1074048491&format=csv -p handlerName=SSoTmeCLIHandler -p namespace=SSoTme.OST.Lib.CLIOptions -p \"application=SSoTme CLI\" -p \"copyright=Copyright 2025, EffortlessAPI.com\"",
+      "IsDisabled": false
     },
     {
       "MatchedTranspiler": {
@@ -48,7 +51,8 @@
       "IsSSoTTranspiler": false,
       "Name": "OdxmlToNodeJSDocs",
       "RelativePath": "/docs/schema",
-      "CommandLine": "odxml42/odxml-to-nodejs-docs -i ../../ODXML/DataSchema.odxml"
+      "CommandLine": "odxml42/odxml-to-nodejs-docs -i ../../ODXML/DataSchema.odxml",
+      "IsDisabled": false
     },
     {
       "MatchedTranspiler": {
@@ -58,7 +62,8 @@
       "IsSSoTTranspiler": false,
       "Name": "XmlXsltTransform",
       "RelativePath": "/docs",
-      "CommandLine": "xml-xslt-transform -i ../ODXML/DataSchema.odxml -i CreateSSoTmeDocs.xslt"
+      "CommandLine": "xml-xslt-transform -i ../ODXML/DataSchema.odxml -i CreateSSoTmeDocs.xslt",
+      "IsDisabled": false
     },
     {
       "MatchedTranspiler": {
@@ -68,7 +73,8 @@
       "IsSSoTTranspiler": false,
       "Name": "PublicGSheetToXml",
       "RelativePath": "/docs/seeds",
-      "CommandLine": "public-gsheet-to-xml https://docs.google.com/spreadsheets/d/1v3pAQu6h3FYAaNqAmcL6j38ohckACRUSOVC33okFwI0/edit#gid=2133303844 -o Seeds.xml"
+      "CommandLine": "public-gsheet-to-xml https://docs.google.com/spreadsheets/d/1v3pAQu6h3FYAaNqAmcL6j38ohckACRUSOVC33okFwI0/edit#gid=2133303844 -o Seeds.xml",
+      "IsDisabled": false
     },
     {
       "MatchedTranspiler": {
@@ -78,7 +84,8 @@
       "IsSSoTTranspiler": false,
       "Name": "XmlXsltTransform",
       "RelativePath": "/docs/seeds",
-      "CommandLine": "xml-xslt-transform -i ./Seeds.xml -i DescribeSeeds.xslt"
+      "CommandLine": "xml-xslt-transform -i ./Seeds.xml -i DescribeSeeds.xslt",
+      "IsDisabled": false
     }
   ]
 }
