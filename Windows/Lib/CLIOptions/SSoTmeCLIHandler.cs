@@ -28,6 +28,7 @@ using SSoTme.OST.Core.Lib.Extensions;
 using System.ComponentModel;
 using Newtonsoft.Json;
 using System.Net.Http.Json;
+using SSoTme.OST.Lib.Services;
 
 namespace SSoTme.OST.Lib.CLIOptions
 {
@@ -220,7 +221,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed)
+                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide)
                 {
                     continueToLoad = false;
                 }
@@ -572,6 +573,11 @@ Seed Url: ");
                     this.descibeAll = true;
                     break;
 
+                case "localguide":
+                case "lg":
+                    this.localGuide = true;
+                    break;
+
                 default:
                     return;
             }
@@ -589,10 +595,19 @@ Seed Url: ");
                 var zfsFileSetFile = this.ZFSFileSetFile;
                 if (this.authenticate)
                 {
-                    if (!this.CheckAuthenticationNow())
-                    {
-                        return -1;
-                    }
+                    var effortlessAPIService = new MyEffortlessAPIService();
+                    effortlessAPIService.HandleAuth().Wait();
+                    this.SuppressTranspile = true;
+                    this.SuppressKeyPress = true;
+                    return 0;
+                }
+                else if (this.localGuide)
+                {
+                    var effortlessAPIService = new MyEffortlessAPIService();
+                    effortlessAPIService.HandleLocalGuide();
+                    this.SuppressTranspile = true;
+                    this.SuppressKeyPress = true;
+                    return 0;
                 }
                 else if (this.describe)
                 {
