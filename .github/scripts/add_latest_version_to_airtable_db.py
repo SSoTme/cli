@@ -2,6 +2,7 @@ import asyncio
 import pyairtable
 import logging
 import time
+import uuid
 import os
 import argparse
 from datetime import datetime
@@ -171,7 +172,7 @@ async def main():
             'Date': current_date,
             'Version': args.version.replace('.', ''),
             'ReleaseIndex': release_index,
-            'InstallerId': f"cli-{args.version}-{release_index}",
+            'InstallerId': str(uuid.uuid4()),
             **installer_urls
         }
         
