@@ -25,6 +25,19 @@ echo "Root dir: $ROOT_DIR"
 
 cd $ROOT_DIR
 
+# Update package.json with current timestamp version
+TIMESTAMP=$(date +"%Y.%m.%d.%H%M")
+PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
+if [ -f "$PACKAGE_JSON_PATH" ]; then
+    OLD_VERSION=$(grep -o '"version": "[^"]*"' "$PACKAGE_JSON_PATH" | cut -d'"' -f4)
+    # Use a temp file to preserve formatting
+    jq --arg ver "$TIMESTAMP" '.version = $ver' "$PACKAGE_JSON_PATH" > "$PACKAGE_JSON_PATH.tmp" && mv "$PACKAGE_JSON_PATH.tmp" "$PACKAGE_JSON_PATH"
+    echo "Updated package.json version from $OLD_VERSION to $TIMESTAMP"
+else
+    echo "ERROR: package.json not found at: $PACKAGE_JSON_PATH"
+    exit 1
+fi
+
 SOURCE_DIR="$ROOT_DIR/ssotme"
 RESOURCES_DIR="$INSTALLER_DIR/Resources"
 ASSETS_DIR="$INSTALLER_DIR/Assets"
