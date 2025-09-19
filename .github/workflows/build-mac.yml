@@ -77,13 +77,9 @@ jobs:
     - name: Build macOS Installer
       if: steps.early_check.outputs.pkg_count < '2'
       run: |
-        chmod +x ./build-package.sh
-        # Update build-package.sh to use GitHub secrets instead of hardcoded values
-        sed -i '' "s/DEV_INS_KEYCHAIN_ID=\".*\"/DEV_INS_KEYCHAIN_ID=\"${{ secrets.DEV_INS_KEYCHAIN_ID }}\"/" build-package.sh
-        sed -i '' "s/DEV_APP_KEYCHAIN_ID=\".*\"/DEV_APP_KEYCHAIN_ID=\"${{ secrets.DEV_APP_KEYCHAIN_ID }}\"/" build-package.sh
-        sed -i '' "s/NOTARYPASS=\".*\"/NOTARYPASS=\"${{ secrets.NOTARY_PASSWORD }}\"/" build-package.sh
-        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLEID }}\"/" build-package.sh
-        ./build-package.sh
+        ARCHITECTURE=$(uname -m)
+        INSTALLER_NAME="SSoTme-Installer-$ARCHITECTURE.pkg"
+        /bin/bash macOS/Installer/Scripts/build.sh --no-update "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
     
     - name: Upload Intel Installer
       if: steps.early_check.outputs.pkg_count < '2'
@@ -196,13 +192,9 @@ jobs:
     - name: Build macOS Installer
       if: steps.early_check_arm.outputs.pkg_count < '2'
       run: |
-        chmod +x ./build-package.sh
-        # Update build-package.sh to use GitHub secrets instead of hardcoded values
-        sed -i '' "s/DEV_INS_KEYCHAIN_ID=\".*\"/DEV_INS_KEYCHAIN_ID=\"${{ secrets.DEV_INS_KEYCHAIN_ID }}\"/" build-package.sh
-        sed -i '' "s/DEV_APP_KEYCHAIN_ID=\".*\"/DEV_APP_KEYCHAIN_ID=\"${{ secrets.DEV_APP_KEYCHAIN_ID }}\"/" build-package.sh
-        sed -i '' "s/NOTARYPASS=\".*\"/NOTARYPASS=\"${{ secrets.NOTARY_PASSWORD }}\"/" build-package.sh
-        sed -i '' "s/APPLEID=\".*\"/APPLEID=\"${{ secrets.APPLEID }}\"/" build-package.sh
-        ./build-package.sh
+        ARCHITECTURE=$(uname -m)
+        INSTALLER_NAME="SSoTme-Installer-$ARCHITECTURE.pkg"
+        /bin/bash macOS/Installer/Scripts/build.sh --no-update "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
     
     - name: Upload ARM Installer
       uses: actions/upload-artifact@v4

@@ -5,11 +5,28 @@
 #           - cli/macOS/Installer/bin/SSoTme-Installer.pkg
 
 
-THE_INSTALLER_FILENAME=$1
-DEV_INSTALLER_KEYCHAIN_ID=$2
-DEV_EXECUTABLE_KEYCHAIN_ID=$3
-APPLE_EMAIL=$4
-NOTARYPASS=$5
+# Parse command line arguments
+NO_UPDATE=false
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --no-update)
+            NO_UPDATE=true
+            shift
+            ;;
+        *)
+            ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Set positional parameters from remaining arguments
+THE_INSTALLER_FILENAME=${ARGS[0]}
+DEV_INSTALLER_KEYCHAIN_ID=${ARGS[1]}
+DEV_EXECUTABLE_KEYCHAIN_ID=${ARGS[2]}
+APPLE_EMAIL=${ARGS[3]}
+NOTARYPASS=${ARGS[4]}
 
 INSTALLER_DIR="$( dirname "$( dirname "${BASH_SOURCE[0]}" )")"
 
@@ -25,17 +42,21 @@ echo "Root dir: $ROOT_DIR"
 
 cd $ROOT_DIR
 
-# Update package.json with current timestamp version
-TIMESTAMP=$(date +"%Y.%m.%d.%H%M")
-PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
-if [ -f "$PACKAGE_JSON_PATH" ]; then
-    OLD_VERSION=$(grep -o '"version": "[^"]*"' "$PACKAGE_JSON_PATH" | cut -d'"' -f4)
-    # Use a temp file to preserve formatting
-    jq --arg ver "$TIMESTAMP" '.version = $ver' "$PACKAGE_JSON_PATH" > "$PACKAGE_JSON_PATH.tmp" && mv "$PACKAGE_JSON_PATH.tmp" "$PACKAGE_JSON_PATH"
-    echo "Updated package.json version from $OLD_VERSION to $TIMESTAMP"
+# Update package.json with current timestamp version (unless --no-update is specified)
+if [ "$NO_UPDATE" = false ]; then
+    TIMESTAMP=$(date +"%Y.%m.%d.%H%M")
+    PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
+    if [ -f "$PACKAGE_JSON_PATH" ]; then
+        OLD_VERSION=$(grep -o '"version": "[^"]*"' "$PACKAGE_JSON_PATH" | cut -d'"' -f4)
+        # Use a temp file to preserve formatting
+        jq --arg ver "$TIMESTAMP" '.version = $ver' "$PACKAGE_JSON_PATH" > "$PACKAGE_JSON_PATH.tmp" && mv "$PACKAGE_JSON_PATH.tmp" "$PACKAGE_JSON_PATH"
+        echo "Updated package.json version from $OLD_VERSION to $TIMESTAMP"
+    else
+        echo "ERROR: package.json not found at: $PACKAGE_JSON_PATH"
+        exit 1
+    fi
 else
-    echo "ERROR: package.json not found at: $PACKAGE_JSON_PATH"
-    exit 1
+    echo "Skipping automatic version update (--no-update specified)"
 fi
 
 SOURCE_DIR="$ROOT_DIR/ssotme"

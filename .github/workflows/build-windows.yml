@@ -58,7 +58,7 @@ jobs:
     - name: Build Windows Installer (x64)
       if: steps.early_check.outputs.msi_count < '2'
       run: |
-        ./build-installer.ps1
+        powershell -ExecutionPolicy Bypass -File Windows/Installer/Scripts/build.ps1 -NoUpdate
       shell: powershell
     
     - name: Upload x64 Installer
@@ -172,7 +172,7 @@ jobs:
     - name: Build Windows Installer (ARM64)
       if: steps.early_check_arm.outputs.msi_count < '2'
       run: |
-        ./build-installer.ps1
+        powershell -ExecutionPolicy Bypass -File Windows/Installer/Scripts/build.ps1 -NoUpdate
       shell: powershell
     
     - name: Upload ARM64 Installer
