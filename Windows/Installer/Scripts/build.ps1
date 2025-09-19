@@ -9,6 +9,20 @@ param (
     [string]$Platform = "x64"
 )
 
+# Update package.json with current timestamp version
+$timestamp = Get-Date -Format "yyyy.MM.dd.HHmm"
+$packageJsonPath = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) "package.json"
+if (Test-Path $packageJsonPath) {
+    $packageContent = Get-Content $packageJsonPath -Raw
+    $packageJson = $packageContent | ConvertFrom-Json
+    $oldVersion = $packageJson.version
+    $packageJson.version = $timestamp
+    $packageJson | ConvertTo-Json -Depth 10 | Set-Content $packageJsonPath -NoNewline
+    Write-Host "Updated package.json version from $oldVersion to $timestamp" -ForegroundColor Green
+} else {
+    Write-Error "package.json not found at: $packageJsonPath"
+    exit 1
+}
 
 # Helper function to update version if changed
 function Update-VersionIfChanged {
