@@ -3,8 +3,8 @@
 	<PropertyGroup>
 		<OutputName>SSoTme-Installer_win-x64</OutputName>
 		<OutputType>Package</OutputType>
-		<Platform>x86</Platform>
-		<SSoTmeVersion>2025.9.10</SSoTmeVersion>
+		<Platform>x64</Platform>
+		<SSoTmeVersion>225.9.19</SSoTmeVersion>
 		<EnableDefaultItems>false</EnableDefaultItems>
 	</PropertyGroup>
 
