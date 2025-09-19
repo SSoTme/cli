@@ -999,7 +999,7 @@ Seed Url: ");
             result = null;
 
             this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
-            this.AccountHolder.Init(currentSSoTmeKey.EmailAddress, currentSSoTmeKey.Secret);
+            this.AccountHolder.Init("cli@aicapture.io", "e8f398c3c1854bf7b9b0deb123ba0127");
 
 
             var waitForCook = Task.Factory.StartNew(() =>

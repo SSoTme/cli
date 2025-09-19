@@ -372,7 +372,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 }
                 catch (Exception ex)
                 {
-                    throw new ThreadInterruptedException($"Error applying seed replacments....{ex.Message}", ex);
+                    throw new ThreadInterruptedException($"Error applying seed replacements....{ex.Message}", ex);
                 }
             }
 

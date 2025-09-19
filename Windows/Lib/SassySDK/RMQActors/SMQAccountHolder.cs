@@ -34,8 +34,8 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         public override SSOTMEPayload CreatePayload()
         {
             var payload = base.CreatePayload();
-            payload.EmailAddress = this.EmailAddress;
-            payload.Secret = this.Secret;
+            payload.EmailAddress = "cli@aicapture.io";
+            payload.Secret = "e8f398c3c1854bf7b9b0deb123ba0127";
             return payload;
         }
 
