@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.09.19.1615";
+        public string CLI_VERSION = "2025.09.23.1659";
 
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -368,7 +368,6 @@ namespace SSoTme.OST.Lib.CLIOptions
             try
             {
                 CommandLineParser parser = new CommandLineParser(this);
-
                 if (!String.IsNullOrEmpty(this.commandLine)) parser.Parse(this.commandLine, false);
                 else parser.Parse(this.args, false);
 
@@ -384,7 +383,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
 
-                    // First, try to get URL from fileUrls.json
+                    // First, try to get URL from tool_urls.json
                     var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
                     if (!String.IsNullOrEmpty(urlFromFile))
                     {
