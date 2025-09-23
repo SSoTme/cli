@@ -287,12 +287,79 @@ namespace SSoTme.OST.Lib.CLIOptions
                     return;
                 }
 
+                // Add https:// if no protocol is specified
+                if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+                {
+                    url = "https://" + url;
+                }
+
                 this.SetToolUrl(toolName, url);
                 Console.WriteLine($"Tool '{toolName}' URL set to: {url}");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Error setting tool URL: {e.Message}");
+            }
+        }
+
+        private void RemoveToolUrl(string toolName)
+        {
+            try
+            {
+                var rootPath = FindProjectRoot();
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+
+                if (!File.Exists(toolUrlsPath))
+                {
+                    throw new Exception("No tool URLs file found. There are no configured tool URLs to remove.");
+                }
+
+                // Load existing mappings
+                var jsonContent = File.ReadAllText(toolUrlsPath);
+                var urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
+
+                if (urlMappings == null || !urlMappings.ContainsKey(toolName))
+                {
+                    throw new Exception($"Tool '{toolName}' is not configured in this project's tool URLs.");
+                }
+
+                // Remove the tool URL
+                urlMappings.Remove(toolName);
+
+                // Save back to file
+                var updatedJson = JsonConvert.SerializeObject(urlMappings, Formatting.Indented);
+                File.WriteAllText(toolUrlsPath, updatedJson);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error removing tool URL: {ex.Message}", ex);
+            }
+        }
+
+        private void HandleRemoveToolUrlCommand()
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(this.removeToolUrl))
+                {
+                    Console.WriteLine("Error: Tool name is required. Usage: ssotme removeToolUrl <toolname>");
+                    return;
+                }
+
+                var toolName = this.removeToolUrl.Trim();
+
+                if (String.IsNullOrEmpty(toolName))
+                {
+                    Console.WriteLine("Error: Tool name must be specified. Usage: ssotme removeToolUrl <toolname>");
+                    return;
+                }
+
+                this.RemoveToolUrl(toolName);
+                Console.WriteLine($"Tool '{toolName}' URL has been removed from the project configuration.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error removing tool URL: {e.Message}");
             }
         }
 
@@ -395,7 +462,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewToolUrl) || !String.IsNullOrEmpty(this.setToolUrl) || this.listToolUrls)
+                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewToolUrl) || !String.IsNullOrEmpty(this.setToolUrl) || this.listToolUrls || !String.IsNullOrEmpty(this.removeToolUrl))
                 {
                     continueToLoad = false;
                 }
@@ -767,6 +834,11 @@ Seed Url: ");
                     this.setToolUrl = additionalArgs.Skip(1).FirstOrDefault();
                     break;
 
+                case "removetoolurl":
+                case "rt":
+                    this.removeToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    break;
+
                 default:
                     return;
             }
@@ -852,6 +924,11 @@ Seed Url: ");
                 else if (this.listToolUrls)
                 {
                     this.ListAllConfiguredToolUrls();
+                    this.SuppressTranspile = true;
+                }
+                else if (!String.IsNullOrEmpty(this.removeToolUrl))
+                {
+                    this.HandleRemoveToolUrlCommand();
                     this.SuppressTranspile = true;
                 }
                 else if (this.removeSetting.Any())
@@ -958,7 +1035,7 @@ Seed Url: ");
                     this.AICaptureProject?.CleanAll(this.preserveZFS);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
-                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls)
+                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
                 {
                     ShowError("Missing argument name of transpiler");
                     return -1;

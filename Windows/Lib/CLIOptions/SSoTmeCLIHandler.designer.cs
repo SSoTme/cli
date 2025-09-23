@@ -162,5 +162,8 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this project", MinOccurs = 0, Aliases = "st")]
         public string setToolUrl { get; set; }
         
+        [CommandLineOption(Description = "Removes a custom tool URL for this project, setting it back to the default value.", MinOccurs = 0, Aliases = "rt")]
+        public string removeToolUrl { get; set; }
+        
     }
 }
