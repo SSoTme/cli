@@ -153,8 +153,14 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "TargetUrl of the tool bing invoked", MinOccurs = 0, Aliases = "g")]
         public string targetUrl { get; set; }
         
+        [CommandLineOption(Description = "List all custom tool urls defined for this project", MinOccurs = 0, Aliases = "lt")]
+        public bool listToolUrls { get; set; }
+        
         [CommandLineOption(Description = "View the url defined for the specified tool for this project", MinOccurs = 0, Aliases = "vt")]
         public string viewToolUrl { get; set; }
+        
+        [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this project", MinOccurs = 0, Aliases = "st")]
+        public string setToolUrl { get; set; }
         
     }
 }

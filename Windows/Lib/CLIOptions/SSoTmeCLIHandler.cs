@@ -137,7 +137,8 @@ namespace SSoTme.OST.Lib.CLIOptions
             {
                 if (String.IsNullOrEmpty(this.viewToolUrl))
                 {
-                    Console.WriteLine("Error: Tool name is required. Usage: ssotme -viewToolUrl <toolname>");
+                    Console.WriteLine("Error: Tool name is required. Usage: ssotme viewToolUrl <toolname>");
+                    Console.WriteLine("To list all configured tools, use: ssotme listToolUrls");
                     return;
                 }
 
@@ -157,11 +158,150 @@ namespace SSoTme.OST.Lib.CLIOptions
             }
         }
 
+        private void ListAllConfiguredToolUrls()
+        {
+            try
+            {
+                var rootPath = FindProjectRoot();
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+
+                if (!File.Exists(toolUrlsPath))
+                {
+                    Console.WriteLine("No tool URLs configured. The SSoT/tool_urls.json file does not exist.");
+                    Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
+                    return;
+                }
+
+                var jsonContent = File.ReadAllText(toolUrlsPath);
+                var urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
+
+                if (urlMappings == null || !urlMappings.Any())
+                {
+                    Console.WriteLine("No tool URLs configured in SSoT/tool_urls.json.");
+                    Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
+                    return;
+                }
+
+                Console.WriteLine("Configured tool URLs:");
+                Console.WriteLine();
+                foreach (var kvp in urlMappings.OrderBy(x => x.Key))
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+                Console.WriteLine();
+                Console.WriteLine($"Total: {urlMappings.Count} tool(s) configured");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error listing tool URLs: {ex.Message}");
+            }
+        }
+
+        private string FindProjectRoot()
+        {
+            // If we have a loaded project, use its root path
+            if (!ReferenceEquals(this.AICaptureProject, null))
+            {
+                return this.AICaptureProject.RootPath;
+            }
+
+            // Otherwise, search up the directory tree for project files
+            var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
+            while (currentDir != null)
+            {
+                var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
+                if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
+                {
+                    return currentDir.FullName;
+                }
+                currentDir = currentDir.Parent;
+            }
+
+            // If no project found, fall back to current directory
+            return Environment.CurrentDirectory;
+        }
+
+        private void SetToolUrl(string toolName, string url)
+        {
+            try
+            {
+                var rootPath = FindProjectRoot();
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+
+                // Ensure SSoT directory exists
+                var ssotDir = Path.Combine(rootPath, "SSoT");
+                if (!Directory.Exists(ssotDir))
+                {
+                    Directory.CreateDirectory(ssotDir);
+                }
+
+                // Load existing mappings or create new dictionary
+                Dictionary<string, string> urlMappings;
+                if (File.Exists(toolUrlsPath))
+                {
+                    var jsonContent = File.ReadAllText(toolUrlsPath);
+                    urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent) ?? new Dictionary<string, string>();
+                }
+                else
+                {
+                    urlMappings = new Dictionary<string, string>();
+                }
+
+                // Update or add the tool URL
+                urlMappings[toolName] = url;
+
+                // Save back to file
+                var updatedJson = JsonConvert.SerializeObject(urlMappings, Formatting.Indented);
+                File.WriteAllText(toolUrlsPath, updatedJson);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error saving tool URL: {ex.Message}", ex);
+            }
+        }
+
+        private void HandleSetToolUrlCommand()
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(this.setToolUrl))
+                {
+                    Console.WriteLine("Error: Tool name and URL are required. Usage: ssotme -setToolUrl toolname=url");
+                    return;
+                }
+
+                // Parse toolname=url format
+                var parts = this.setToolUrl.Split('=');
+                if (parts.Length != 2)
+                {
+                    Console.WriteLine("Error: Invalid format. Usage: ssotme -setToolUrl toolname=url");
+                    return;
+                }
+
+                var toolName = parts[0].Trim();
+                var url = parts[1].Trim();
+
+                if (String.IsNullOrEmpty(toolName) || String.IsNullOrEmpty(url))
+                {
+                    Console.WriteLine("Error: Both tool name and URL must be specified. Usage: ssotme -setToolUrl toolname=url");
+                    return;
+                }
+
+                this.SetToolUrl(toolName, url);
+                Console.WriteLine($"Tool '{toolName}' URL set to: {url}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error setting tool URL: {e.Message}");
+            }
+        }
+
         private void ParseCommand()
         {
             try
             {
                 CommandLineParser parser = new CommandLineParser(this);
+
                 if (!String.IsNullOrEmpty(this.commandLine)) parser.Parse(this.commandLine, false);
                 else parser.Parse(this.args, false);
 
@@ -255,7 +395,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewToolUrl))
+                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewToolUrl) || !String.IsNullOrEmpty(this.setToolUrl) || this.listToolUrls)
                 {
                     continueToLoad = false;
                 }
@@ -612,9 +752,19 @@ Seed Url: ");
                     this.localGuide = true;
                     break;
 
+                case "listtoolurls":
+                case "lt":
+                    this.listToolUrls = true;
+                    break;
+
                 case "viewtoolurl":
                 case "vt":
-                    this.viewToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    this.viewToolUrl = additionalArgs.Skip(1).FirstOrDefault() ?? "";
+                    break;
+
+                case "settoolurl":
+                case "st":
+                    this.setToolUrl = additionalArgs.Skip(1).FirstOrDefault();
                     break;
 
                 default:
@@ -692,6 +842,16 @@ Seed Url: ");
                 else if (!String.IsNullOrEmpty(this.viewToolUrl))
                 {
                     this.HandleViewToolUrlCommand();
+                    this.SuppressTranspile = true;
+                }
+                else if (!String.IsNullOrEmpty(this.setToolUrl))
+                {
+                    this.HandleSetToolUrlCommand();
+                    this.SuppressTranspile = true;
+                }
+                else if (this.listToolUrls)
+                {
+                    this.ListAllConfiguredToolUrls();
                     this.SuppressTranspile = true;
                 }
                 else if (this.removeSetting.Any())
@@ -798,7 +958,7 @@ Seed Url: ");
                     this.AICaptureProject?.CleanAll(this.preserveZFS);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
-                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl))
+                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls)
                 {
                     ShowError("Missing argument name of transpiler");
                     return -1;
@@ -996,21 +1156,7 @@ Seed Url: ");
         {
             try
             {
-                // Try to get project root path, even if project isn't loaded yet
-                var rootPath = Environment.CurrentDirectory;
-                if (!ReferenceEquals(this.AICaptureProject, null))
-                {
-                    rootPath = this.AICaptureProject.RootPath;
-                }
-                else
-                {
-                    // Try to find project root by loading it temporarily
-                    var tempProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, false);
-                    if (!ReferenceEquals(tempProject, null))
-                    {
-                        rootPath = tempProject.RootPath;
-                    }
-                }
+                var rootPath = FindProjectRoot();
                 var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
                 if (!File.Exists(toolUrlsPath))
                 {
