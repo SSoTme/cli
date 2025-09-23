@@ -131,6 +131,32 @@ namespace SSoTme.OST.Lib.CLIOptions
             }
         }
 
+        private void HandleViewToolUrlCommand()
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(this.viewToolUrl))
+                {
+                    Console.WriteLine("Error: Tool name is required. Usage: ssotme -viewToolUrl <toolname>");
+                    return;
+                }
+
+                var url = this.TryGetUrlFromFileUrls(this.viewToolUrl);
+                if (!String.IsNullOrEmpty(url))
+                {
+                    Console.WriteLine($"Tool '{this.viewToolUrl}' is configured with URL: {url}");
+                }
+                else
+                {
+                    Console.WriteLine($"Tool '{this.viewToolUrl}' is not configured in this project's SSoT/tool_urls.json file.");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error retrieving tool URL: {e.Message}");
+            }
+        }
+
         private void ParseCommand()
         {
             try
@@ -229,7 +255,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide)
+                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewToolUrl))
                 {
                     continueToLoad = false;
                 }
@@ -586,6 +612,11 @@ Seed Url: ");
                     this.localGuide = true;
                     break;
 
+                case "viewtoolurl":
+                case "vt":
+                    this.viewToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    break;
+
                 default:
                     return;
             }
@@ -656,6 +687,11 @@ Seed Url: ");
                 else if (this.cloneSeed)
                 {
                     this.InitiateCloneSeedingProcess();
+                    this.SuppressTranspile = true;
+                }
+                else if (!String.IsNullOrEmpty(this.viewToolUrl))
+                {
+                    this.HandleViewToolUrlCommand();
                     this.SuppressTranspile = true;
                 }
                 else if (this.removeSetting.Any())
