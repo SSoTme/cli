@@ -150,7 +150,15 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (String.IsNullOrEmpty(this.transpiler))
                 {
                     this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
-                    if (this.transpiler.Contains("/"))
+
+                    // First, try to get URL from fileUrls.json
+                    var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+                    if (!String.IsNullOrEmpty(urlFromFile))
+                    {
+                        this.targetUrl = urlFromFile;
+                        this.transpiler = "remote-transpiler";
+                    }
+                    else if (this.transpiler.Contains("/"))
                     {
                         if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
                             (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
@@ -946,6 +954,31 @@ Seed Url: ");
             Console.ForegroundColor = color;
             Console.WriteLine(msg);
             Console.ForegroundColor = curColor;
+        }
+
+        private string TryGetUrlFromFileUrls(string transpilerName)
+        {
+            try
+            {
+                var rootPath = ReferenceEquals(this.AICaptureProject, null) ? Environment.CurrentDirectory : this.AICaptureProject.RootPath;
+                var toolUrlsPath = Path.Combine(rootPath, "ssot", "tool_urls.json");
+                if (!File.Exists(toolUrlsPath))
+                {
+                    return null;
+                }
+                var jsonContent = File.ReadAllText(toolUrlsPath);
+                var urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
+                if (urlMappings != null && urlMappings.ContainsKey(transpilerName))
+                {
+                    return urlMappings[transpilerName];
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the entire operation
+                Console.WriteLine($"Warning: Error reading ssot/tool_urls.json: {ex.Message}");
+            }
+            return null;
         }
 
         private void ProcessCommandLine(string commandLine)
