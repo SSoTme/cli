@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.09.19.1615";
+        public string CLI_VERSION = "2025.09.23.1659";
 
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -131,6 +131,238 @@ namespace SSoTme.OST.Lib.CLIOptions
             }
         }
 
+        private void HandleViewToolUrlCommand()
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(this.viewToolUrl))
+                {
+                    Console.WriteLine("Error: Tool name is required. Usage: ssotme viewToolUrl <toolname>");
+                    Console.WriteLine("To list all configured tools, use: ssotme listToolUrls");
+                    return;
+                }
+
+                var url = this.TryGetUrlFromFileUrls(this.viewToolUrl);
+                if (!String.IsNullOrEmpty(url))
+                {
+                    Console.WriteLine($"Tool '{this.viewToolUrl}' is configured with URL: {url}");
+                }
+                else
+                {
+                    Console.WriteLine($"Tool '{this.viewToolUrl}' is not configured in this project's SSoT/tool_urls.json file.");
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error retrieving tool URL: {e.Message}");
+            }
+        }
+
+        private void ListAllConfiguredToolUrls()
+        {
+            try
+            {
+                var rootPath = FindProjectRoot();
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+
+                if (!File.Exists(toolUrlsPath))
+                {
+                    Console.WriteLine("No tool URLs configured. The SSoT/tool_urls.json file does not exist.");
+                    Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
+                    return;
+                }
+
+                var jsonContent = File.ReadAllText(toolUrlsPath);
+                var urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
+
+                if (urlMappings == null || !urlMappings.Any())
+                {
+                    Console.WriteLine("No tool URLs configured in SSoT/tool_urls.json.");
+                    Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
+                    return;
+                }
+
+                Console.WriteLine("Configured tool URLs:");
+                Console.WriteLine();
+                foreach (var kvp in urlMappings.OrderBy(x => x.Key))
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+                Console.WriteLine();
+                Console.WriteLine($"Total: {urlMappings.Count} tool(s) configured");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error listing tool URLs: {ex.Message}");
+            }
+        }
+
+        private string FindProjectRoot()
+        {
+            // If we have a loaded project, use its root path
+            if (!ReferenceEquals(this.AICaptureProject, null))
+            {
+                return this.AICaptureProject.RootPath;
+            }
+
+            // Otherwise, search up the directory tree for project files
+            var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
+            while (currentDir != null)
+            {
+                var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
+                if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
+                {
+                    return currentDir.FullName;
+                }
+                currentDir = currentDir.Parent;
+            }
+
+            // If no project found, fall back to current directory
+            return Environment.CurrentDirectory;
+        }
+
+        private void SetToolUrl(string toolName, string url)
+        {
+            try
+            {
+                var rootPath = FindProjectRoot();
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+
+                // Ensure SSoT directory exists
+                var ssotDir = Path.Combine(rootPath, "SSoT");
+                if (!Directory.Exists(ssotDir))
+                {
+                    Directory.CreateDirectory(ssotDir);
+                }
+
+                // Load existing mappings or create new dictionary
+                Dictionary<string, string> urlMappings;
+                if (File.Exists(toolUrlsPath))
+                {
+                    var jsonContent = File.ReadAllText(toolUrlsPath);
+                    urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent) ?? new Dictionary<string, string>();
+                }
+                else
+                {
+                    urlMappings = new Dictionary<string, string>();
+                }
+
+                // Update or add the tool URL
+                urlMappings[toolName] = url;
+
+                // Save back to file
+                var updatedJson = JsonConvert.SerializeObject(urlMappings, Formatting.Indented);
+                File.WriteAllText(toolUrlsPath, updatedJson);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error saving tool URL: {ex.Message}", ex);
+            }
+        }
+
+        private void HandleSetToolUrlCommand()
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(this.setToolUrl))
+                {
+                    Console.WriteLine("Error: Tool name and URL are required. Usage: ssotme -setToolUrl toolname=url");
+                    return;
+                }
+
+                // Parse toolname=url format
+                var parts = this.setToolUrl.Split('=');
+                if (parts.Length != 2)
+                {
+                    Console.WriteLine("Error: Invalid format. Usage: ssotme -setToolUrl toolname=url");
+                    return;
+                }
+
+                var toolName = parts[0].Trim();
+                var url = parts[1].Trim();
+
+                if (String.IsNullOrEmpty(toolName) || String.IsNullOrEmpty(url))
+                {
+                    Console.WriteLine("Error: Both tool name and URL must be specified. Usage: ssotme -setToolUrl toolname=url");
+                    return;
+                }
+
+                // Add https:// if no protocol is specified
+                if (!url.StartsWith("http://") && !url.StartsWith("https://"))
+                {
+                    url = "https://" + url;
+                }
+
+                this.SetToolUrl(toolName, url);
+                Console.WriteLine($"Tool '{toolName}' URL set to: {url}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error setting tool URL: {e.Message}");
+            }
+        }
+
+        private void RemoveToolUrl(string toolName)
+        {
+            try
+            {
+                var rootPath = FindProjectRoot();
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+
+                if (!File.Exists(toolUrlsPath))
+                {
+                    throw new Exception("No tool URLs file found. There are no configured tool URLs to remove.");
+                }
+
+                // Load existing mappings
+                var jsonContent = File.ReadAllText(toolUrlsPath);
+                var urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
+
+                if (urlMappings == null || !urlMappings.ContainsKey(toolName))
+                {
+                    throw new Exception($"Tool '{toolName}' is not configured in this project's tool URLs.");
+                }
+
+                // Remove the tool URL
+                urlMappings.Remove(toolName);
+
+                // Save back to file
+                var updatedJson = JsonConvert.SerializeObject(urlMappings, Formatting.Indented);
+                File.WriteAllText(toolUrlsPath, updatedJson);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error removing tool URL: {ex.Message}", ex);
+            }
+        }
+
+        private void HandleRemoveToolUrlCommand()
+        {
+            try
+            {
+                if (String.IsNullOrEmpty(this.removeToolUrl))
+                {
+                    Console.WriteLine("Error: Tool name is required. Usage: ssotme removeToolUrl <toolname>");
+                    return;
+                }
+
+                var toolName = this.removeToolUrl.Trim();
+
+                if (String.IsNullOrEmpty(toolName))
+                {
+                    Console.WriteLine("Error: Tool name must be specified. Usage: ssotme removeToolUrl <toolname>");
+                    return;
+                }
+
+                this.RemoveToolUrl(toolName);
+                Console.WriteLine($"Tool '{toolName}' URL has been removed from the project configuration.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error removing tool URL: {e.Message}");
+            }
+        }
+
         private void ParseCommand()
         {
             try
@@ -150,7 +382,15 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (String.IsNullOrEmpty(this.transpiler))
                 {
                     this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
-                    if (this.transpiler.Contains("/"))
+
+                    // First, try to get URL from tool_urls.json
+                    var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+                    if (!String.IsNullOrEmpty(urlFromFile))
+                    {
+                        this.targetUrl = urlFromFile;
+                        this.transpiler = "remote-transpiler";
+                    }
+                    else if (this.transpiler.Contains("/"))
                     {
                         if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
                             (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
@@ -221,7 +461,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide)
+                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewToolUrl) || !String.IsNullOrEmpty(this.setToolUrl) || this.listToolUrls || !String.IsNullOrEmpty(this.removeToolUrl))
                 {
                     continueToLoad = false;
                 }
@@ -578,6 +818,26 @@ Seed Url: ");
                     this.localGuide = true;
                     break;
 
+                case "listtoolurls":
+                case "lt":
+                    this.listToolUrls = true;
+                    break;
+
+                case "viewtoolurl":
+                case "vt":
+                    this.viewToolUrl = additionalArgs.Skip(1).FirstOrDefault() ?? "";
+                    break;
+
+                case "settoolurl":
+                case "st":
+                    this.setToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    break;
+
+                case "removetoolurl":
+                case "rt":
+                    this.removeToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    break;
+
                 default:
                     return;
             }
@@ -648,6 +908,26 @@ Seed Url: ");
                 else if (this.cloneSeed)
                 {
                     this.InitiateCloneSeedingProcess();
+                    this.SuppressTranspile = true;
+                }
+                else if (!String.IsNullOrEmpty(this.viewToolUrl))
+                {
+                    this.HandleViewToolUrlCommand();
+                    this.SuppressTranspile = true;
+                }
+                else if (!String.IsNullOrEmpty(this.setToolUrl))
+                {
+                    this.HandleSetToolUrlCommand();
+                    this.SuppressTranspile = true;
+                }
+                else if (this.listToolUrls)
+                {
+                    this.ListAllConfiguredToolUrls();
+                    this.SuppressTranspile = true;
+                }
+                else if (!String.IsNullOrEmpty(this.removeToolUrl))
+                {
+                    this.HandleRemoveToolUrlCommand();
                     this.SuppressTranspile = true;
                 }
                 else if (this.removeSetting.Any())
@@ -754,7 +1034,7 @@ Seed Url: ");
                     this.AICaptureProject?.CleanAll(this.preserveZFS);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
-                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl))
+                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
                 {
                     ShowError("Missing argument name of transpiler");
                     return -1;
@@ -946,6 +1226,31 @@ Seed Url: ");
             Console.ForegroundColor = color;
             Console.WriteLine(msg);
             Console.ForegroundColor = curColor;
+        }
+
+        private string TryGetUrlFromFileUrls(string transpilerName)
+        {
+            try
+            {
+                var rootPath = FindProjectRoot();
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+                if (!File.Exists(toolUrlsPath))
+                {
+                    return null;
+                }
+                var jsonContent = File.ReadAllText(toolUrlsPath);
+                var urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonContent);
+                if (urlMappings != null && urlMappings.ContainsKey(transpilerName))
+                {
+                    return urlMappings[transpilerName];
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the entire operation
+                Console.WriteLine($"Warning: Error reading SSoT/tool_urls.json: {ex.Message}");
+            }
+            return null;
         }
 
         private void ProcessCommandLine(string commandLine)
