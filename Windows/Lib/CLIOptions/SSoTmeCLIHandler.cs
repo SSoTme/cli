@@ -960,8 +960,22 @@ Seed Url: ");
         {
             try
             {
-                var rootPath = ReferenceEquals(this.AICaptureProject, null) ? Environment.CurrentDirectory : this.AICaptureProject.RootPath;
-                var toolUrlsPath = Path.Combine(rootPath, "ssot", "tool_urls.json");
+                // Try to get project root path, even if project isn't loaded yet
+                var rootPath = Environment.CurrentDirectory;
+                if (!ReferenceEquals(this.AICaptureProject, null))
+                {
+                    rootPath = this.AICaptureProject.RootPath;
+                }
+                else
+                {
+                    // Try to find project root by loading it temporarily
+                    var tempProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, false);
+                    if (!ReferenceEquals(tempProject, null))
+                    {
+                        rootPath = tempProject.RootPath;
+                    }
+                }
+                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
                 if (!File.Exists(toolUrlsPath))
                 {
                     return null;
@@ -976,7 +990,7 @@ Seed Url: ");
             catch (Exception ex)
             {
                 // Log the error but don't fail the entire operation
-                Console.WriteLine($"Warning: Error reading ssot/tool_urls.json: {ex.Message}");
+                Console.WriteLine($"Warning: Error reading SSoT/tool_urls.json: {ex.Message}");
             }
             return null;
         }
