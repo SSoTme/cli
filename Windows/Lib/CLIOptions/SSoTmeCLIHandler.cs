@@ -1255,7 +1255,7 @@ Seed Url: ");
             payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
             payload.CLIInputFileContents = string.Empty;
 
-            var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "http://localhost:8080"}", payload);
+            var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}", payload);
             if (response != null)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
