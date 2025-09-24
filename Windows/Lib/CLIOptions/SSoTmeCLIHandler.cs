@@ -47,8 +47,8 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.09.23.1659";
-
+        public string CLI_VERSION = "2025.09.24.1315";
+      
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
 
@@ -1303,9 +1303,9 @@ Seed Url: ");
             var currentSSoTmeKey = SSOTMEKey.GetSSoTmeKey(this.runAs);
             result = null;
 
-            this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
+            //this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
             this.AccountHolder.Init("cli@aicapture.io", "e8f398c3c1854bf7b9b0deb123ba0127");
-
+            this.ProxyRequest();
 
             var waitForCook = Task.Factory.StartNew(() =>
             {
@@ -1547,6 +1547,25 @@ Seed Url: ");
                     (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_requesttranspile_ssotmecoordinator)))
             {
                 result = e.Payload;
+            }
+        }
+
+        private async void ProxyRequest()
+        {
+            var payload = AccountHolder.CreatePayload();
+            payload.SaveCLIOptions(this);
+            this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
+            using var client = new HttpClient();
+            payload.TranspileRequest = new TranspileRequest();
+            payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
+            payload.CLIInputFileContents = string.Empty;
+
+            var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}", payload);
+            if (response != null)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+                this.result = responsePayload;
             }
         }
     }

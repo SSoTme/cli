@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <Version>2025.09.23.1659</Version>
+    <Version>2025.09.24.1315</Version>
   </PropertyGroup>
 
   <ItemGroup>
