@@ -998,9 +998,9 @@ Seed Url: ");
             var currentSSoTmeKey = SSOTMEKey.GetSSoTmeKey(this.runAs);
             result = null;
 
-            this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
+            //this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
             this.AccountHolder.Init("cli@aicapture.io", "e8f398c3c1854bf7b9b0deb123ba0127");
-
+            this.ProxyRequest();
 
             var waitForCook = Task.Factory.StartNew(() =>
             {
@@ -1242,6 +1242,25 @@ Seed Url: ");
                     (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_requesttranspile_ssotmecoordinator)))
             {
                 result = e.Payload;
+            }
+        }
+
+        private async void ProxyRequest()
+        {
+            var payload = AccountHolder.CreatePayload();
+            payload.SaveCLIOptions(this);
+            this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
+            using var client = new HttpClient();
+            payload.TranspileRequest = new TranspileRequest();
+            payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
+            payload.CLIInputFileContents = string.Empty;
+
+            var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "http://localhost:8080"}", payload);
+            if (response != null)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+                this.result = responsePayload;
             }
         }
     }
