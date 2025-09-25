@@ -379,17 +379,43 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 bool continueToLoad = false;
 
-                if (String.IsNullOrEmpty(this.transpiler))
+                // If -g flag is used, prioritize remote transpiler naming regardless of transpiler arg
+                if (!String.IsNullOrEmpty(this.targetUrl))
                 {
-                    // If -g flag is used, use the targetUrl directly for transpiler naming
-                    if (!String.IsNullOrEmpty(this.targetUrl))
-                    {
-                        this.transpiler = "remote-transpiler-" + this.targetUrl.SanitizeUrlForFilename();
-                    }
-                    else
-                    {
-                        this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
+                    this.transpiler = "remote-transpiler-" + this.targetUrl.SanitizeUrlForFilename();
+                }
+                else if (String.IsNullOrEmpty(this.transpiler))
+                {
+                    this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
 
+                    // First, try to get URL from tool_urls.json
+                    var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+                    if (!String.IsNullOrEmpty(urlFromFile))
+                    {
+                        this.targetUrl = urlFromFile;
+                        this.transpiler = "remote-transpiler-" + urlFromFile.SanitizeUrlForFilename();
+                    }
+                    else if (this.transpiler.Contains("/"))
+                    {
+                        if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
+                            (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
+                        {
+                            // If this not a URL, assume it's a transpiler name with an account prefix
+                            this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+                            this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
+                        }
+                        else
+                        {
+                            this.targetUrl = this.transpiler;
+                            this.transpiler = "remote-transpiler-" + this.transpiler.SanitizeUrlForFilename();
+                        }
+                    }
+                }
+                else
+                {
+                    // If transpiler is already set but we also have a -g URL, check if we should still use remote naming
+                    if (!String.IsNullOrEmpty(this.transpiler))
+                    {
                         // First, try to get URL from tool_urls.json
                         var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
                         if (!String.IsNullOrEmpty(urlFromFile))
@@ -399,14 +425,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                         }
                         else if (this.transpiler.Contains("/"))
                         {
-                            if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
-                                (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
-                            {
-                                // If this not a URL, assume it's a transpiler name with an account prefix
-                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
-                                this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
-                            }
-                            else
+                            if (Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
+                                (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
                             {
                                 this.targetUrl = this.transpiler;
                                 this.transpiler = "remote-transpiler-" + this.transpiler.SanitizeUrlForFilename();
@@ -1628,10 +1648,30 @@ Seed Url: ");
                     }
                     return;
                 }
-
                 try
                 {
                     var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+                    // Debug remote transpiler responses
+                    if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("remote-transpiler"))
+                    {
+                        var expectedName = this.transpiler;
+                        var returnedName = responsePayload?.Transpiler?.Name ?? "NULL";
+                        var hasZippedFileSet = responsePayload?.TranspileRequest?.ZippedOutputFileSet?.Length > 0;
+                        if (!returnedName.StartsWith("remote-transpiler"))
+                        {
+                            Console.WriteLine($"WARNING: Remote server {this.targetUrl} returned unexpected transpiler name.");
+                            Console.WriteLine($"  Expected: '{expectedName}' (or similar remote-transpiler name)");
+                            Console.WriteLine($"  Received: '{returnedName}'");
+                            Console.WriteLine($"  JSON Key: Response should set 'Transpiler.Name' to preserve the original name");
+                            Console.WriteLine($"  This will cause the transpiler name to be reset during builds.");
+                        }
+                        if (!hasZippedFileSet)
+                        {
+                            Console.WriteLine($"WARNING: Remote server {this.targetUrl} did not return expected output files.");
+                            Console.WriteLine($"  JSON Key: Response should set 'TranspileRequest.ZippedOutputFileSet' with generated files");
+                            Console.WriteLine($"  This will prevent files from being written to the project.");
+                        }
+                    }
                     this.result = responsePayload;
                 }
                 catch (JsonException ex)

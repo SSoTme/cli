@@ -5,6 +5,7 @@
  License:    Mozilla Public License 2.0
  *******************************************/
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using SassyMQ.SSOTME.Lib.RMQActors;
 using System.IO;
@@ -68,6 +69,10 @@ namespace SSoTme.OST.Lib.DataClasses
             else if (lowerCLI.Contains("/aic")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic") + "/aic".Length);
 
             cmd0 = cmd0.Replace("-install", "").Replace(" install ", " ").Trim(" '\"".ToCharArray());
+            if (cmd0.StartsWith("ssotme ")) {
+                // the command shouldn't start with ssotme in the ssotme.json file
+                cmd0 = cmd0.Substring("ssotme ".Length);
+            }
             this.CommandLine = cmd0;
             
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
@@ -89,7 +94,7 @@ namespace SSoTme.OST.Lib.DataClasses
         internal void Clean(SSoTmeProject project, bool preserveZFS)
         {
             Console.WriteLine("CLEANING: " + this.RelativePath + ": " + this.Name);
-            Console.WriteLine("CommandLine:> aicapture {0}", this.CommandLine);
+            Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
             var di = new DirectoryInfo(Path.Combine(project.RootPath, this.RelativePath.Trim("\\/".ToCharArray())));
             if (!di.Exists) di.Create();
             Environment.CurrentDirectory = di.FullName;
