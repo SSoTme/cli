@@ -381,28 +381,36 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (String.IsNullOrEmpty(this.transpiler))
                 {
-                    this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
-
-                    // First, try to get URL from tool_urls.json
-                    var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
-                    if (!String.IsNullOrEmpty(urlFromFile))
+                    // If -g flag is used, use the targetUrl directly for transpiler naming
+                    if (!String.IsNullOrEmpty(this.targetUrl))
                     {
-                        this.targetUrl = urlFromFile;
-                        this.transpiler = "remote-transpiler";
+                        this.transpiler = "remote-transpiler-" + this.targetUrl.SanitizeUrlForFilename();
                     }
-                    else if (this.transpiler.Contains("/"))
+                    else
                     {
-                        if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
-                            (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
+                        this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
+
+                        // First, try to get URL from tool_urls.json
+                        var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+                        if (!String.IsNullOrEmpty(urlFromFile))
                         {
-                            // If this not a URL, assume it's a transpiler name with an account prefix
-                            this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
-                            this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
+                            this.targetUrl = urlFromFile;
+                            this.transpiler = "remote-transpiler-" + urlFromFile.SanitizeUrlForFilename();
                         }
-                        else
+                        else if (this.transpiler.Contains("/"))
                         {
-                            this.targetUrl = this.transpiler;
-                            this.transpiler = "remote-transpiler";
+                            if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
+                                (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
+                            {
+                                // If this not a URL, assume it's a transpiler name with an account prefix
+                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+                                this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
+                            }
+                            else
+                            {
+                                this.targetUrl = this.transpiler;
+                                this.transpiler = "remote-transpiler-" + this.transpiler.SanitizeUrlForFilename();
+                            }
                         }
                     }
                 }
@@ -413,14 +421,11 @@ namespace SSoTme.OST.Lib.CLIOptions
                     this.parameters.Add(String.Format("param{0}={1}", i + 1, additionalArgs[i]));
                 }
 
-
                 if (this.help)
                 {
                     var helpWidth = Console.WindowWidth - 4;
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
-
                     Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
-
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
                     Console.ReadKey();
                     this.SuppressTranspile = true;
@@ -444,11 +449,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                     {
                         this.projectName = Path.GetFileName(Environment.CurrentDirectory);
                     }
-
                     var force = this.args.Count() == 2 && this.args[1] == "force";
-
                     DataClasses.AICaptureProject.Init(force, this.projectName);
-
                     continueToLoad = true;
                     this.build = true;
                 }
@@ -468,7 +470,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                 else continueToLoad = true;
 
                 // Check for api keys
-
                 if (continueToLoad)
                 {
                     if (String.IsNullOrEmpty(this.setAccountAPIKey) && !this.help && !this.authenticate && !this.listSeeds && !this.cloneSeed)
@@ -487,7 +488,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 this.parameters.Add(String.Format("{0}={1}", projectSetting.Name, projectSetting.Value));
                             }
                         }
-
                     }
                     this.LoadInputFiles();
 
@@ -496,7 +496,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                     {
                         this.parameters.Add(String.Format("apiKey={0}", key.APIKeys[this.account]));
                     }
-
                     if (!ReferenceEquals(this.FileSet, null))
                     {
                         this.ZFSFileSetFile = this.FileSet.FileSetFiles.FirstOrDefault(fodFileSetFile => fodFileSetFile.RelativePath.EndsWith(".zfs", StringComparison.OrdinalIgnoreCase));
@@ -507,7 +506,6 @@ namespace SSoTme.OST.Lib.CLIOptions
             {
                 var curColor = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Red;
-
                 var currentException = ex;
                 while (!(currentException is null))
                 {
@@ -537,7 +535,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                 int maxLineWidth = Math.Max((int)(Console.WindowWidth * 0.9) - 15, 60);
 
                 Console.ResetColor();
-
                 if (this.IsCurrentSeedRoot())
                 {
                     if (!String.IsNullOrEmpty(requestedSeedName))
@@ -552,7 +549,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = ConsoleColor.Green; // Header in green
                     Console.WriteLine("\n\nPublic ssot.me starter seeds.");
                     Console.ResetColor();
-
                     return ListAndPickSeed(seeds, allowChoice, maxLineWidth);
                 }
                 else
@@ -621,7 +617,6 @@ Syntax:
                     selectedSeed = seeds[rootSeedSelected - 1];
                 }
             }
-
             return selectedSeed;
         }
 
@@ -650,7 +645,6 @@ Syntax:
             {
                 Console.WriteLine($"Error parsing ssotme.json: {ex.Message}");
             }
-
             return false;
         }
 
@@ -658,10 +652,8 @@ Syntax:
         private static string WrapText(string text, int maxWidth)
         {
             if (string.IsNullOrEmpty(text) || text.Length <= maxWidth) return text;
-
             var lines = new List<string>();
             var words = text.Split(' ');
-
             var currentLine = string.Empty;
             foreach (var word in words)
             {
@@ -676,7 +668,6 @@ Syntax:
                 }
             }
             lines.Add(currentLine); // Add the last line
-
             return string.Join(Environment.NewLine, lines);
         }
 
@@ -692,16 +683,13 @@ Syntax:
         {
             var apiUrl = $"https://api.github.com/users/{account}/repos";
             var reposList = new List<GitRepo>();
-
             using (var client = new HttpClient())
             {
                 client.DefaultRequestHeaders.Add("User-Agent", "request"); // GitHub API requires a user-agent header
-
                 try
                 {
                     var response = await client.GetStringAsync(apiUrl);
                     JArray repos = JArray.Parse(response);
-
                     foreach (JObject repo in repos)
                     {
                         string name = repo["name"].ToString();
@@ -716,10 +704,8 @@ Syntax:
                     // Optionally, handle exceptions in a way that suits your application's needs
                 }
             }
-
             reposList.Add(new GitRepo() { Name = "seed-airtable-dotnet-api", Description = "An EffortlessAPI for Airtable Dotnet REST-API, Swagger documentation." });
             reposList.Add(new GitRepo() { Name = "seed-golang-dotnet-api", Description = "An EffortlessAPI for Airtable Golang REST-API, Swagger documentation." });
-
             return reposList;
         }
 
@@ -976,13 +962,13 @@ Seed Url: ");
                     }
                     SSOTMEKey.SetSSoTmeKey(key, this.runAs);
                 }
-                else if (this.install && this.transpiler == "remote-transpiler")
+                else if (this.install && this.transpiler.StartsWith("remote-transpiler"))
                 {
                     result = new SSOTMEPayload()
                     {
                         Transpiler = new Transpiler()
                         {
-                            Name = "remote-" + this.targetUrl,
+                            Name = this.transpiler,
                         }
                     };
                     this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
@@ -1517,12 +1503,12 @@ Seed Url: ");
             {
                 if (!String.IsNullOrEmpty(this.targetUrl) )
                 {
-                    this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
+                    this.conditionallyPopulateTranspiler(payload, this.transpiler);
 
                     // Set LowerHyphenName for .zfs file creation after transpiler is populated
                     if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
                     {
-                        if (payload.Transpiler.Name == "remote-transpiler" && !string.IsNullOrEmpty(this.targetUrl))
+                        if (payload.Transpiler.Name.StartsWith("remote-transpiler") && !string.IsNullOrEmpty(this.targetUrl))
                         {
                             // For remote transpilers, use sanitized URL as the filename
                             var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
@@ -1578,12 +1564,12 @@ Seed Url: ");
         {
             var payload = AccountHolder.CreatePayload();
             payload.SaveCLIOptions(this);
-            this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
+            this.conditionallyPopulateTranspiler(payload, this.transpiler);
 
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
             {
-                if (payload.Transpiler.Name == "remote-transpiler" && !string.IsNullOrEmpty(this.targetUrl))
+                if (payload.Transpiler.Name.StartsWith("remote-transpiler") && !string.IsNullOrEmpty(this.targetUrl))
                 {
                     // For remote transpilers, use sanitized URL as the filename
                     var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();

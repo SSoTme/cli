@@ -940,7 +940,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 {
                     // Use same naming logic as ProjectTranspiler.Clean method
                     string transpilerName;
-                    if (pt.Name == "remote-transpiler" && pt.CommandLine.Contains("-g "))
+                    if (pt.Name.StartsWith("remote-transpiler") && pt.CommandLine.Contains("-g "))
                     {
                         // Extract and sanitize URL from command line for remote transpilers
                         var parts = pt.CommandLine.Split(' ');

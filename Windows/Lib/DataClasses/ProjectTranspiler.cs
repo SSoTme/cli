@@ -97,7 +97,7 @@ namespace SSoTme.OST.Lib.DataClasses
 
             // For remote transpilers, extract and sanitize the URL from command line
             string transpilerName;
-            if (this.Name == "remote-transpiler" && this.CommandLine.Contains("-g "))
+            if (this.Name.StartsWith("remote-transpiler") && this.CommandLine.Contains("-g "))
             {
                 // Extract URL from "-g URL" in command line
                 var parts = this.CommandLine.Split(' ');
