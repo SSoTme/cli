@@ -67,7 +67,7 @@ namespace SSoTme.OST.Lib.DataClasses
             else if (lowerCLI.Contains("/aicapture")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture") + "/aicapture".Length);
             else if (lowerCLI.Contains("/aic")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic") + "/aic".Length);
 
-            cmd0 = cmd0.Replace("-install", "").Trim(" '\"".ToCharArray());
+            cmd0 = cmd0.Replace("-install", "").Replace(" install ", " ").Trim(" '\"".ToCharArray());
             this.CommandLine = cmd0;
             
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
