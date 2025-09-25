@@ -913,7 +913,72 @@ namespace SSoTme.OST.Lib.DataClasses
         {
             var rootPathDI = new DirectoryInfo(this.RootPath);
             this.Clean(rootPathDI.FullName, preserveZFS, true);
+
+            // Remove unused ZFS files (those not corresponding to current transpilers)
+            if (!preserveZFS)
+            {
+                this.RemoveUnusedZFSFiles();
+            }
+
             this.RemoveEmptyFolders(rootPathDI.FullName);
+        }
+
+        private void RemoveUnusedZFSFiles()
+        {
+            try
+            {
+                var ssotmeDI = this.GetSSoTmeDI();
+                if (!ssotmeDI.Exists) return;
+
+                // Get all existing ZFS files
+                var allZfsFiles = ssotmeDI.GetFiles("*.zfs", SearchOption.AllDirectories);
+
+                // Build set of expected ZFS filenames from current transpilers
+                var expectedZfsFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var pt in this.ProjectTranspilers)
+                {
+                    // Use same naming logic as ProjectTranspiler.Clean method
+                    string transpilerName;
+                    if (pt.Name == "remote-transpiler" && pt.CommandLine.Contains("-g "))
+                    {
+                        // Extract and sanitize URL from command line for remote transpilers
+                        var parts = pt.CommandLine.Split(' ');
+                        var gIndex = Array.IndexOf(parts, "-g");
+                        if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                        {
+                            var targetUrl = parts[gIndex + 1];
+                            transpilerName = targetUrl.SanitizeUrlForFilename();
+                        }
+                        else
+                        {
+                            transpilerName = pt.Name.ToTitle().ToLower().Replace(" ", "-");
+                        }
+                    }
+                    else
+                    {
+                        transpilerName = pt.MatchedTranspiler?.LowerHyphenName ?? pt.Name.ToTitle().ToLower().Replace(" ", "-");
+                    }
+
+                    var zfsDI = this.GetZFSDI(pt.RelativePath);
+                    var expectedZfsPath = Path.Combine(zfsDI.FullName, $"{transpilerName}.zfs");
+                    expectedZfsFiles.Add(expectedZfsPath);
+                }
+
+                // Remove ZFS files that are not expected
+                foreach (var zfsFile in allZfsFiles)
+                {
+                    if (!expectedZfsFiles.Contains(zfsFile.FullName))
+                    {
+                        Console.WriteLine($"Removing unused ZFS file: {zfsFile.FullName}");
+                        zfsFile.Delete();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Error cleaning unused ZFS files: {ex.Message}");
+            }
         }
 
         public void Clean(string pathFullName, bool preserveZFS, bool cleanAll = false)
