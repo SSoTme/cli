@@ -1497,35 +1497,11 @@ Seed Url: ");
                 if (!string.IsNullOrEmpty(this.transpiler))
                 {
                     payload.Transpiler.Name = this.transpiler;
-
-                    // Set LowerHyphenName for .zfs file creation
-                    if (this.transpiler == "remote-transpiler" && !string.IsNullOrEmpty(this.targetUrl))
-                    {
-                        // For remote transpilers, use sanitized URL as the filename
-                        var sanitizedUrl = this.targetUrl
-                            .Replace("https://", "")
-                            .Replace("http://", "")
-                            .Replace("/", "-")
-                            .Replace(".", "-")
-                            .Replace(":", "-")
-                            .Replace("?", "-")
-                            .Replace("&", "-")
-                            .Replace("=", "-")
-                            .ToLower();
-                        payload.Transpiler.LowerHyphenName = sanitizedUrl;
-                    }
-                    else
-                    {
-                        // For other transpilers, derive from name
-                        payload.Transpiler.LowerHyphenName = this.transpiler.ToTitle().Replace(" ", "-").ToLower();
-                    }
                 }
                 else
                 {
                     // Use passed transpiler name
                     payload.Transpiler.Name = transpilerName;
-                    // Set LowerHyphenName for .zfs file creation
-                    payload.Transpiler.LowerHyphenName = (transpilerName ?? "default").ToTitle().Replace(" ", "-").ToLower();
                 }
             }
         }
@@ -1542,6 +1518,25 @@ Seed Url: ");
                 if (!String.IsNullOrEmpty(this.targetUrl) )
                 {
                     this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
+
+                    // Set LowerHyphenName for .zfs file creation after transpiler is populated
+                    if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
+                    {
+                        if (payload.Transpiler.Name == "remote-transpiler" && !string.IsNullOrEmpty(this.targetUrl))
+                        {
+                            // For remote transpilers, use sanitized URL as the filename
+                            var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
+                            payload.Transpiler.LowerHyphenName = sanitizedUrl;
+                            Console.WriteLine($"Setting remote transpiler .zfs name to SANITIZED URL: {sanitizedUrl}");
+                        }
+                        else
+                        {
+                            // For other transpilers, derive from name
+                            payload.Transpiler.LowerHyphenName = payload.Transpiler.Name.ToTitle().Replace(" ", "-").ToLower();
+                            Console.WriteLine($"Setting transpiler .zfs name to DERIVED NAME: {payload.Transpiler.LowerHyphenName}");
+                        }
+                    }
+
                     using var client = new HttpClient();
                     payload.TranspileRequest = new TranspileRequest();
                     payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
@@ -1566,7 +1561,6 @@ Seed Url: ");
                 else
                 {
                     CoordinatorProxy = new DMProxy(e.Payload.DirectMessageQueue);
-
                     payload.TranspileRequest = new TranspileRequest();
                     payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
                     payload.CLIInputFileContents = String.Empty;
@@ -1585,6 +1579,25 @@ Seed Url: ");
             var payload = AccountHolder.CreatePayload();
             payload.SaveCLIOptions(this);
             this.conditionallyPopulateTranspiler(payload, "remote-transpiler");
+
+            // Set LowerHyphenName for .zfs file creation after transpiler is populated
+            if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
+            {
+                if (payload.Transpiler.Name == "remote-transpiler" && !string.IsNullOrEmpty(this.targetUrl))
+                {
+                    // For remote transpilers, use sanitized URL as the filename
+                    var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
+                    payload.Transpiler.LowerHyphenName = sanitizedUrl;
+                    // Console.WriteLine($"Setting remote transpiler .zfs name to SANITIZED URL: {sanitizedUrl}");
+                }
+                else
+                {
+                    // For other transpilers, derive from name
+                    payload.Transpiler.LowerHyphenName = payload.Transpiler.Name.ToTitle().Replace(" ", "-").ToLower();
+                    // Console.WriteLine($"Setting transpiler .zfs name to DERIVED NAME: {payload.Transpiler.LowerHyphenName}");
+                }
+            }
+
             using var client = new HttpClient();
             payload.TranspileRequest = new TranspileRequest();
             payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();

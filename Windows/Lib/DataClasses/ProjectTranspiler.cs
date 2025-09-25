@@ -95,7 +95,30 @@ namespace SSoTme.OST.Lib.DataClasses
             Environment.CurrentDirectory = di.FullName;
             var zfsDI = project.GetZFSDI(this.RelativePath);
 
-            String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, this.Name.ToTitle().ToLower().Replace(" ", "-"));
+            // For remote transpilers, extract and sanitize the URL from command line
+            string transpilerName;
+            if (this.Name == "remote-transpiler" && this.CommandLine.Contains("-g "))
+            {
+                // Extract URL from "-g URL" in command line
+                var parts = this.CommandLine.Split(' ');
+                var gIndex = Array.IndexOf(parts, "-g");
+                if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                {
+                    var targetUrl = parts[gIndex + 1];
+                    transpilerName = targetUrl.SanitizeUrlForFilename();
+                }
+                else
+                {
+                    transpilerName = this.Name.ToTitle().ToLower().Replace(" ", "-");
+                }
+            }
+            else
+            {
+                transpilerName = this.MatchedTranspiler?.LowerHyphenName ?? this.Name.ToTitle().ToLower().Replace(" ", "-");
+            }
+
+            String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
+            // Console.WriteLine($"Using ZFS {zsfFileName}");
             var zfsFI = new FileInfo(zsfFileName);
             if (zfsFI.Exists)
             {
