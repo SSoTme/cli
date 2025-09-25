@@ -5,6 +5,7 @@
  License:    Mozilla Public License 2.0
  *******************************************/
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using SassyMQ.SSOTME.Lib.RMQActors;
 using System.IO;
@@ -67,7 +68,11 @@ namespace SSoTme.OST.Lib.DataClasses
             else if (lowerCLI.Contains("/aicapture")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture") + "/aicapture".Length);
             else if (lowerCLI.Contains("/aic")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic") + "/aic".Length);
 
-            cmd0 = cmd0.Replace("-install", "").Trim(" '\"".ToCharArray());
+            cmd0 = cmd0.Replace("-install", "").Replace(" install ", " ").Trim(" '\"".ToCharArray());
+            if (cmd0.StartsWith("ssotme ")) {
+                // the command shouldn't start with ssotme in the ssotme.json file
+                cmd0 = cmd0.Substring("ssotme ".Length);
+            }
             this.CommandLine = cmd0;
             
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
@@ -89,13 +94,36 @@ namespace SSoTme.OST.Lib.DataClasses
         internal void Clean(SSoTmeProject project, bool preserveZFS)
         {
             Console.WriteLine("CLEANING: " + this.RelativePath + ": " + this.Name);
-            Console.WriteLine("CommandLine:> aicapture {0}", this.CommandLine);
+            Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
             var di = new DirectoryInfo(Path.Combine(project.RootPath, this.RelativePath.Trim("\\/".ToCharArray())));
             if (!di.Exists) di.Create();
             Environment.CurrentDirectory = di.FullName;
             var zfsDI = project.GetZFSDI(this.RelativePath);
 
-            String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, this.Name.ToTitle().ToLower().Replace(" ", "-"));
+            // For remote transpilers, extract and sanitize the URL from command line
+            string transpilerName;
+            if (this.Name.StartsWith("remote-transpiler") && this.CommandLine.Contains("-g "))
+            {
+                // Extract URL from "-g URL" in command line
+                var parts = this.CommandLine.Split(' ');
+                var gIndex = Array.IndexOf(parts, "-g");
+                if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                {
+                    var targetUrl = parts[gIndex + 1];
+                    transpilerName = targetUrl.SanitizeUrlForFilename();
+                }
+                else
+                {
+                    transpilerName = this.Name.ToTitle().ToLower().Replace(" ", "-");
+                }
+            }
+            else
+            {
+                transpilerName = this.MatchedTranspiler?.LowerHyphenName ?? this.Name.ToTitle().ToLower().Replace(" ", "-");
+            }
+
+            String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
+            // Console.WriteLine($"Using ZFS {zsfFileName}");
             var zfsFI = new FileInfo(zsfFileName);
             if (zfsFI.Exists)
             {
