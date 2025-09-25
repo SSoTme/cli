@@ -753,7 +753,6 @@ Seed Url: ");
             return _cachedSeedUrl;
         }
 
-
         private void FixParameters(ref List<string> additionalArgs)
         {
             var cmd = additionalArgs.FirstOrDefault();
@@ -836,6 +835,15 @@ Seed Url: ");
                 case "removetoolurl":
                 case "rt":
                     this.removeToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    break;
+
+                case "version":
+                case "v":
+                    this.version = true;
+                    break;
+
+                case "info":
+                    this.info = true;
                     break;
 
                 default:
@@ -1489,13 +1497,35 @@ Seed Url: ");
                 if (!string.IsNullOrEmpty(this.transpiler))
                 {
                     payload.Transpiler.Name = this.transpiler;
-                    // LowerHyphenName is typically derived from Name in the Transpiler class
-                    // If it's not automatically set, we would set it here
+
+                    // Set LowerHyphenName for .zfs file creation
+                    if (this.transpiler == "remote-transpiler" && !string.IsNullOrEmpty(this.targetUrl))
+                    {
+                        // For remote transpilers, use sanitized URL as the filename
+                        var sanitizedUrl = this.targetUrl
+                            .Replace("https://", "")
+                            .Replace("http://", "")
+                            .Replace("/", "-")
+                            .Replace(".", "-")
+                            .Replace(":", "-")
+                            .Replace("?", "-")
+                            .Replace("&", "-")
+                            .Replace("=", "-")
+                            .ToLower();
+                        payload.Transpiler.LowerHyphenName = sanitizedUrl;
+                    }
+                    else
+                    {
+                        // For other transpilers, derive from name
+                        payload.Transpiler.LowerHyphenName = this.transpiler.ToTitle().Replace(" ", "-").ToLower();
+                    }
                 }
                 else
                 {
                     // Use passed transpiler name
                     payload.Transpiler.Name = transpilerName;
+                    // Set LowerHyphenName for .zfs file creation
+                    payload.Transpiler.LowerHyphenName = (transpilerName ?? "default").ToTitle().Replace(" ", "-").ToLower();
                 }
             }
         }
@@ -1564,8 +1594,61 @@ Seed Url: ");
             if (response != null)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
-                var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
-                this.result = responsePayload;
+
+                // Check if response is successful
+                if (!response.IsSuccessStatusCode)
+                {
+                    this.result = new SSOTMEPayload
+                    {
+                        Exception = new Exception($"Proxy request failed with status {response.StatusCode}: {responseContent}")
+                    };
+                    return;
+                }
+
+                // Check if response content looks like JSON
+                if (string.IsNullOrWhiteSpace(responseContent) ||
+                    (!responseContent.TrimStart().StartsWith("{") && !responseContent.TrimStart().StartsWith("[")))
+                {
+                    // If response is plain text that might indicate transpiler status
+                    if (responseContent.Trim().Equals("True", StringComparison.OrdinalIgnoreCase) ||
+                        responseContent.Trim().Equals("False", StringComparison.OrdinalIgnoreCase) ||
+                        responseContent.Trim().Contains("transpiler") ||
+                        responseContent.Trim().Contains("inactive"))
+                    {
+                        this.result = new SSOTMEPayload
+                        {
+                            Exception = new Exception($"Proxy server returned transpiler status message: {responseContent.Trim()}")
+                        };
+                    }
+                    else
+                    {
+                        this.result = new SSOTMEPayload
+                        {
+                            Exception = new Exception($"Proxy server returned non-JSON response: {responseContent}")
+                        };
+                    }
+                    return;
+                }
+
+                try
+                {
+                    var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+                    this.result = responsePayload;
+                }
+                catch (JsonException ex)
+                {
+                    this.result = new SSOTMEPayload
+                    {
+                        Exception = new Exception($"Failed to parse proxy response as JSON. Status: {response.StatusCode}, Content-Type: {response.Content.Headers.ContentType}, Response content: {responseContent}", ex)
+                    };
+                }
+            }
+            else
+            {
+                this.result = new SSOTMEPayload
+                {
+                    Exception = new Exception("No response received from proxy server")
+                };
             }
         }
     }
