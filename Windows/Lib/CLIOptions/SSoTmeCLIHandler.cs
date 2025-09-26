@@ -509,6 +509,27 @@ namespace SSoTme.OST.Lib.CLIOptions
                             }
                         }
                     }
+
+                    // Auto-build before loading input files if transpiler has -i dependencies
+                    if (this.install && ShouldAutoBuildForInstall())
+                    {
+                        try
+                        {
+                            Console.WriteLine("Auto-building project before install (transpiler has -i file dependencies which don't exist)...");
+                            // Ensure project is loaded first
+                            if (this.AICaptureProject == null)
+                            {
+                                this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
+                            }
+                            this.AICaptureProject?.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
+                            Console.WriteLine("Auto-build completed successfully.");
+                        }
+                        catch (Exception ex)
+                        {
+                            ShowError($"WARNING: Auto-build failed but continuing with install: {ex.Message}", ConsoleColor.Yellow);
+                        }
+                    }
+
                     this.LoadInputFiles();
 
                     var key = SSOTMEKey.GetSSoTmeKey(this.runAs);
@@ -1751,6 +1772,53 @@ Seed Url: ");
                     Exception = new Exception("No response received from proxy server")
                 };
             }
+        }
+
+        private bool ShouldAutoBuildForInstall()
+        {
+            // Parse command line to check for -i flag, similar to ProjectTranspiler constructor logic
+            var lowerCLI = Environment.CommandLine.ToLower().Replace("\\", "/");
+            var cmd0 = Environment.CommandLine;
+
+            // Remove common prefixes to get the actual transpiler command
+            if (lowerCLI.Contains("/ssotme.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.exe") + "/ssotme.exe".Length);
+            else if (lowerCLI.Contains("/ssotme.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.ost.cli.dll") + "/ssotme.ost.cli.dll".Length);
+            else if (lowerCLI.Contains("/aicapture.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture.ost.cli.dll") + "/aicapture.ost.cli.dll".Length);
+            else if (lowerCLI.Contains("/ssotme")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme") + "/ssotme".Length);
+            else if (lowerCLI.Contains("/aicapture")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture") + "/aicapture".Length);
+            else if (lowerCLI.Contains("/aic")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic") + "/aic".Length);
+
+            cmd0 = cmd0.Trim(" '\"".ToCharArray());
+
+            // Remove install prefixes
+            if (cmd0.StartsWith("/ssotme ")) cmd0 = cmd0.Substring("/ssotme ".Length);
+            if (cmd0.StartsWith("install ")) cmd0 = cmd0.Substring("install ".Length);
+            if (cmd0.StartsWith("-install ")) cmd0 = cmd0.Substring("-install ".Length);
+            if (cmd0.StartsWith("ssotme ")) cmd0 = cmd0.Substring("ssotme ".Length);
+
+            // Check if the cleaned command line contains -i flag
+            var args = cmd0.Split(' ');
+            var iIndex = Array.IndexOf(args, "-i");
+
+            if (iIndex == -1 || iIndex + 1 >= args.Length)
+            {
+                // No -i flag or no filename after -i
+                return false;
+            }
+
+            // Get the filename specified after -i
+            var inputFileName = args[iIndex + 1];
+
+            // Check if the input file already exists
+            var inputFilePath = Path.Combine(Environment.CurrentDirectory, inputFileName);
+            if (File.Exists(inputFilePath))
+            {
+                // Input file exists, no need to build
+                return false;
+            }
+
+            // Input file doesn't exist and -i flag is present, should auto-build
+            return true;
         }
     }
 }
