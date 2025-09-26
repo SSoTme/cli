@@ -970,14 +970,11 @@ namespace SSoTme.OST.Lib.DataClasses
                 {
                     if (!expectedZfsFiles.Contains(zfsFile.FullName))
                     {
-                        Console.WriteLine($"Processing orphaned ZFS file: {zfsFile.FullName}");
                         try
                         {
                             // Clean the orphaned ZFS file first
                             var zippedFileSet = File.ReadAllBytes(zfsFile.FullName);
-                            Console.WriteLine($"DEBUG: Read {zippedFileSet.Length} bytes from orphaned ZFS, calling CleanZippedFileSet()");
                             zippedFileSet.CleanZippedFileSet();
-                            Console.WriteLine($"DEBUG: CleanZippedFileSet() completed for orphaned ZFS");
                         }
                         catch (Exception ex)
                         {
@@ -986,7 +983,6 @@ namespace SSoTme.OST.Lib.DataClasses
                         finally
                         {
                             // Always remove the orphaned ZFS file after cleaning
-                            Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
                             zfsFile.Delete();
                         }
                     }

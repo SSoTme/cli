@@ -373,56 +373,37 @@ namespace SSoTme.OST.Lib.Extensions
 
         public static void CleanZippedFileSet(this byte[] zippedFileSet)
         {
-            Console.WriteLine($"DEBUG: Unzipping {zippedFileSet.Length} bytes to string");
             var fileSetXml = zippedFileSet.UnzipToString();
-            Console.WriteLine($"DEBUG: Unzipped XML length: {fileSetXml.Length} chars, calling CleanFileSet()");
             fileSetXml.CleanFileSet();
-            Console.WriteLine($"DEBUG: CleanFileSet() completed");
         }
 
         public static void CleanFileSet(this string fileSetXml)
         {
-            Console.WriteLine($"DEBUG: CleanFileSet called with XML (empty={String.IsNullOrEmpty(fileSetXml)})");
             if (!String.IsNullOrEmpty(fileSetXml) && fileSetXml.Contains("<"))
             {
-                Console.WriteLine($"DEBUG: XML contains '<', preprocessing...");
                 fileSetXml = fileSetXml.Substring(fileSetXml.IndexOf("<"));
                 fileSetXml = fileSetXml.Replace("FileContents><?xml ", "FileContents>&lt;?xml");
                 XmlDocument doc = new XmlDocument();
                 try
                 {
-                    Console.WriteLine($"DEBUG: Loading XML into XmlDocument...");
                     doc.LoadXml(fileSetXml);
-                    Console.WriteLine($"DEBUG: XML loaded successfully, root element: {doc.DocumentElement?.Name}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"DEBUG: XML parsing failed: {ex.Message}");
-                    Console.WriteLine($"DEBUG: XML content preview: {(fileSetXml.Length > 200 ? fileSetXml.Substring(0, 200) + "..." : fileSetXml)}");
+                    Console.WriteLine($"Warning: XML parsing failed: {ex.Message}");
                     return; // Exit early if XML parsing failed
                 }
                 var fileSetNodes = doc.SelectNodes("//FileSetFile");
-                Console.WriteLine($"DEBUG: Found {fileSetNodes?.Count ?? 0} FileSetFile nodes to process");
                 foreach (XmlElement fileSetFileElem in fileSetNodes)
                 {
                     // Delete the file if it matches the contents
                     XmlNode relPathElem = fileSetFileElem.SelectSingleNode("RelativePath");
                     if (!ReferenceEquals(relPathElem, null))
                     {
-                        Console.WriteLine($"DEBUG: Processing file: {relPathElem.InnerText}");
                         CleanFileByRelativeName(fileSetFileElem, relPathElem);
                     }
-                    else
-                    {
-                        Console.WriteLine($"DEBUG: FileSetFile node missing RelativePath");
-                    }
                 }
-                Console.WriteLine($"DEBUG: Calling CleanEmptyFolders()");
                 CleanEmptyFolders();
-            }
-            else
-            {
-                Console.WriteLine($"DEBUG: XML is empty or doesn't contain '<' - skipping cleanup");
             }
         }
 
@@ -455,19 +436,15 @@ namespace SSoTme.OST.Lib.Extensions
 
         private static void CleanFileByRelativeName(XmlElement fileSetFileElem, XmlNode relPathElem)
         {
-            Console.WriteLine($"DEBUG: CleanFileByRelativeName called for: {relPathElem.InnerText}");
             var skipElement = fileSetFileElem.SelectSingleNode(".//SkipClean");
             if (!ReferenceEquals(skipElement, null) && String.Equals(skipElement.InnerText, "true", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"DEBUG: Skipping cleanup for {relPathElem.InnerText} (SkipClean=true)");
                 return;
             }
             else
             {
                 var fullFileName = GetFullFileName(relPathElem.InnerText, new DirectoryInfo("."));
-                Console.WriteLine($"DEBUG: Full file path resolved to: {fullFileName}");
                 FileInfo fiToClean = new FileInfo(fullFileName);
-                Console.WriteLine($"DEBUG: File exists: {fiToClean.Exists}");
                 if (fiToClean.Exists)
                 {
                     bool neverOverwrite = true;
@@ -509,8 +486,6 @@ namespace SSoTme.OST.Lib.Extensions
                         // SplitFileSetXml writes content with WriteLine() which adds a newline, so we need to match that
                         value = unzippedContent + Environment.NewLine;
                     }
-                    Console.WriteLine($"DEBUG: neverOverwrite={neverOverwrite}, hasFileContents={!ReferenceEquals(fileContentsNode, null)}, hasZippedContents={!ReferenceEquals(zippedFileContents, null)}, hasBinaryContents={!ReferenceEquals(binaryFileContentsNode, null)}");
-
                     // Check if file content matches what would be generated
                     bool contentMatches = false;
                     bool hasAnyContent = !ReferenceEquals(fileContentsNode, null) ||
@@ -525,12 +500,10 @@ namespace SSoTme.OST.Lib.Extensions
                     {
                         var fileContent = File.ReadAllText(fiToClean.FullName);
                         contentMatches = fileContent == value;
-                        Console.WriteLine($"DEBUG: Text content matches: {contentMatches}");
                     }
                     else if (binaryEquals)
                     {
                         contentMatches = true;
-                        Console.WriteLine($"DEBUG: Binary content matches: {contentMatches}");
                     }
 
                     // Clean logic: Always delete if content matches (regardless of neverOverwrite)
@@ -539,11 +512,6 @@ namespace SSoTme.OST.Lib.Extensions
                     {
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
                         fiToClean.Delete();
-                        Console.WriteLine($"DEBUG: File deleted successfully");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"DEBUG: Content doesn't match - NOT deleting {fiToClean.FullName} (preserving user changes)");
                     }
                 }
             }
