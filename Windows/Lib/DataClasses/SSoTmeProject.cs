@@ -965,13 +965,30 @@ namespace SSoTme.OST.Lib.DataClasses
                     expectedZfsFiles.Add(expectedZfsPath);
                 }
 
-                // Remove ZFS files that are not expected
+                // Process orphaned ZFS files - clean them first, then remove
                 foreach (var zfsFile in allZfsFiles)
                 {
                     if (!expectedZfsFiles.Contains(zfsFile.FullName))
                     {
-                        Console.WriteLine($"Removing unused ZFS file: {zfsFile.FullName}");
-                        zfsFile.Delete();
+                        Console.WriteLine($"Processing orphaned ZFS file: {zfsFile.FullName}");
+                        try
+                        {
+                            // Clean the orphaned ZFS file first
+                            var zippedFileSet = File.ReadAllBytes(zfsFile.FullName);
+                            Console.WriteLine($"DEBUG: Read {zippedFileSet.Length} bytes from orphaned ZFS, calling CleanZippedFileSet()");
+                            zippedFileSet.CleanZippedFileSet();
+                            Console.WriteLine($"DEBUG: CleanZippedFileSet() completed for orphaned ZFS");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Warning: Error cleaning orphaned ZFS file {zfsFile.FullName}: {ex.Message}");
+                        }
+                        finally
+                        {
+                            // Always remove the orphaned ZFS file after cleaning
+                            Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
+                            zfsFile.Delete();
+                        }
                     }
                 }
             }
