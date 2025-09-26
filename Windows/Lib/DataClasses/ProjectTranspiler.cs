@@ -68,9 +68,18 @@ namespace SSoTme.OST.Lib.DataClasses
             else if (lowerCLI.Contains("/aicapture")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture") + "/aicapture".Length);
             else if (lowerCLI.Contains("/aic")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic") + "/aic".Length);
 
-            cmd0 = cmd0.Replace("-install", "").Replace(" install ", " ").Trim(" '\"".ToCharArray());
+            // some common errors - on install we should remove all these prefixes from the CommandLine in the json
+            cmd0 = cmd0.Trim(" '\"".ToCharArray());
+            if (cmd0.StartsWith("/ssotme ")) {
+                cmd0 = cmd0.Substring("/ssotme ".Length);
+            }
+            if (cmd0.StartsWith("install ")) {
+                cmd0 = cmd0.Substring("install ".Length);
+            }
+            if (cmd0.StartsWith("-install ")) {
+                cmd0 = cmd0.Substring("-install ".Length);
+            }
             if (cmd0.StartsWith("ssotme ")) {
-                // the command shouldn't start with ssotme in the ssotme.json file
                 cmd0 = cmd0.Substring("ssotme ".Length);
             }
             this.CommandLine = cmd0;
