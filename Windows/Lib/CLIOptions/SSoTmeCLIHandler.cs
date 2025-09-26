@@ -1671,6 +1671,64 @@ Seed Url: ");
                             Console.WriteLine($"  JSON Key: Response should set 'TranspileRequest.ZippedOutputFileSet' with generated files");
                             Console.WriteLine($"  This will prevent files from being written to the project.");
                         }
+                        else
+                        {
+                            // Validate ZFS content - check for files with no content
+                            try
+                            {
+                                var zfsBytes = responsePayload?.TranspileRequest?.ZippedOutputFileSet;
+                                if (zfsBytes?.Length > 0)
+                                {
+                                    var fileSetXml = zfsBytes.UnzipToString();
+                                    if (!String.IsNullOrEmpty(fileSetXml) && fileSetXml.Contains("<"))
+                                    {
+                                        fileSetXml = fileSetXml.Substring(fileSetXml.IndexOf("<"));
+                                        fileSetXml = fileSetXml.Replace("FileContents><?xml ", "FileContents>&lt;?xml");
+
+                                        var doc = new System.Xml.XmlDocument();
+                                        doc.LoadXml(fileSetXml);
+                                        var fileSetNodes = doc.SelectNodes("//FileSetFile");
+
+                                        var filesWithNoContent = new List<string>();
+
+                                        foreach (System.Xml.XmlElement fileSetFileElem in fileSetNodes)
+                                        {
+                                            var relPathElem = fileSetFileElem.SelectSingleNode("RelativePath");
+                                            if (relPathElem != null)
+                                            {
+                                                var fileContentsNode = fileSetFileElem.SelectSingleNode("FileContents");
+                                                var zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedTextFileContents");
+                                                var binaryFileContentsNode = fileSetFileElem.SelectSingleNode("BinaryFileContents");
+
+                                                bool hasContent = (!ReferenceEquals(fileContentsNode, null) && !String.IsNullOrEmpty(fileContentsNode.InnerXml)) ||
+                                                                (!ReferenceEquals(zippedFileContents, null) && !String.IsNullOrEmpty(zippedFileContents.InnerXml)) ||
+                                                                (!ReferenceEquals(binaryFileContentsNode, null) && !String.IsNullOrEmpty(binaryFileContentsNode.InnerText));
+
+                                                if (!hasContent)
+                                                {
+                                                    filesWithNoContent.Add(relPathElem.InnerText);
+                                                }
+                                            }
+                                        }
+
+                                        if (filesWithNoContent.Any())
+                                        {
+                                            Console.WriteLine($"WARNING: ZFS contains file entries with no content:");
+                                            foreach (var file in filesWithNoContent)
+                                            {
+                                                Console.WriteLine($"  - {file}");
+                                            }
+                                            Console.WriteLine($"  Files without content cannot be properly cleaned during 'ssotme clean'");
+                                            Console.WriteLine($"  This may indicate the transpiler is not generating complete file entries");
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"WARNING: Error validating ZFS content: {ex.Message}");
+                            }
+                        }
                     }
                     this.result = responsePayload;
                 }
