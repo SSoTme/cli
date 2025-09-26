@@ -82,6 +82,7 @@ namespace SSoTme.OST.Lib.DataClasses
             if (cmd0.StartsWith("ssotme ")) {
                 cmd0 = cmd0.Substring("ssotme ".Length);
             }
+            cmd0 = cmd0.Trim(" '\"".ToCharArray());
             this.CommandLine = cmd0;
             
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
