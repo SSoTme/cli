@@ -473,6 +473,10 @@ namespace SSoTme.OST.Lib.Extensions
 
                     XmlNode fileContentsNode = fileSetFileElem.SelectSingleNode("FileContents");
                     XmlNode zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedTextFileContents");
+                    if (ReferenceEquals(zippedFileContents, null))
+                    {
+                        zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedFileContents");
+                    }
                     XmlNode binaryFileContentsNode = fileSetFileElem.SelectSingleNode("BinaryFileContents");
                     byte[] data = new byte[] { };
                     bool binaryEquals = false;
@@ -484,12 +488,25 @@ namespace SSoTme.OST.Lib.Extensions
                     }
                     String value = String.Empty;
                     if (!ReferenceEquals(fileContentsNode, null)) value = HttpUtility.HtmlDecode(fileContentsNode.InnerXml);
-                    else if (!ReferenceEquals(zippedFileContents, null)) value = Convert.FromBase64String(zippedFileContents.InnerXml).UnzipToString();
+                    else if (!ReferenceEquals(zippedFileContents, null))
+                    {
+                        var unzippedContent = Convert.FromBase64String(zippedFileContents.InnerXml).UnzipToString();
+                        // SplitFileSetXml writes content with WriteLine() which adds a newline, so we need to match that
+                        value = unzippedContent + Environment.NewLine;
+                    }
                     Console.WriteLine($"DEBUG: neverOverwrite={neverOverwrite}, hasFileContents={!ReferenceEquals(fileContentsNode, null)}, hasZippedContents={!ReferenceEquals(zippedFileContents, null)}, hasBinaryContents={!ReferenceEquals(binaryFileContentsNode, null)}");
 
                     // Check if file content matches what would be generated
                     bool contentMatches = false;
-                    if (!String.IsNullOrEmpty(value))
+                    bool hasAnyContent = !ReferenceEquals(fileContentsNode, null) ||
+                                       !ReferenceEquals(zippedFileContents, null) ||
+                                       !ReferenceEquals(binaryFileContentsNode, null);
+
+                    if (!hasAnyContent)
+                    {
+                        Console.WriteLine($"WARNING: Cannot clean {fiToClean.FullName} - ZFS entry has no content nodes (FileContents, ZippedTextFileContents, ZippedFileContents, or BinaryFileContents)");
+                    }
+                    else if (!String.IsNullOrEmpty(value))
                     {
                         var fileContent = File.ReadAllText(fiToClean.FullName);
                         contentMatches = fileContent == value;

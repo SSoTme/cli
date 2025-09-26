@@ -1698,6 +1698,10 @@ Seed Url: ");
                                             {
                                                 var fileContentsNode = fileSetFileElem.SelectSingleNode("FileContents");
                                                 var zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedTextFileContents");
+                                                if (ReferenceEquals(zippedFileContents, null))
+                                                {
+                                                    zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedFileContents");
+                                                }
                                                 var binaryFileContentsNode = fileSetFileElem.SelectSingleNode("BinaryFileContents");
 
                                                 bool hasContent = (!ReferenceEquals(fileContentsNode, null) && !String.IsNullOrEmpty(fileContentsNode.InnerXml)) ||
