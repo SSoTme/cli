@@ -440,19 +440,15 @@ namespace SSoTme.OST.Lib.Extensions
 
         private static void CleanFileByRelativeName(XmlElement fileSetFileElem, XmlNode relPathElem)
         {
-            Console.WriteLine($"DEBUG: CleanFileByRelativeName called for: {relPathElem.InnerText}");
             var skipElement = fileSetFileElem.SelectSingleNode(".//SkipClean");
             if (!ReferenceEquals(skipElement, null) && String.Equals(skipElement.InnerText, "true", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"DEBUG: Skipping cleanup for {relPathElem.InnerText} (SkipClean=true)");
                 return;
             }
             else
             {
                 var fullFileName = GetFullFileName(relPathElem.InnerText, new DirectoryInfo("."));
-                Console.WriteLine($"DEBUG: Full file path resolved to: {fullFileName}");
                 FileInfo fiToClean = new FileInfo(fullFileName);
-                Console.WriteLine($"DEBUG: File exists: {fiToClean.Exists}");
                 if (fiToClean.Exists)
                 {
                     bool neverOverwrite = true;
@@ -494,8 +490,6 @@ namespace SSoTme.OST.Lib.Extensions
                         // SplitFileSetXml writes content with WriteLine() which adds a newline, so we need to match that
                         value = unzippedContent + Environment.NewLine;
                     }
-                    Console.WriteLine($"DEBUG: neverOverwrite={neverOverwrite}, hasFileContents={!ReferenceEquals(fileContentsNode, null)}, hasZippedContents={!ReferenceEquals(zippedFileContents, null)}, hasBinaryContents={!ReferenceEquals(binaryFileContentsNode, null)}");
-
                     // Check if file content matches what would be generated
                     bool contentMatches = false;
                     bool hasAnyContent = !ReferenceEquals(fileContentsNode, null) ||
@@ -510,12 +504,10 @@ namespace SSoTme.OST.Lib.Extensions
                     {
                         var fileContent = File.ReadAllText(fiToClean.FullName);
                         contentMatches = fileContent == value;
-                        Console.WriteLine($"DEBUG: Text content matches: {contentMatches}");
                     }
                     else if (binaryEquals)
                     {
                         contentMatches = true;
-                        Console.WriteLine($"DEBUG: Binary content matches: {contentMatches}");
                     }
 
                     // Clean logic: Always delete if content matches (regardless of neverOverwrite)
@@ -524,11 +516,6 @@ namespace SSoTme.OST.Lib.Extensions
                     {
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
                         fiToClean.Delete();
-                        Console.WriteLine($"DEBUG: File deleted successfully");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"DEBUG: Content doesn't match - NOT deleting {fiToClean.FullName} (preserving user changes)");
                     }
                 }
             }
