@@ -2,7 +2,7 @@
 	xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
 	xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
-	<Package Name="SSoTme CLI" Language="1033" Version="225.9.25.1729" Manufacturer="EffortlessAPI" UpgradeCode="EB59dEFF-B979-464F-B36A-57F272E872A1" Scope="perMachine">
+	<Package Name="SSoTme CLI" Language="1033" Version="225.9.26.1251" Manufacturer="EffortlessAPI" UpgradeCode="EB59dEFF-B979-464F-B36A-57F272E872A1" Scope="perMachine">
 
 		<SummaryInformation Description="SSoTme Command Line Interface" Comments="Installs the SSoTme CLI tool" />
 
@@ -64,7 +64,7 @@
 		<Component Id="RegistryEntries" Directory="INSTALLFOLDER" Guid="{C8D9E0F1-A2B3-44C5-6D7E-8F9A0B1C2D3E}">
 			<RegistryKey Root="HKLM" Key="Software\SSoTme\CLI">
 				<RegistryValue Type="string" Name="InstallPath" Value="[INSTALLFOLDER]" KeyPath="yes" />
-				<RegistryValue Type="string" Name="Version" Value="225.9.25.1729" />
+				<RegistryValue Type="string" Name="Version" Value="225.9.26.1251" />
 			</RegistryKey>
 		</Component>
 
