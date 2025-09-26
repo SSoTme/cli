@@ -471,7 +471,7 @@ namespace SSoTme.OST.Lib.Extensions
                     String value = String.Empty;
                     if (!ReferenceEquals(fileContentsNode, null)) value = HttpUtility.HtmlDecode(fileContentsNode.InnerXml);
                     else if (!ReferenceEquals(zippedFileContents, null)) value = Convert.FromBase64String(zippedFileContents.InnerXml).UnzipToString();
-                    if (!neverOverwrite && (File.ReadAllText(fiToClean.FullName) == value || binaryEquals))
+                    if (File.ReadAllText(fiToClean.FullName) == value || binaryEquals)
                     {
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
                         fiToClean.Delete();
