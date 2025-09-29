@@ -1432,6 +1432,49 @@ Seed Url: ");
             this.FileSet = fs;
         }
 
+        /// <summary>
+        /// Validates that a file path is within the project scope.
+        /// Throws NoStackException if the path attempts to access files outside the project.
+        /// </summary>
+        /// <param name="filePath">The file path to validate</param>
+        /// <param name="projectRoot">The project root directory (optional)</param>
+        private void ValidatePathIsInProjectScope(string filePath, string projectName, string projectRoot = null)
+        {
+            // If no project is loaded, we can't validate scope - allow the operation
+            // This handles cases like -init, -listSeeds, etc. that don't need a project
+            if (String.IsNullOrEmpty(projectRoot))
+            {
+                return;
+            }
+
+            try
+            {
+                // Resolve both paths to absolute paths to handle .. and symlinks
+                var absoluteProjectRoot = Path.GetFullPath(projectRoot);
+                var absoluteFilePath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, filePath));
+
+                // Check if the file path starts with the project root
+                // Use case-insensitive comparison for Windows compatibility
+                if (!absoluteFilePath.StartsWith(absoluteProjectRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new NoStackException(
+                        $"Access denied: The path '{filePath}' resolves to a directory outside the current project scope.\n" +
+                        $"Current project: {projectName} ({absoluteProjectRoot})\n" +
+                        $"For security reasons, ssotme can only access files within the project directory.");
+                }
+            }
+            catch (NoStackException)
+            {
+                // Re-throw our custom exceptions
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // Handle path resolution errors
+                throw new NoStackException($"Error validating path '{filePath}': {ex.Message}");
+            }
+        }
+
         private void ImportFile(string filePattern, FileSet fs)
         {
             var fileNameReplacement = String.Empty;
@@ -1440,6 +1483,20 @@ Seed Url: ");
                 fileNameReplacement = filePattern.Substring(0, filePattern.IndexOf("="));
                 filePattern = filePattern.Substring(filePattern.IndexOf("=") + 1);
             }
+
+            // Validate that the file path is within project scope before processing
+            var projectRoot = this.AICaptureProject?.RootPath;
+            var directoryPath = Path.GetDirectoryName(filePattern);
+            if (!String.IsNullOrEmpty(directoryPath))
+            {
+                var name = "unknown";
+                if (!ReferenceEquals(this.AICaptureProject, null))
+                {
+                    name = this.AICaptureProject.Name;
+                }
+                ValidatePathIsInProjectScope(directoryPath, name, projectRoot);
+            }
+
             var di = new DirectoryInfo(Path.Combine(".", Path.GetDirectoryName(filePattern)));
             filePattern = Path.GetFileName(filePattern);
 
