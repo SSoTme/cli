@@ -447,7 +447,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
                     Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
-                    Console.ReadKey();
+                    if (!this.noKey) Console.ReadKey();
                     this.SuppressTranspile = true;
                 }
                 else if (this.info)
@@ -552,14 +552,14 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     Console.WriteLine("\n********************************\nERROR: {0}\n********************************\n\n", currentException.Message);
                     Console.WriteLine(currentException.StackTrace);
-                    Console.WriteLine("\n\nPress any key to continue...\n");
+                    if (!this.noKey) Console.WriteLine("\n\nPress any key to continue...\n");
                     Console.WriteLine("\n\n");
                     if (currentException == ex.InnerException) break;
                     currentException = ex.InnerException;
                 }
                 Console.ForegroundColor = curColor;
                 this.SuppressTranspile = true;
-                Console.ReadKey();
+                if (!this.noKey) Console.ReadKey();
             }
         }
 
