@@ -42,6 +42,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Use with buildOnTrigger to connect the baseId to the SSoTme Copilot Agent", MinOccurs = 0, Aliases = "cc")]
         public bool copilotConnect { get; set; }
         
+        [CommandLineOption(Description = "Don't ask for user input after a command exits", MinOccurs = 0, Aliases = "")]
+        public bool noKey { get; set; }
+        
         [CommandLineOption(Description = "Describes the current SSoT.me Project (and all transpilers)", MinOccurs = 0, Aliases = "d")]
         public bool describe { get; set; }
         
