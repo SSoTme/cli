@@ -133,7 +133,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
 
             String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
-            Console.WriteLine($"DEBUG: Looking for ZFS file: {zsfFileName}");
+            //Console.WriteLine($"DEBUG: Looking for ZFS file: {zsfFileName}");
             var zfsFI = new FileInfo(zsfFileName);
             if (zfsFI.Exists)
             {
