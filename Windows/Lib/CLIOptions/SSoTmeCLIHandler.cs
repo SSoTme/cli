@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.09.26.1251";
+        public string CLI_VERSION = "2025.09.30.1719";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
