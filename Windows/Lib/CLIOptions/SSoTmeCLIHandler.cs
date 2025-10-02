@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.09.30.1831";
+        public string CLI_VERSION = "2025.10.02.1456";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -1458,8 +1458,10 @@ Seed Url: ");
         /// Throws NoStackException if the path attempts to access files outside the project.
         /// </summary>
         /// <param name="filePath">The file path to validate</param>
+        /// <param name="projectName">The project name for error messages</param>
         /// <param name="projectRoot">The project root directory (optional)</param>
-        private void ValidatePathIsInProjectScope(string filePath, string projectName, string projectRoot = null)
+        /// <param name="allowedFolders">Additional folders that are allowed (e.g., parent ssotme projects)</param>
+        private void ValidatePathIsInProjectScope(string filePath, string projectName, string projectRoot = null, List<string> allowedFolders = null)
         {
             // If no project is loaded, we can't validate scope - allow the operation
             // This handles cases like -init, -listSeeds, etc. that don't need a project
@@ -1476,13 +1478,30 @@ Seed Url: ");
 
                 // Check if the file path starts with the project root
                 // Use case-insensitive comparison for Windows compatibility
-                if (!absoluteFilePath.StartsWith(absoluteProjectRoot, StringComparison.OrdinalIgnoreCase))
+                if (absoluteFilePath.StartsWith(absoluteProjectRoot, StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new NoStackException(
-                        $"Access denied: The path '{filePath}' resolves to a directory outside the current project scope.\n" +
-                        $"Current project: {projectName} ({absoluteProjectRoot})\n" +
-                        $"For security reasons, ssotme can only access files within the project directory.");
+                    return; // Path is within project root - allowed
                 }
+
+                // Check if the file path is within any of the allowed folders
+                if (allowedFolders != null && allowedFolders.Any())
+                {
+                    foreach (var allowedFolder in allowedFolders)
+                    {
+                        var absoluteAllowedFolder = Path.GetFullPath(allowedFolder);
+                        if (absoluteFilePath.StartsWith(absoluteAllowedFolder, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.WriteLine($"Allowing access to parent ssotme project: {absoluteAllowedFolder}");
+                            return; // Path is within an allowed folder - allowed
+                        }
+                    }
+                }
+
+                // Path is not within project root or any allowed folders
+                throw new NoStackException(
+                    $"Access denied: The path '{filePath}' resolves to a directory outside the current project scope.\n" +
+                    $"Current project: {projectName} ({absoluteProjectRoot})\n" +
+                    $"For security reasons, ssotme can only access files within the project directory.");
             }
             catch (NoStackException)
             {
@@ -1515,7 +1534,25 @@ Seed Url: ");
                 {
                     name = this.AICaptureProject.Name;
                 }
-                ValidatePathIsInProjectScope(directoryPath, name, projectRoot);
+
+                // Check if parent directory also has a ssotme.json file
+                List<string> allowedFolders = null;
+                if (!String.IsNullOrEmpty(projectRoot))
+                {
+                    var projectRootDI = new DirectoryInfo(projectRoot);
+                    var parentDI = projectRootDI.Parent;
+                    if (parentDI != null)
+                    {
+                        var parentSsotmeFile = new FileInfo(Path.Combine(parentDI.FullName, "ssotme.json"));
+                        if (parentSsotmeFile.Exists)
+                        {
+                            // Parent has ssotme.json, so allow reading from parent directory
+                            allowedFolders = new List<string> { parentDI.FullName };
+                        }
+                    }
+                }
+
+                ValidatePathIsInProjectScope(directoryPath, name, projectRoot, allowedFolders);
             }
 
             var di = new DirectoryInfo(Path.Combine(".", Path.GetDirectoryName(filePattern)));
