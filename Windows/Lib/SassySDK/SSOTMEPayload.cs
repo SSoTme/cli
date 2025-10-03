@@ -185,10 +185,15 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         {
             // skip for null projects
             if (this.SSoTmeProject is null) return;
-            
+
             var zfsFI = this.GetZFSFI();
             if (!zfsFI.Directory.Exists) zfsFI.Directory.Create();
             File.WriteAllBytes(zfsFI.FullName, fileSetXml.Zip());
+
+            // DEBUG: Write unzipped XML for debugging
+            var xmlDebugPath = Path.ChangeExtension(zfsFI.FullName, ".xml");
+            File.WriteAllText(xmlDebugPath, fileSetXml);
+            Console.WriteLine($"DEBUG: Wrote XML to {xmlDebugPath}");
         }
 
         private FileInfo GetZFSFI()

@@ -89,10 +89,19 @@ namespace SSoTme.OST.Lib.Extensions
                 var fsf = new FileSetFile();
                 fs.FileSetFiles.Add(fsf);
                 var xmlNode = fsfNode.SelectSingleNode("AlwaysOverwrite");
-                if (!ReferenceEquals(xmlNode, null) && (xmlNode.InnerText == "true")) fsf.AlwaysOverwrite = true;
-
-                xmlNode = fsfNode.SelectSingleNode("OverwriteMode");
-                if (ReferenceEquals(xmlNode, null) || (!String.Equals(xmlNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase))) fsf.AlwaysOverwrite = true;
+                if (!ReferenceEquals(xmlNode, null) && (xmlNode.InnerText == "true"))
+                {
+                    fsf.AlwaysOverwrite = true;
+                }
+                else
+                {
+                    // Fallback: check OverwriteMode if AlwaysOverwrite not explicitly defined
+                    xmlNode = fsfNode.SelectSingleNode("OverwriteMode");
+                    if (!ReferenceEquals(xmlNode, null) && String.Equals(xmlNode.InnerText, "Always", StringComparison.OrdinalIgnoreCase))
+                    {
+                        fsf.AlwaysOverwrite = true;
+                    }
+                }
 
                 xmlNode = fsfNode.SelectSingleNode("RelativePath");
                 if (!ReferenceEquals(xmlNode, null)) fsf.RelativePath = xmlNode.InnerText;
@@ -394,6 +403,7 @@ namespace SSoTme.OST.Lib.Extensions
                     return; // Exit early if XML parsing failed
                 }
                 var fileSetNodes = doc.SelectNodes("//FileSetFile");
+                Console.WriteLine($"DEBUG: Found {fileSetNodes.Count} files in ZFS to process");
                 foreach (XmlElement fileSetFileElem in fileSetNodes)
                 {
                     // Delete the file if it matches the contents
@@ -436,30 +446,50 @@ namespace SSoTme.OST.Lib.Extensions
 
         private static void CleanFileByRelativeName(XmlElement fileSetFileElem, XmlNode relPathElem)
         {
+            var relativePath = relPathElem.InnerText;
+            Console.WriteLine($"\nDEBUG: Processing file from ZFS: {relativePath}");
+
+            // Log overwrite settings
+            XmlNode aoNode = fileSetFileElem.SelectSingleNode("AlwaysOverwrite");
+            XmlNode omNode = fileSetFileElem.SelectSingleNode("OverwriteMode");
+            string alwaysOverwrite = aoNode?.InnerText ?? "null";
+            string overwriteMode = omNode?.InnerText ?? "null";
+            Console.WriteLine($"DEBUG:   AlwaysOverwrite={alwaysOverwrite}, OverwriteMode={overwriteMode}");
+
             var skipElement = fileSetFileElem.SelectSingleNode(".//SkipClean");
             if (!ReferenceEquals(skipElement, null) && String.Equals(skipElement.InnerText, "true", StringComparison.OrdinalIgnoreCase))
             {
+                Console.WriteLine($"DEBUG:   DECISION: Skipping - SkipClean=true");
                 return;
             }
             else
             {
                 var fullFileName = GetFullFileName(relPathElem.InnerText, new DirectoryInfo("."));
                 FileInfo fiToClean = new FileInfo(fullFileName);
+                Console.WriteLine($"DEBUG:   Full path: {fiToClean.FullName}");
+                Console.WriteLine($"DEBUG:   File exists: {fiToClean.Exists}");
                 if (fiToClean.Exists)
                 {
+                    bool alwaysOverwriteFlag = false;
                     bool neverOverwrite = true;
 
-                    XmlNode aoNode = fileSetFileElem.SelectSingleNode("AlwaysOverwrite");
                     if (!ReferenceEquals(aoNode, null))
                     {
-                        if (aoNode.InnerText == "true") neverOverwrite = false;
+                        if (aoNode.InnerText == "true")
+                        {
+                            neverOverwrite = false;
+                            alwaysOverwriteFlag = true;
+                        }
                     }
                     else
                     {
-                        XmlNode omNode = fileSetFileElem.SelectSingleNode("OverwriteMode");
                         if (!ReferenceEquals(omNode, null) && (!String.Equals(omNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase)))
                         {
                             neverOverwrite = false;
+                            if (String.Equals(omNode.InnerText, "Always", StringComparison.OrdinalIgnoreCase))
+                            {
+                                alwaysOverwriteFlag = true;
+                            }
                         }
                     }
 
@@ -494,25 +524,45 @@ namespace SSoTme.OST.Lib.Extensions
 
                     if (!hasAnyContent)
                     {
+                        Console.WriteLine($"DEBUG:   Content check: No content nodes found in ZFS");
                         Console.WriteLine($"WARNING: Cannot clean {fiToClean.FullName} - ZFS entry has no content nodes (FileContents, ZippedTextFileContents, ZippedFileContents, or BinaryFileContents)");
                     }
                     else if (!String.IsNullOrEmpty(value))
                     {
                         var fileContent = File.ReadAllText(fiToClean.FullName);
                         contentMatches = fileContent == value;
+                        Console.WriteLine($"DEBUG:   Content check: Text content {(contentMatches ? "MATCHES" : "DOES NOT MATCH")}");
                     }
                     else if (binaryEquals)
                     {
                         contentMatches = true;
+                        Console.WriteLine($"DEBUG:   Content check: Binary content MATCHES");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"DEBUG:   Content check: No valid content to compare");
                     }
 
-                    // Clean logic: Always delete if content matches (regardless of neverOverwrite)
-                    // The neverOverwrite setting only affects writing files, not cleaning them
-                    if (contentMatches)
+                    // Clean logic:
+                    // 1. AlwaysOverwrite files should ALWAYS be cleaned (they'll be regenerated)
+                    // 2. Other files should only be cleaned if content matches
+                    bool shouldClean = alwaysOverwriteFlag || contentMatches;
+
+                    if (shouldClean)
                     {
+                        string reason = alwaysOverwriteFlag ? "AlwaysOverwrite=true" : "content matches ZFS";
+                        Console.WriteLine($"DEBUG:   DECISION: CLEANING - {reason}");
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
                         fiToClean.Delete();
                     }
+                    else
+                    {
+                        Console.WriteLine($"DEBUG:   DECISION: NOT CLEANING - content does not match and not AlwaysOverwrite");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"DEBUG:   DECISION: NOT CLEANING - file does not exist on disk");
                 }
             }
         }
