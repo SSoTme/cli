@@ -547,7 +547,6 @@ namespace SSoTme.OST.Lib.Extensions
                     // 1. AlwaysOverwrite files should ALWAYS be cleaned (they'll be regenerated)
                     // 2. Other files should only be cleaned if content matches
                     bool shouldClean = alwaysOverwriteFlag || contentMatches;
-
                     if (shouldClean)
                     {
                         string reason = alwaysOverwriteFlag ? "AlwaysOverwrite=true" : "content matches ZFS";
