@@ -52,7 +52,10 @@ namespace SSoTme.OST.Lib.DataClasses
     
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "AlwaysOverwrite")]
         public Boolean AlwaysOverwrite { get; set; }
-    
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "OverwriteMode")]
+        public String OverwriteMode { get; set; }
+
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "SkipClean")]
         public Boolean SkipClean { get; set; }
     
