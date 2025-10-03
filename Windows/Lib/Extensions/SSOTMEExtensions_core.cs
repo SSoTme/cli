@@ -473,17 +473,24 @@ namespace SSoTme.OST.Lib.Extensions
                 {
                     bool neverOverwrite = true;
 
+                    // Check AlwaysOverwrite first (legacy transpilers send this)
                     XmlNode aoNode = fileSetFileElem.SelectSingleNode("AlwaysOverwrite");
                     if (!ReferenceEquals(aoNode, null))
                     {
                         if (aoNode.InnerText == "true") neverOverwrite = false;
                     }
-                    else
+
+                    // Check OverwriteMode second (newer transpilers send this - let it override)
+                    XmlNode omNode = fileSetFileElem.SelectSingleNode("OverwriteMode");
+                    if (!ReferenceEquals(omNode, null))
                     {
-                        XmlNode omNode = fileSetFileElem.SelectSingleNode("OverwriteMode");
-                        if (!ReferenceEquals(omNode, null) && (!String.Equals(omNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase)))
+                        if (String.Equals(omNode.InnerText, "Always", StringComparison.OrdinalIgnoreCase))
                         {
                             neverOverwrite = false;
+                        }
+                        else if (String.Equals(omNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase))
+                        {
+                            neverOverwrite = true;
                         }
                     }
 
@@ -1107,17 +1114,24 @@ namespace SSoTme.OST.Lib.Extensions
                     {
                         bool neverOverwrite = true;
 
+                        // Check AlwaysOverwrite first (legacy transpilers send this)
                         XmlNode aoNode = elem.SelectSingleNode("AlwaysOverwrite");
                         if (!ReferenceEquals(aoNode, null))
                         {
                             if (aoNode.InnerText == "true") neverOverwrite = false;
                         }
-                        else
+
+                        // Check OverwriteMode second (newer transpilers send this - let it override)
+                        XmlNode omNode = elem.SelectSingleNode("OverwriteMode");
+                        if (!ReferenceEquals(omNode, null))
                         {
-                            XmlNode omNode = elem.SelectSingleNode("OverwriteMode");
-                            if (!ReferenceEquals(omNode, null) && (!String.Equals(omNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase)))
+                            if (String.Equals(omNode.InnerText, "Always", StringComparison.OrdinalIgnoreCase))
                             {
                                 neverOverwrite = false;
+                            }
+                            else if (String.Equals(omNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase))
+                            {
+                                neverOverwrite = true;
                             }
                         }
 
