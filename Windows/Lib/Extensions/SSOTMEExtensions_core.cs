@@ -83,16 +83,40 @@ namespace SSoTme.OST.Lib.Extensions
             fileSetXml = fileSetXml.Substring(fileSetXml.IndexOf("<"));
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(fileSetXml);
+
+            /*
+            // Save XML for debugging
+            var debugPath = Path.Combine(Path.GetTempPath(), $"ssotme-transpiler-{DateTime.Now:yyyyMMdd-HHmmss}.xml");
+            File.WriteAllText(debugPath, fileSetXml);
+            Console.WriteLine($"DEBUG: Saved transpiler XML to {debugPath}");
+            */
+
             var fs = new FileSet();
             foreach (var fsfNode in doc.SelectNodes("//FileSetFile").OfType<XmlElement>())
             {
                 var fsf = new FileSetFile();
                 fs.FileSetFiles.Add(fsf);
+                // Check AlwaysOverwrite first (legacy transpilers send this as bool)
                 var xmlNode = fsfNode.SelectSingleNode("AlwaysOverwrite");
-                if (!ReferenceEquals(xmlNode, null) && (xmlNode.InnerText == "true")) fsf.AlwaysOverwrite = true;
+                if (!ReferenceEquals(xmlNode, null))
+                {
+                    fsf.AlwaysOverwrite = (xmlNode.InnerText.ToLower() == "true");
+                }
 
+                // Check OverwriteMode (newer transpilers send this as string "Always"/"Never")
                 xmlNode = fsfNode.SelectSingleNode("OverwriteMode");
-                if (ReferenceEquals(xmlNode, null) || (!String.Equals(xmlNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase))) fsf.AlwaysOverwrite = true;
+                if (!ReferenceEquals(xmlNode, null))
+                {
+                    if (String.Equals(xmlNode.InnerText, "Always", StringComparison.OrdinalIgnoreCase))
+                    {
+                        fsf.AlwaysOverwrite = true;
+                    }
+                    else if (String.Equals(xmlNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase))
+                    {
+                        fsf.AlwaysOverwrite = false;
+                    }
+                }
+                // If neither tag exists, AlwaysOverwrite defaults to false (class default)
 
                 xmlNode = fsfNode.SelectSingleNode("RelativePath");
                 if (!ReferenceEquals(xmlNode, null)) fsf.RelativePath = xmlNode.InnerText;
