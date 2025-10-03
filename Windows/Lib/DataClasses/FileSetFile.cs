@@ -14,40 +14,6 @@ namespace SSoTme.OST.Lib.DataClasses
     {
         public string OriginalRelativePath { get; set; }
 
-        /// <summary>
-        /// String-based overwrite mode for compatibility with remote transpilers.
-        /// Maps to the AlwaysOverwrite boolean property.
-        /// Accepts "Always" (case-insensitive) -> AlwaysOverwrite = true
-        /// Accepts "Never" (case-insensitive) or null -> AlwaysOverwrite = false
-        /// </summary>
-        [JsonProperty(PropertyName = "OverwriteMode")]
-        public string OverwriteMode
-        {
-            get
-            {
-                return AlwaysOverwrite ? "Always" : "Never";
-            }
-            set
-            {
-                if (string.IsNullOrEmpty(value))
-                {
-                    AlwaysOverwrite = false;
-                }
-                else if (value.Equals("Always", StringComparison.OrdinalIgnoreCase))
-                {
-                    AlwaysOverwrite = true;
-                }
-                else if (value.Equals("Never", StringComparison.OrdinalIgnoreCase))
-                {
-                    AlwaysOverwrite = false;
-                }
-                else
-                {
-                    AlwaysOverwrite = false; // Default for unknown values
-                }
-            }
-        }
-
         public override string ToString()
         {
             return this.RelativePath;
