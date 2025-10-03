@@ -445,7 +445,6 @@ namespace SSoTme.OST.Lib.Extensions
 
         private static void CleanFileByRelativeName(XmlElement fileSetFileElem, XmlNode relPathElem)
         {
-            var relativePath = relPathElem.InnerText;
             var skipElement = fileSetFileElem.SelectSingleNode(".//SkipClean");
             if (!ReferenceEquals(skipElement, null) && String.Equals(skipElement.InnerText, "true", StringComparison.OrdinalIgnoreCase))
             {
@@ -518,7 +517,6 @@ namespace SSoTme.OST.Lib.Extensions
 
                     if (!neverOverwrite || contentMatches)
                     {
-                        string reason = !neverOverwrite ? "OverwriteMode allows cleaning" : "content matches ZFS";
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
                         fiToClean.Delete();
                     }
