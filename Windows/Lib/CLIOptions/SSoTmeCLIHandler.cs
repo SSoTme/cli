@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.02.1463";
+        public string CLI_VERSION = "2025.10.02.1462";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -1669,14 +1669,6 @@ Seed Url: ");
                     if (response != null)
                     {
                         var responseContent = await response.Content.ReadAsStringAsync();
-
-                        // DEBUG: Save full response from remote transpiler
-                        //var debugResponsePath = Path.Combine(this.AICaptureProject?.RootPath ?? Environment.CurrentDirectory, ".ssotme", "debug-transpiler-response.json");
-                        //var debugDir = Path.GetDirectoryName(debugResponsePath);
-                        //if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
-                        //File.WriteAllText(debugResponsePath, responseContent);
-                        //Console.WriteLine($"DEBUG: Saved full transpiler response to {debugResponsePath}");
-
                         var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
                         result = responsePayload;
                         if (result != null)
@@ -1703,23 +1695,6 @@ Seed Url: ");
                     (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_requesttranspile_ssotmecoordinator)))
             {
                 result = e.Payload;
-
-                /*
-                // DEBUG: Save local transpiler response
-                try
-                {
-                    var debugResponsePath = Path.Combine(this.AICaptureProject?.RootPath ?? Environment.CurrentDirectory, ".ssotme", "debug-local-transpiler-response.json");
-                    var debugDir = Path.GetDirectoryName(debugResponsePath);
-                    if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
-                    var jsonResponse = JsonConvert.SerializeObject(result, Formatting.Indented);
-                    File.WriteAllText(debugResponsePath, jsonResponse);
-                    //Console.WriteLine($"DEBUG: Saved local transpiler response to {debugResponsePath}");
-                }
-                catch (Exception ex)
-                {
-                    //Console.WriteLine($"DEBUG: Error saving local transpiler response: {ex.Message}");
-                }
-                */
             }
         }
 
@@ -1877,23 +1852,6 @@ Seed Url: ");
                             }
                         }
                     }
-
-                    /*
-                    // DEBUG: Save proxy transpiler response
-                    try
-                    {
-                        var debugResponsePath = Path.Combine(this.AICaptureProject?.RootPath ?? Environment.CurrentDirectory, ".ssotme", "debug-transpiler-response.json");
-                        var debugDir = Path.GetDirectoryName(debugResponsePath);
-                        if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
-                        File.WriteAllText(debugResponsePath, responseContent);
-                        //Console.WriteLine($"DEBUG: Saved transpiler response to {debugResponsePath}");
-                    }
-                    catch (Exception ex)
-                    {
-                        //Console.WriteLine($"DEBUG: Error saving transpiler response: {ex.Message}");
-                    }
-                    */
-
                     this.result = responsePayload;
                 }
                 catch (JsonException ex)
