@@ -1878,6 +1878,7 @@ Seed Url: ");
                         }
                     }
 
+                    /*
                     // DEBUG: Save proxy transpiler response
                     try
                     {
@@ -1891,6 +1892,7 @@ Seed Url: ");
                     {
                         //Console.WriteLine($"DEBUG: Error saving transpiler response: {ex.Message}");
                     }
+                    */
 
                     this.result = responsePayload;
                 }

@@ -191,8 +191,8 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             File.WriteAllBytes(zfsFI.FullName, fileSetXml.Zip());
 
             // DEBUG: Write unzipped XML for debugging
-            var xmlDebugPath = Path.ChangeExtension(zfsFI.FullName, ".xml");
-            File.WriteAllText(xmlDebugPath, fileSetXml);
+            //var xmlDebugPath = Path.ChangeExtension(zfsFI.FullName, ".xml");
+            //File.WriteAllText(xmlDebugPath, fileSetXml);
             //Console.WriteLine($"DEBUG: Wrote XML to {xmlDebugPath}");
         }
 
