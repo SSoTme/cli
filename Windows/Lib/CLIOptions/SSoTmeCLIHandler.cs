@@ -1671,10 +1671,10 @@ Seed Url: ");
                         var responseContent = await response.Content.ReadAsStringAsync();
 
                         // DEBUG: Save full response from remote transpiler
-                        var debugResponsePath = Path.Combine(this.AICaptureProject?.RootPath ?? Environment.CurrentDirectory, ".ssotme", "debug-transpiler-response.json");
-                        var debugDir = Path.GetDirectoryName(debugResponsePath);
-                        if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
-                        File.WriteAllText(debugResponsePath, responseContent);
+                        //var debugResponsePath = Path.Combine(this.AICaptureProject?.RootPath ?? Environment.CurrentDirectory, ".ssotme", "debug-transpiler-response.json");
+                        //var debugDir = Path.GetDirectoryName(debugResponsePath);
+                        //if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
+                        //File.WriteAllText(debugResponsePath, responseContent);
                         //Console.WriteLine($"DEBUG: Saved full transpiler response to {debugResponsePath}");
 
                         var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
