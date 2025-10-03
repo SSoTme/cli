@@ -31,4 +31,5 @@ macOS/Installer/Resources
 **/ssotme-win64-inno-msi/publish/**
 
 # test folder used to test locally
+.claude/
 test/
