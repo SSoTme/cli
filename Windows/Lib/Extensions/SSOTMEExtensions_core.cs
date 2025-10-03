@@ -403,7 +403,7 @@ namespace SSoTme.OST.Lib.Extensions
                     return; // Exit early if XML parsing failed
                 }
                 var fileSetNodes = doc.SelectNodes("//FileSetFile");
-                Console.WriteLine($"DEBUG: Found {fileSetNodes.Count} files in ZFS to process");
+                //Console.WriteLine($"DEBUG: Found {fileSetNodes.Count} files in ZFS to process");
                 foreach (XmlElement fileSetFileElem in fileSetNodes)
                 {
                     // Delete the file if it matches the contents
@@ -447,20 +447,20 @@ namespace SSoTme.OST.Lib.Extensions
         private static void CleanFileByRelativeName(XmlElement fileSetFileElem, XmlNode relPathElem)
         {
             var relativePath = relPathElem.InnerText;
-            Console.WriteLine($"\nDEBUG: Processing file from ZFS: {relativePath}");
+            //Console.WriteLine($"\nDEBUG: Processing file from ZFS: {relativePath}");
 
             var skipElement = fileSetFileElem.SelectSingleNode(".//SkipClean");
             if (!ReferenceEquals(skipElement, null) && String.Equals(skipElement.InnerText, "true", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine($"DEBUG:   DECISION: Skipping - SkipClean=true");
+                //Console.WriteLine($"DEBUG:   DECISION: Skipping - SkipClean=true");
                 return;
             }
             else
             {
                 var fullFileName = GetFullFileName(relPathElem.InnerText, new DirectoryInfo("."));
                 FileInfo fiToClean = new FileInfo(fullFileName);
-                Console.WriteLine($"DEBUG:   Full path: {fiToClean.FullName}");
-                Console.WriteLine($"DEBUG:   File exists: {fiToClean.Exists}");
+                //Console.WriteLine($"DEBUG:   Full path: {fiToClean.FullName}");
+                //Console.WriteLine($"DEBUG:   File exists: {fiToClean.Exists}");
                 if (fiToClean.Exists)
                 {
                     bool neverOverwrite = true;
@@ -510,40 +510,40 @@ namespace SSoTme.OST.Lib.Extensions
 
                     if (!hasAnyContent)
                     {
-                        Console.WriteLine($"DEBUG:   Content check: No content nodes found in ZFS");
+                        //Console.WriteLine($"DEBUG:   Content check: No content nodes found in ZFS");
                         Console.WriteLine($"WARNING: Cannot clean {fiToClean.FullName} - ZFS entry has no content nodes (FileContents, ZippedTextFileContents, ZippedFileContents, or BinaryFileContents)");
                     }
                     else if (!String.IsNullOrEmpty(value))
                     {
                         var fileContent = File.ReadAllText(fiToClean.FullName);
                         contentMatches = fileContent == value;
-                        Console.WriteLine($"DEBUG:   Content check: Text content {(contentMatches ? "MATCHES" : "DOES NOT MATCH")}");
+                        //Console.WriteLine($"DEBUG:   Content check: Text content {(contentMatches ? "MATCHES" : "DOES NOT MATCH")}");
                     }
                     else if (binaryEquals)
                     {
                         contentMatches = true;
-                        Console.WriteLine($"DEBUG:   Content check: Binary content MATCHES");
+                        //Console.WriteLine($"DEBUG:   Content check: Binary content MATCHES");
                     }
                     else
                     {
-                        Console.WriteLine($"DEBUG:   Content check: No valid content to compare");
+                        //Console.WriteLine($"DEBUG:   Content check: No valid content to compare");
                     }
 
                     if (!neverOverwrite || contentMatches)
                     {
                         string reason = !neverOverwrite ? "OverwriteMode allows cleaning" : "content matches ZFS";
-                        Console.WriteLine($"DEBUG:   DECISION: CLEANING - {reason}");
+                        //Console.WriteLine($"DEBUG:   DECISION: CLEANING - {reason}");
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
                         fiToClean.Delete();
                     }
                     else
                     {
-                        Console.WriteLine($"DEBUG:   DECISION: NOT CLEANING - content does not match and not AlwaysOverwrite");
+                        //Console.WriteLine($"DEBUG:   DECISION: NOT CLEANING - content does not match and not AlwaysOverwrite");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"DEBUG:   DECISION: NOT CLEANING - file does not exist on disk");
+                    //Console.WriteLine($"DEBUG:   DECISION: NOT CLEANING - file does not exist on disk");
                 }
             }
         }

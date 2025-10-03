@@ -1675,7 +1675,7 @@ Seed Url: ");
                         var debugDir = Path.GetDirectoryName(debugResponsePath);
                         if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
                         File.WriteAllText(debugResponsePath, responseContent);
-                        Console.WriteLine($"DEBUG: Saved full transpiler response to {debugResponsePath}");
+                        //Console.WriteLine($"DEBUG: Saved full transpiler response to {debugResponsePath}");
 
                         var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
                         result = responsePayload;
@@ -1712,11 +1712,11 @@ Seed Url: ");
                     if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
                     var jsonResponse = JsonConvert.SerializeObject(result, Formatting.Indented);
                     File.WriteAllText(debugResponsePath, jsonResponse);
-                    Console.WriteLine($"DEBUG: Saved local transpiler response to {debugResponsePath}");
+                    //Console.WriteLine($"DEBUG: Saved local transpiler response to {debugResponsePath}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"DEBUG: Error saving local transpiler response: {ex.Message}");
+                    //Console.WriteLine($"DEBUG: Error saving local transpiler response: {ex.Message}");
                 }
             }
         }
@@ -1883,11 +1883,11 @@ Seed Url: ");
                         var debugDir = Path.GetDirectoryName(debugResponsePath);
                         if (!Directory.Exists(debugDir)) Directory.CreateDirectory(debugDir);
                         File.WriteAllText(debugResponsePath, responseContent);
-                        Console.WriteLine($"DEBUG: Saved transpiler response to {debugResponsePath}");
+                        //Console.WriteLine($"DEBUG: Saved transpiler response to {debugResponsePath}");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"DEBUG: Error saving transpiler response: {ex.Message}");
+                        //Console.WriteLine($"DEBUG: Error saving transpiler response: {ex.Message}");
                     }
 
                     this.result = responsePayload;

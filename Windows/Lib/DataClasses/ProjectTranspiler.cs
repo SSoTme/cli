@@ -133,28 +133,28 @@ namespace SSoTme.OST.Lib.DataClasses
             }
 
             String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
-            Console.WriteLine($"DEBUG: Looking for ZFS file: {zsfFileName}");
+            //Console.WriteLine($"DEBUG: Looking for ZFS file: {zsfFileName}");
             var zfsFI = new FileInfo(zsfFileName);
             if (zfsFI.Exists)
             {
-                Console.WriteLine($"DEBUG: ZFS file found, size: {zfsFI.Length} bytes");
+                //Console.WriteLine($"DEBUG: ZFS file found, size: {zfsFI.Length} bytes");
                 var zippedFileSet = File.ReadAllBytes(zfsFI.FullName);
-                Console.WriteLine($"DEBUG: Read {zippedFileSet.Length} bytes from ZFS file, calling CleanZippedFileSet()");
+                //Console.WriteLine($"DEBUG: Read {zippedFileSet.Length} bytes from ZFS file, calling CleanZippedFileSet()");
                 zippedFileSet.CleanZippedFileSet();
-                Console.WriteLine($"DEBUG: CleanZippedFileSet() completed");
+                //Console.WriteLine($"DEBUG: CleanZippedFileSet() completed");
                 if (!preserveZFS)
                 {
                     File.Delete(zfsFI.FullName);
-                    Console.WriteLine($"DEBUG: ZFS file deleted");
+                    //Console.WriteLine($"DEBUG: ZFS file deleted");
                 }
                 else
                 {
-                    Console.WriteLine($"DEBUG: ZFS file preserved (preserveZFS=true)");
+                    //Console.WriteLine($"DEBUG: ZFS file preserved (preserveZFS=true)");
                 }
             }
             else
             {
-                Console.WriteLine($"DEBUG: ZFS file not found at: {zsfFileName}");
+                //Console.WriteLine($"DEBUG: ZFS file not found at: {zsfFileName}");
             }
         }
 
