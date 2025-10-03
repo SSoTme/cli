@@ -510,9 +510,8 @@ namespace SSoTme.OST.Lib.Extensions
                         contentMatches = true;
                     }
 
-                    // Clean logic: Always delete if content matches (regardless of neverOverwrite)
-                    // The neverOverwrite setting only affects writing files, not cleaning them
-                    if (contentMatches)
+                    // Clean logic: Delete if AlwaysOverwrite (neverOverwrite=false) OR if content matches
+                    if (!neverOverwrite || contentMatches)
                     {
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
                         fiToClean.Delete();

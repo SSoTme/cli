@@ -185,7 +185,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         {
             // skip for null projects
             if (this.SSoTmeProject is null) return;
-            
+
             var zfsFI = this.GetZFSFI();
             if (!zfsFI.Directory.Exists) zfsFI.Directory.Create();
             File.WriteAllBytes(zfsFI.FullName, fileSetXml.Zip());
