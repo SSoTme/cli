@@ -89,19 +89,10 @@ namespace SSoTme.OST.Lib.Extensions
                 var fsf = new FileSetFile();
                 fs.FileSetFiles.Add(fsf);
                 var xmlNode = fsfNode.SelectSingleNode("AlwaysOverwrite");
-                if (!ReferenceEquals(xmlNode, null) && (xmlNode.InnerText == "true"))
-                {
-                    fsf.AlwaysOverwrite = true;
-                }
-                else
-                {
-                    // Fallback: check OverwriteMode if AlwaysOverwrite not explicitly defined
-                    xmlNode = fsfNode.SelectSingleNode("OverwriteMode");
-                    if (!ReferenceEquals(xmlNode, null) && String.Equals(xmlNode.InnerText, "Always", StringComparison.OrdinalIgnoreCase))
-                    {
-                        fsf.AlwaysOverwrite = true;
-                    }
-                }
+                if (!ReferenceEquals(xmlNode, null) && (xmlNode.InnerText == "true")) fsf.AlwaysOverwrite = true;
+
+                xmlNode = fsfNode.SelectSingleNode("OverwriteMode");
+                if (ReferenceEquals(xmlNode, null) || (!String.Equals(xmlNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase))) fsf.AlwaysOverwrite = true;
 
                 xmlNode = fsfNode.SelectSingleNode("RelativePath");
                 if (!ReferenceEquals(xmlNode, null)) fsf.RelativePath = xmlNode.InnerText;
