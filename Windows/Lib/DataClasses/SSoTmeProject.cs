@@ -642,7 +642,18 @@ namespace SSoTme.OST.Lib.DataClasses
 
         public void Install(SSOTMEPayload result, string transpilerGroup, bool dryRun)
         {
-            string relativePath = this.GetProjectRelativePath(Environment.CurrentDirectory);
+            string currentDir;
+            try
+            {
+                currentDir = Environment.CurrentDirectory;
+            }
+            catch (Exception)
+            {
+                // On macOS, Environment.CurrentDirectory throws if the directory was deleted during cleaning
+                // Fall back to the stored path from the payload if available
+                currentDir = this.RootPath;
+            }
+            string relativePath = this.GetProjectRelativePath(currentDir);
 
             var projectTranspiler = new ProjectTranspiler(relativePath, result);
             projectTranspiler.TranspilerGroup = transpilerGroup;

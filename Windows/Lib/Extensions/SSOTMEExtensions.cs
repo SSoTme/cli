@@ -417,6 +417,24 @@ namespace SSoTme.OST.Lib.Extensions
                 var diFiles = di.GetFiles();
                 if (!diDirs.Any() && !diFiles.Any())
                 {
+                    // Don't delete current working directory or any ancestor
+                    // On macOS, this would cause Environment.CurrentDirectory to throw FileNotFoundException
+                    string currentDir;
+                    try
+                    {
+                        currentDir = Environment.CurrentDirectory;
+                        if (di.FullName.Equals(currentDir, StringComparison.OrdinalIgnoreCase) ||
+                            currentDir.StartsWith(di.FullName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return; // Skip deleting current directory or any parent
+                        }
+                    }
+                    catch
+                    {
+                        // If we can't get current directory, skip deletion to be safe
+                        return;
+                    }
+
                     Task.Factory.StartNew(() =>
                     {
                         Thread.Sleep(150);
