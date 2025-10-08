@@ -92,13 +92,15 @@ namespace SSoTme.OST.Lib.DataClasses
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
         }
 
-        internal void Rebuild(SSoTmeProject project)
+        internal void Rebuild(SSoTmeProject project, bool debugOption)
         {
+            if (debugOption) {
+                this.CommandLine += " -debug";
+            }
             Console.WriteLine("\n\n **** " + this.RelativePath + ": " + this.Name + " ****");
             Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
             var transpileRootDI = new DirectoryInfo(Path.Combine(project.RootPath, $"{this.RelativePath}".Trim("\\/".ToCharArray())));
             if (!transpileRootDI.Exists) transpileRootDI.Create();
-
             Environment.CurrentDirectory = transpileRootDI.FullName;
             var cliHandler = SSoTmeCLIHandler.CreateHandler(this.CommandLine);
             var cliResult = cliHandler.TranspileProject(this);
@@ -117,7 +119,7 @@ namespace SSoTme.OST.Lib.DataClasses
             // Derive transpiler name from command line (not from saved JSON)
             // For remote transpilers, extract and sanitize the URL from command line
             string transpilerName;
-            if (this.CommandLine.Contains("-g "))
+            if (this.Name.StartsWith("http") && this.CommandLine.Contains("-g "))
             {
                 // Extract URL from "-g URL" in command line
                 var parts = this.CommandLine.Split(' ');
@@ -187,7 +189,7 @@ namespace SSoTme.OST.Lib.DataClasses
 
             // Derive transpiler name from command line (not from saved JSON)
             string transpilerName;
-            if (this.CommandLine.Contains("-g "))
+            if (this.Name.StartsWith("http") && this.CommandLine.Contains("-g "))
             {
                 // Extract URL from "-g URL" in command line for remote transpilers
                 var parts = this.CommandLine.Split(' ');

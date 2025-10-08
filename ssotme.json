@@ -10,10 +10,6 @@
   ],
   "ProjectTranspilers": [
     {
-      "MatchedTranspiler": {
-        "Name": "JsonToHandlebars",
-        "Description": "JsonToHandlebars"
-      },
       "IsSSoTTranspiler": false,
       "Name": "JsonToHandlebars",
       "RelativePath": "",
@@ -22,10 +18,6 @@
       "TranspilerGroup": "aic"
     },
     {
-      "MatchedTranspiler": {
-        "Name": "OdxmlToCSharpPOCOs",
-        "Description": "Odxml To CSharp POCOs"
-      },
       "IsSSoTTranspiler": false,
       "Name": "OdxmlToCSharpPOCOs",
       "RelativePath": "/Windows/Lib/DataClasses",
@@ -33,10 +25,6 @@
       "IsDisabled": true
     },
     {
-      "MatchedTranspiler": {
-        "Name": "GSheetToPlossumCmdLineOptions",
-        "Description": "Converts a simple GSheet into a C# Plossom command line object"
-      },
       "IsSSoTTranspiler": false,
       "Name": "GSheetToPlossumCmdLineOptions",
       "RelativePath": "/Windows/Lib/CLIOptions",
@@ -44,10 +32,6 @@
       "IsDisabled": false
     },
     {
-      "MatchedTranspiler": {
-        "Name": "OdxmlToNodeJSDocs",
-        "Description": "Creates easy to read/navigate html documentation for an Odxml Schema."
-      },
       "IsSSoTTranspiler": false,
       "Name": "OdxmlToNodeJSDocs",
       "RelativePath": "/docs/schema",
@@ -55,10 +39,6 @@
       "IsDisabled": false
     },
     {
-      "MatchedTranspiler": {
-        "Name": "XmlXsltTransform",
-        "Description": "Given an Xml and Xslt file, will process and \"split\" a resulting fileset."
-      },
       "IsSSoTTranspiler": false,
       "Name": "XmlXsltTransform",
       "RelativePath": "/docs",
@@ -66,10 +46,6 @@
       "IsDisabled": false
     },
     {
-      "MatchedTranspiler": {
-        "Name": "PublicGSheetToXml",
-        "Description": "Downloads a public google spreadsheet as an XML file.  "
-      },
       "IsSSoTTranspiler": false,
       "Name": "PublicGSheetToXml",
       "RelativePath": "/docs/seeds",
@@ -77,10 +53,6 @@
       "IsDisabled": false
     },
     {
-      "MatchedTranspiler": {
-        "Name": "XmlXsltTransform",
-        "Description": "Given an Xml and Xslt file, will process and \"split\" a resulting fileset."
-      },
       "IsSSoTTranspiler": false,
       "Name": "XmlXsltTransform",
       "RelativePath": "/docs/seeds",

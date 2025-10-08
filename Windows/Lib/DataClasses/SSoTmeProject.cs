@@ -669,9 +669,9 @@ namespace SSoTme.OST.Lib.DataClasses
             return relativePath.Replace("\\", "/");
         }
 
-        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild)
+        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug)
         {
-            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, true);
+            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, true, debug);
         }
 
         internal void Rebuild(
@@ -681,27 +681,29 @@ namespace SSoTme.OST.Lib.DataClasses
             string buildOnTrigger,
             bool copilotConnect,
             bool isBuildLocal,
+            bool debug,
             bool isBuildAll = false)
         {
             if (!string.IsNullOrEmpty(buildOnTrigger))
             {
                 this.LogMessage("Watching for Airtable changes using baseId: {0}...", buildOnTrigger);
-                this.ListenForChangesAndRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll, buildOnTrigger, copilotConnect);
+                this.ListenForChangesAndRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll, buildOnTrigger, debug, copilotConnect);
             }
             else
             {
-                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll);
+                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
             }
         }
         
         private void ListenForChangesAndRebuild(
-    string buildPath,
-    bool includeDisabled,
-    string transpilerGroup,
-    bool isBuildLocal,
-    bool isBuildAll,
-    string baseId,
-    bool isCopilot = false)
+            string buildPath,
+            bool includeDisabled,
+            string transpilerGroup,
+            bool isBuildLocal,
+            bool isBuildAll,
+            string baseId,
+            bool debug,
+            bool isCopilot = false)
         {
             DateTime? lastChangedTime = null;
             bool changeEverDetected = false;
@@ -758,7 +760,7 @@ namespace SSoTme.OST.Lib.DataClasses
                         Console.WriteLine("No changes in last 10 seconds. Rebuilding...");
                         try
                         {
-                            this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll);
+                            this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
                         }
                         catch (Exception ex)
                         {
@@ -802,8 +804,8 @@ namespace SSoTme.OST.Lib.DataClasses
                 return false;
             }
         }
-        
-        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool isBuildAll = false)
+
+        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool debugOption, bool isBuildAll = false)
         {
             if (!isBuildLocal) this.CheckIfParentIsRootSeed();
             if (isBuildAll) this.FindSSoTmeJsonFiles();
@@ -816,7 +818,7 @@ namespace SSoTme.OST.Lib.DataClasses
                                                                                         String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase));
                 foreach (var pt in matchingProjectTranspilers)
                 {
-                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this);
+                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption);
                     else this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
                 }
                 if (isBuildAll) this.BuildSubSSoTmeProjects();
@@ -929,7 +931,7 @@ namespace SSoTme.OST.Lib.DataClasses
                     // Derive transpiler name from command line (not from saved JSON)
                     // Use same naming logic as ProjectTranspiler.Clean method
                     string transpilerName;
-                    if (pt.CommandLine.Contains("-g "))
+                    if (pt.Name.StartsWith("http") && pt.CommandLine.Contains("-g "))
                     {
                         // Extract and sanitize URL from command line for remote transpilers
                         var parts = pt.CommandLine.Split(' ');

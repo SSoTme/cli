@@ -440,6 +440,10 @@ namespace SSoTme.OST.Lib.CLIOptions
                     this.parameters.Add(String.Format("param{0}={1}", i + 1, additionalArgs[i]));
                 }
 
+                if (this.debug) {
+                    Console.WriteLine($"DEBUG OUTPUT ENABLED");
+                }
+
                 if (this.help)
                 {
                     var helpWidth = Console.WindowWidth - 4;
@@ -519,7 +523,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                             {
                                 this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
                             }
-                            this.AICaptureProject?.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
+                            this.AICaptureProject?.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
                             Console.WriteLine("Auto-build completed successfully.");
                         }
                         catch (Exception ex)
@@ -807,13 +811,10 @@ Seed Url: ");
                     break;
 
                 case "build":
+                case "buildlocal":
                 case "rebuild":
                 case "pull":
                     this.build = true;
-                    break;
-
-                case "buildlocal":
-                    this.buildLocal = true;
                     break;
 
                 case "buildall":
@@ -834,7 +835,7 @@ Seed Url: ");
                     this.describe = true;
                     break;
 
-                case "descibeall":
+                case "describeall":
                     this.descibeAll = true;
                     break;
 
@@ -1028,11 +1029,11 @@ Seed Url: ");
                 }
                 else if (this.build || this.buildLocal)
                 {
-                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
+                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
                 }
                 else if (this.buildAll)
                 {
-                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
+                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
                 }
                 else if (this.discuss)
                 {
@@ -1761,7 +1762,7 @@ Seed Url: ");
                         var expectedName = this.transpiler;
                         var returnedName = responsePayload?.Transpiler?.Name ?? "NULL";
                         var hasZippedFileSet = responsePayload?.TranspileRequest?.ZippedOutputFileSet?.Length > 0;
-                        if (!returnedName.StartsWith("http"))
+                        if (!returnedName.StartsWith("http") && this.debug)
                         {
                             Console.WriteLine($"WARNING: Remote server {this.targetUrl} returned unexpected transpiler name.");
                             Console.WriteLine($"  Expected: '{expectedName}' (or similar remote transpiler name)");
@@ -1769,7 +1770,7 @@ Seed Url: ");
                             Console.WriteLine($"  JSON Key: Response should set 'Transpiler.Name' to preserve the original name");
                             Console.WriteLine($"  This will cause the transpiler name to be reset during builds.");
                         }
-                        if (!hasZippedFileSet)
+                        if (!hasZippedFileSet && this.debug)
                         {
                             Console.WriteLine($"WARNING: Remote server {this.targetUrl} did not return expected output files.");
                             Console.WriteLine($"  JSON Key: Response should set 'TranspileRequest.ZippedOutputFileSet' with generated files");
