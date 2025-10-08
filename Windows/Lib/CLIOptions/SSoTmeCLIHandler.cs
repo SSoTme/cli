@@ -382,7 +382,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 // If -g flag is used, prioritize remote transpiler naming regardless of transpiler arg
                 if (!String.IsNullOrEmpty(this.targetUrl))
                 {
-                    this.transpiler = "remote-transpiler-" + this.targetUrl.SanitizeUrlForFilename();
+                    this.transpiler = this.targetUrl.SanitizeUrlForFilename();
                 }
                 else if (String.IsNullOrEmpty(this.transpiler))
                 {
@@ -393,7 +393,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     if (!String.IsNullOrEmpty(urlFromFile))
                     {
                         this.targetUrl = urlFromFile;
-                        this.transpiler = "remote-transpiler-" + urlFromFile.SanitizeUrlForFilename();
+                        this.transpiler = urlFromFile.SanitizeUrlForFilename();
                     }
                     else if (this.transpiler.Contains("/"))
                     {
@@ -407,7 +407,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         else
                         {
                             this.targetUrl = this.transpiler;
-                            this.transpiler = "remote-transpiler-" + this.transpiler.SanitizeUrlForFilename();
+                            this.transpiler = this.transpiler.SanitizeUrlForFilename();
                         }
                     }
                 }
@@ -421,7 +421,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         if (!String.IsNullOrEmpty(urlFromFile))
                         {
                             this.targetUrl = urlFromFile;
-                            this.transpiler = "remote-transpiler-" + urlFromFile.SanitizeUrlForFilename();
+                            this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
                         else if (this.transpiler.Contains("/"))
                         {
@@ -429,7 +429,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
                             {
                                 this.targetUrl = this.transpiler;
-                                this.transpiler = "remote-transpiler-" + this.transpiler.SanitizeUrlForFilename();
+                                this.transpiler = this.transpiler.SanitizeUrlForFilename();
                             }
                         }
                     }
@@ -1000,7 +1000,7 @@ Seed Url: ");
                     }
                     SSOTMEKey.SetSSoTmeKey(key, this.runAs);
                 }
-                else if (this.install && this.transpiler.StartsWith("remote-transpiler"))
+                else if (this.install && this.transpiler.StartsWith("http"))
                 {
                     result = new SSOTMEPayload()
                     {
@@ -1633,7 +1633,7 @@ Seed Url: ");
                     // Set LowerHyphenName for .zfs file creation after transpiler is populated
                     if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
                     {
-                        if (payload.Transpiler.Name.StartsWith("remote-transpiler") && !string.IsNullOrEmpty(this.targetUrl))
+                        if (payload.Transpiler.Name.StartsWith("http") && !string.IsNullOrEmpty(this.targetUrl))
                         {
                             // For remote transpilers, use sanitized URL as the filename
                             var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
@@ -1694,7 +1694,7 @@ Seed Url: ");
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
             {
-                if (payload.Transpiler.Name.StartsWith("remote-transpiler") && !string.IsNullOrEmpty(this.targetUrl))
+                if (payload.Transpiler.Name.StartsWith("http") && !string.IsNullOrEmpty(this.targetUrl))
                 {
                     // For remote transpilers, use sanitized URL as the filename
                     var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
@@ -1756,11 +1756,19 @@ Seed Url: ");
                 {
                     var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
                     // Debug remote transpiler responses
-                    if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("remote-transpiler"))
+                    if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("http"))
                     {
                         var expectedName = this.transpiler;
                         var returnedName = responsePayload?.Transpiler?.Name ?? "NULL";
                         var hasZippedFileSet = responsePayload?.TranspileRequest?.ZippedOutputFileSet?.Length > 0;
+                        if (!returnedName.StartsWith("http"))
+                        {
+                            Console.WriteLine($"WARNING: Remote server {this.targetUrl} returned unexpected transpiler name.");
+                            Console.WriteLine($"  Expected: '{expectedName}' (or similar remote transpiler name)");
+                            Console.WriteLine($"  Received: '{returnedName}'");
+                            Console.WriteLine($"  JSON Key: Response should set 'Transpiler.Name' to preserve the original name");
+                            Console.WriteLine($"  This will cause the transpiler name to be reset during builds.");
+                        }
                         if (!hasZippedFileSet)
                         {
                             Console.WriteLine($"WARNING: Remote server {this.targetUrl} did not return expected output files.");

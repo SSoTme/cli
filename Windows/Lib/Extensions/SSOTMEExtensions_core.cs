@@ -1729,10 +1729,7 @@ namespace SSoTme.OST.Lib.Extensions
         public static String SanitizeUrlForFilename(this string url)
         {
             if (string.IsNullOrEmpty(url)) return string.Empty;
-
             return url
-                .Replace("https://", "")
-                .Replace("http://", "")
                 .Replace("/", "")
                 .Replace(".", "")
                 .Replace(":", "")

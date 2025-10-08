@@ -908,13 +908,6 @@ namespace SSoTme.OST.Lib.DataClasses
         {
             var rootPathDI = new DirectoryInfo(this.RootPath);
             this.Clean(rootPathDI.FullName, preserveZFS, true);
-
-            // Remove unused ZFS files (those not corresponding to current transpilers)
-            if (!preserveZFS)
-            {
-                this.RemoveUnusedZFSFiles();
-            }
-
             this.RemoveEmptyFolders(rootPathDI.FullName);
         }
 
@@ -1084,7 +1077,7 @@ namespace SSoTme.OST.Lib.DataClasses
             firstIndex = Math.Min(firstIndex, this.ProjectTranspilers.Count);
             if (firstIndex >= 0) this.ProjectTranspilers.Insert(firstIndex, projectTranspiler);
             else if (addIfMissing) this.ProjectTranspilers.Add(projectTranspiler);
-            projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name ?? "no-transpiler-found";
+            projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name.Replace("-", "") ?? "noTranspilerFound";
         }
 
         private ProjectTranspiler FindMatchingTranspiler(ProjectTranspiler projectTranspiler)
