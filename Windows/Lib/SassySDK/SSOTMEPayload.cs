@@ -134,10 +134,19 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         private string GetCurrentRelativePath()
         {
             string curDir = String.Empty;
-            curDir = Environment.CurrentDirectory;
+            try
+            {
+                curDir = Environment.CurrentDirectory;
+            }
+            catch (Exception)
+            {
+                // On macOS, Environment.CurrentDirectory throws if the directory was deleted
+                // Fall back to empty string, which will use root path
+                curDir = String.Empty;
+            }
 
             string relPath;
-            if (curDir.StartsWith(this.SSoTmeProject.RootPath, StringComparison.OrdinalIgnoreCase))
+            if (!String.IsNullOrEmpty(curDir) && curDir.StartsWith(this.SSoTmeProject.RootPath, StringComparison.OrdinalIgnoreCase))
             {
                 relPath = curDir.Substring(this.SSoTmeProject.RootPath.Length);
                 // Normalize path separators and remove leading separators

@@ -60,7 +60,6 @@ namespace SSoTme.OST.Lib.DataClasses
             this.RelativePath = relativePath.SafeToString().Replace("\\", "/");
             var lowerCLI = Environment.CommandLine.ToLower().Replace("\\", "/");
             var cmd0 = Environment.CommandLine;
-            Console.WriteLine($"COMMAND LINE: {cmd0}");
             if (lowerCLI.Contains("/ssotme.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.exe") + "/ssotme.exe".Length);
             else if (lowerCLI.Contains("/ssotme.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.ost.cli.dll") + "/ssotme.ost.cli.dll".Length);
             else if (lowerCLI.Contains("/aicapture.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture.ost.cli.dll") + "/aicapture.ost.cli.dll".Length);            
@@ -83,8 +82,8 @@ namespace SSoTme.OST.Lib.DataClasses
                 cmd0 = cmd0.Substring("ssotme ".Length);
             }
             cmd0 = cmd0.Trim(" '\"".ToCharArray());
+            Console.WriteLine($"COMMAND LINE: {cmd0}");
             this.CommandLine = cmd0;
-            
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
         }
 
