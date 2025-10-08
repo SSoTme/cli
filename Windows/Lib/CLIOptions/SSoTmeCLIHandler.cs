@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.02.1462";
+        public string CLI_VERSION = "2025.10.08.1106";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -434,7 +434,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                         }
                     }
                 }
-
                 var additionalArgs = remainingArguments.Skip(1).ToList();
                 for (var i = 0; i < additionalArgs.Count; i++)
                 {
@@ -447,7 +446,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
                     Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
-                    if (!this.noKey) Console.ReadKey();
+                    Console.ReadKey();
                     this.SuppressTranspile = true;
                 }
                 else if (this.info)
@@ -460,7 +459,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     Console.WriteLine(this.CLI_VERSION);
                     this.SuppressTranspile = true;
-                    this.SuppressKeyPress = true;
                     continueToLoad = false;
                 }
                 else if (this.init)
@@ -552,14 +550,12 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     Console.WriteLine("\n********************************\nERROR: {0}\n********************************\n\n", currentException.Message);
                     Console.WriteLine(currentException.StackTrace);
-                    if (!this.noKey) Console.WriteLine("\n\nPress any key to continue...\n");
                     Console.WriteLine("\n\n");
                     if (currentException == ex.InnerException) break;
                     currentException = ex.InnerException;
                 }
                 Console.ForegroundColor = curColor;
                 this.SuppressTranspile = true;
-                if (!this.noKey) Console.ReadKey();
             }
         }
 
@@ -896,7 +892,6 @@ Seed Url: ");
                     var effortlessAPIService = new MyEffortlessAPIService();
                     effortlessAPIService.HandleAuth().Wait();
                     this.SuppressTranspile = true;
-                    this.SuppressKeyPress = true;
                     return 0;
                 }
                 else if (this.localGuide)
@@ -914,7 +909,6 @@ Seed Url: ");
                     
                     effortlessAPIService.HandleLocalGuide(projectName).Wait();
                     this.SuppressTranspile = true;
-                    this.SuppressKeyPress = true;
                     return 0;
                 }
                 else if (this.describe)
@@ -1376,7 +1370,6 @@ Seed Url: ");
         public int ParseResult { get; private set; }
         public FileSet OutputFileSet { get; private set; }
         public bool SuppressTranspile { get; private set; }
-        public bool SuppressKeyPress { get; private set; }
 
         public string AICaptureHost
         {
@@ -1430,7 +1423,6 @@ Seed Url: ");
             }
         }
 
-
         public void LoadInputFiles()
         {
             this.SaveOptionalCLIInputs();
@@ -1446,9 +1438,7 @@ Seed Url: ");
                         {
                             this.ImportFile(filePattern, fs);
                         }
-
                         if (fs.FileSetFiles.Any()) this.inputFileContents = fs.FileSetFiles.First().FileContents;
-
                     }
                 }
             }
@@ -1560,7 +1550,6 @@ Seed Url: ");
 
             var di = new DirectoryInfo(Path.Combine(".", Path.GetDirectoryName(filePattern)));
             filePattern = Path.GetFileName(filePattern);
-
             var matchingFiles = new FileInfo[] { };
             if (di.Exists)
             {
@@ -1574,9 +1563,7 @@ Seed Url: ");
                 var fsf = new FileSetFile();
                 fsf.RelativePath = Path.GetFileName(filePattern);
                 fs.FileSetFiles.Add(fsf);
-
                 Console.ForegroundColor = curColor;
-
             }
 
             foreach (var matchingFileFI in matchingFiles)
@@ -1726,7 +1713,6 @@ Seed Url: ");
             payload.TranspileRequest = new TranspileRequest();
             payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
             payload.CLIInputFileContents = string.Empty;
-
             var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}", payload);
             if (response != null)
             {
@@ -1775,14 +1761,6 @@ Seed Url: ");
                         var expectedName = this.transpiler;
                         var returnedName = responsePayload?.Transpiler?.Name ?? "NULL";
                         var hasZippedFileSet = responsePayload?.TranspileRequest?.ZippedOutputFileSet?.Length > 0;
-                        if (!returnedName.StartsWith("remote-transpiler"))
-                        {
-                            Console.WriteLine($"WARNING: Remote server {this.targetUrl} returned unexpected transpiler name.");
-                            Console.WriteLine($"  Expected: '{expectedName}' (or similar remote-transpiler name)");
-                            Console.WriteLine($"  Received: '{returnedName}'");
-                            Console.WriteLine($"  JSON Key: Response should set 'Transpiler.Name' to preserve the original name");
-                            Console.WriteLine($"  This will cause the transpiler name to be reset during builds.");
-                        }
                         if (!hasZippedFileSet)
                         {
                             Console.WriteLine($"WARNING: Remote server {this.targetUrl} did not return expected output files.");
@@ -1802,11 +1780,9 @@ Seed Url: ");
                                     {
                                         fileSetXml = fileSetXml.Substring(fileSetXml.IndexOf("<"));
                                         fileSetXml = fileSetXml.Replace("FileContents><?xml ", "FileContents>&lt;?xml");
-
                                         var doc = new System.Xml.XmlDocument();
                                         doc.LoadXml(fileSetXml);
                                         var fileSetNodes = doc.SelectNodes("//FileSetFile");
-
                                         var filesWithNoContent = new List<string>();
 
                                         foreach (System.Xml.XmlElement fileSetFileElem in fileSetNodes)
@@ -1821,7 +1797,6 @@ Seed Url: ");
                                                     zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedFileContents");
                                                 }
                                                 var binaryFileContentsNode = fileSetFileElem.SelectSingleNode("BinaryFileContents");
-
                                                 bool hasContent = (!ReferenceEquals(fileContentsNode, null) && !String.IsNullOrEmpty(fileContentsNode.InnerXml)) ||
                                                                 (!ReferenceEquals(zippedFileContents, null) && !String.IsNullOrEmpty(zippedFileContents.InnerXml)) ||
                                                                 (!ReferenceEquals(binaryFileContentsNode, null) && !String.IsNullOrEmpty(binaryFileContentsNode.InnerText));

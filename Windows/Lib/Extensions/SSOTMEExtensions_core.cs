@@ -1733,12 +1733,13 @@ namespace SSoTme.OST.Lib.Extensions
             return url
                 .Replace("https://", "")
                 .Replace("http://", "")
-                .Replace("/", "-")
-                .Replace(".", "-")
-                .Replace(":", "-")
-                .Replace("?", "-")
-                .Replace("&", "-")
-                .Replace("=", "-")
+                .Replace("/", "")
+                .Replace(".", "")
+                .Replace(":", "")
+                .Replace("?", "")
+                .Replace("&", "")
+                .Replace("=", "")
+                .Replace(" ", "")
                 .ToLower();
         }
 
