@@ -273,21 +273,8 @@ namespace SSoTme.OST.Lib.DataClasses
         {
             this.RemoveUUIds();
             this.AddSetting(string.Format("project-name={0}", this.Name));
-            this.ProjectTranspilers
-                .ToList()
-                .ForEach(feProjectTranspiler =>
-                {
-                    if (feProjectTranspiler.MatchedTranspiler == null) feProjectTranspiler.MatchedTranspiler = new Transpiler();
-                    feProjectTranspiler.MatchedTranspiler = new Transpiler()
-                    {
-                        TranspilerId = feProjectTranspiler.MatchedTranspiler.TranspilerId,
-                        Name = feProjectTranspiler.MatchedTranspiler.Name,
-                        Description = feProjectTranspiler.MatchedTranspiler.Description,
-                        TranspileRequests = null,
-                        TranspilerInstances = null,
-                        TranspilerVersions = null
-                    };
-                });
+            // Note: MatchedTranspiler is marked with [JsonIgnore] and won't be serialized
+            // The transpiler name will be derived fresh from API responses on each run
             string projectJson = JsonConvert.SerializeObject(this, Newtonsoft.Json.Formatting.Indented);
             var tempTranspiler = JsonConvert.DeserializeObject<SSoTmeProject>(projectJson);
             tempTranspiler.RootPath = null;
@@ -329,10 +316,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 if (transpiler != null)
                 {
                     transpiler.ProjectTranspilerId = Guid.Empty;
-                    if (transpiler.MatchedTranspiler != null)
-                    {
-                        transpiler.MatchedTranspiler.TranspilerId = Guid.Empty;
-                    }
+                    // Note: MatchedTranspiler is not saved to JSON (marked with [JsonIgnore])
                 }
             });
         }
@@ -949,9 +933,10 @@ namespace SSoTme.OST.Lib.DataClasses
 
                 foreach (var pt in this.ProjectTranspilers)
                 {
+                    // Derive transpiler name from command line (not from saved JSON)
                     // Use same naming logic as ProjectTranspiler.Clean method
                     string transpilerName;
-                    if (pt.Name.StartsWith("remote-transpiler") && pt.CommandLine.Contains("-g "))
+                    if (pt.CommandLine.Contains("-g "))
                     {
                         // Extract and sanitize URL from command line for remote transpilers
                         var parts = pt.CommandLine.Split(' ');
@@ -963,12 +948,13 @@ namespace SSoTme.OST.Lib.DataClasses
                         }
                         else
                         {
-                            transpilerName = pt.Name.ToTitle().ToLower().Replace(" ", "-");
+                            transpilerName = pt.Name.ToLower().Replace(" ", "");
                         }
                     }
                     else
                     {
-                        transpilerName = pt.MatchedTranspiler?.LowerHyphenName ?? pt.Name.ToTitle().ToLower().Replace(" ", "-");
+                        // For local transpilers, derive from Name (lowercase with spaces removed)
+                        transpilerName = pt.Name.ToLower().Replace(" ", "");
                     }
 
                     var zfsDI = this.GetZFSDI(pt.RelativePath);

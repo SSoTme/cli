@@ -14,12 +14,17 @@ using SSoTme.OST.Lib.CLIOptions;
 using SSoTme.OST.Lib.Extensions;
 using SassyMQ.Lib.RabbitMQ;
 using System.Text.RegularExpressions;
+using System.Linq;
+using Newtonsoft.Json;
 
 namespace SSoTme.OST.Lib.DataClasses
 {
     public partial class ProjectTranspiler
     {
+        [JsonIgnore]
         public Transpiler MatchedTranspiler { get; set; }
+
+        [JsonIgnore]
         public SSoTmeCLIHandler CLIHandler { get; private set; }
 
         // Fields used by the my.effortlessapi tool marketplace that should get preserved during builds
@@ -109,9 +114,10 @@ namespace SSoTme.OST.Lib.DataClasses
             Environment.CurrentDirectory = di.FullName;
             var zfsDI = project.GetZFSDI(this.RelativePath);
 
+            // Derive transpiler name from command line (not from saved JSON)
             // For remote transpilers, extract and sanitize the URL from command line
             string transpilerName;
-            if (this.Name.StartsWith("remote-transpiler") && this.CommandLine.Contains("-g "))
+            if (this.CommandLine.Contains("-g "))
             {
                 // Extract URL from "-g URL" in command line
                 var parts = this.CommandLine.Split(' ');
@@ -123,12 +129,13 @@ namespace SSoTme.OST.Lib.DataClasses
                 }
                 else
                 {
-                    transpilerName = this.Name.ToTitle().ToLower().Replace(" ", "-");
+                    transpilerName = this.Name.ToLower().Replace(" ", "");
                 }
             }
             else
             {
-                transpilerName = this.MatchedTranspiler?.LowerHyphenName ?? this.Name.ToTitle().ToLower().Replace(" ", "-");
+                // For local transpilers, derive from Name (lowercase with spaces removed)
+                transpilerName = this.Name.ToLower().Replace(" ", "");
             }
 
             String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
@@ -178,16 +185,33 @@ namespace SSoTme.OST.Lib.DataClasses
                 cliHandler.AICaptureProject = null;
             }
 
-            if (!ReferenceEquals(this.MatchedTranspiler, null))
+            // Derive transpiler name from command line (not from saved JSON)
+            string transpilerName;
+            if (this.CommandLine.Contains("-g "))
             {
-                cliHandler.AICaptureProject = project;
-                if (String.IsNullOrEmpty(this.MatchedTranspiler.LowerHyphenName))
+                // Extract URL from "-g URL" in command line for remote transpilers
+                var parts = this.CommandLine.Split(' ');
+                var gIndex = Array.IndexOf(parts, "-g");
+                if (gIndex >= 0 && gIndex + 1 < parts.Length)
                 {
-                    this.MatchedTranspiler.LowerHyphenName = $"{this.MatchedTranspiler.Name}".ToTitleCase().Replace(" ", "-").ToLower();
+                    var targetUrl = parts[gIndex + 1];
+                    transpilerName = targetUrl.SanitizeUrlForFilename();
                 }
-                cliHandler.LoadOutputFiles(this.MatchedTranspiler.LowerHyphenName, this.GetProjectRelativePath(project), includeContents);
-                cliHandler.AICaptureProject = null;
+                else
+                {
+                    transpilerName = this.Name.ToLower().Replace(" ", "");
+                }
             }
+            else
+            {
+                // For local transpilers, derive from Name (lowercase with spaces removed)
+                transpilerName = this.Name.ToLower().Replace(" ", "");
+            }
+
+            cliHandler.AICaptureProject = project;
+            cliHandler.LoadOutputFiles(transpilerName, this.GetProjectRelativePath(project), includeContents);
+            cliHandler.AICaptureProject = null;
+
             this.CLIHandler = cliHandler;
         }
 
