@@ -76,6 +76,15 @@ namespace SSoTme.OST.Lib.CLIOptions
             return this.AICaptureProject;
         }
 
+        private bool IsHttpUrl(string value)
+        {
+            if (String.IsNullOrEmpty(value))
+                return false;
+
+            return Uri.TryCreate(value, UriKind.Absolute, out var uriResult) &&
+                   (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+        }
+
         public static SSoTmeCLIHandler CreateHandler(string commandLine)
         {
             var cliHandler = new SSoTmeCLIHandler();
@@ -388,17 +397,24 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
 
-                    // First, try to get URL from tool_urls.json
-                    var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
-                    if (!String.IsNullOrEmpty(urlFromFile))
+                    // Check if the transpiler argument itself is a URL (supports ssotme https://... syntax)
+                    if (this.IsHttpUrl(this.transpiler))
                     {
+                        this.targetUrl = this.transpiler;
+                        this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                        // When URL is the transpiler, only count additional args beyond it as "remaining"
+                        this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                    }
+                    // First, try to get URL from tool_urls.json
+                    else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                    {
+                        var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
                         this.targetUrl = urlFromFile;
                         this.transpiler = urlFromFile.SanitizeUrlForFilename();
                     }
                     else if (this.transpiler.Contains("/"))
                     {
-                        if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
-                            (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
+                        if (!this.IsHttpUrl(this.transpiler))
                         {
                             // If this not a URL, assume it's a transpiler name with an account prefix
                             this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
@@ -408,6 +424,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                         {
                             this.targetUrl = this.transpiler;
                             this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                            // When URL is the transpiler, only count additional args beyond it as "remaining"
+                            this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                         }
                     }
                 }
@@ -416,20 +434,29 @@ namespace SSoTme.OST.Lib.CLIOptions
                     // If transpiler is already set but we also have a -g URL, check if we should still use remote naming
                     if (!String.IsNullOrEmpty(this.transpiler))
                     {
-                        // First, try to get URL from tool_urls.json
-                        var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
-                        if (!String.IsNullOrEmpty(urlFromFile))
+                        // Check if the transpiler argument itself is a URL (supports ssotme https://... syntax)
+                        if (this.IsHttpUrl(this.transpiler))
                         {
+                            this.targetUrl = this.transpiler;
+                            this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                            // When URL is the transpiler, only count additional args beyond it as "remaining"
+                            this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                        }
+                        // First, try to get URL from tool_urls.json
+                        else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                        {
+                            var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
                             this.targetUrl = urlFromFile;
                             this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
                         else if (this.transpiler.Contains("/"))
                         {
-                            if (Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
-                                (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+                            if (this.IsHttpUrl(this.transpiler))
                             {
                                 this.targetUrl = this.transpiler;
                                 this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                                // When URL is the transpiler, only count additional args beyond it as "remaining"
+                                this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                             }
                         }
                     }
@@ -446,7 +473,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (this.help)
                 {
-                    var helpWidth = Console.WindowWidth - 4;
+                    var helpWidth = Math.Max(Console.WindowWidth - 4, 80);
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
                     Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
@@ -1067,7 +1094,7 @@ Seed Url: ");
                     this.AICaptureProject?.CleanAll(this.preserveZFS);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
-                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
+                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && !this.IsHttpUrl(this.transpiler) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
                 {
                     ShowError("Missing argument name of transpiler");
                     return -1;
