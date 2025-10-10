@@ -42,8 +42,8 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Use with buildOnTrigger to connect the baseId to the SSoTme Copilot Agent", MinOccurs = 0, Aliases = "cc")]
         public bool copilotConnect { get; set; }
         
-        [CommandLineOption(Description = "Don't ask for user input after a command exits", MinOccurs = 0, Aliases = "")]
-        public bool noKey { get; set; }
+        [CommandLineOption(Description = "Show debug output", MinOccurs = 0, Aliases = "")]
+        public bool debug { get; set; }
         
         [CommandLineOption(Description = "Describes the current SSoT.me Project (and all transpilers)", MinOccurs = 0, Aliases = "d")]
         public bool describe { get; set; }
@@ -65,6 +65,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         
         [CommandLineOption(Description = "Don't output the final results - instead, clean", MinOccurs = 0, Aliases = "ca")]
         public bool cleanAll { get; set; }
+        
+        [CommandLineOption(Description = "Run clean on all generated files", MinOccurs = 0, Aliases = "")]
+        public bool purge { get; set; }
         
         [CommandLineOption(Description = "Don't clean the output before cooking", MinOccurs = 0, Aliases = "sc")]
         public bool skipClean { get; set; }

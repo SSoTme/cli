@@ -27,10 +27,6 @@ namespace SSoTme.OST.ConApp
                 var returnValue = -1;
                 var handler = SSoTmeCLIHandler.CreateHandler(args);
                 if (!handler.SuppressTranspile) returnValue = handler.TranspileProject();
-                if (returnValue != 0 && !handler.SuppressKeyPress && !handler.noKey)
-                {
-                    SafeReadKey();
-                }
                 return returnValue;
             }
             catch (ProjectNotConfiguredException ex)

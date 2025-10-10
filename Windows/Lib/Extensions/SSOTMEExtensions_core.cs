@@ -395,39 +395,61 @@ namespace SSoTme.OST.Lib.Extensions
         }
 
 
-        public static void CleanZippedFileSet(this byte[] zippedFileSet)
+        public static void CleanZippedFileSet(this byte[] zippedFileSet, bool debug = false)
         {
+            if (debug) Console.WriteLine($"DEBUG: Unzipping {zippedFileSet.Length} bytes to string");
             var fileSetXml = zippedFileSet.UnzipToString();
-            fileSetXml.CleanFileSet();
+            if (debug) Console.WriteLine($"DEBUG: Unzipped XML length: {fileSetXml.Length} chars, calling CleanFileSet()");
+            fileSetXml.CleanFileSet(debug);
+            if (debug) Console.WriteLine($"DEBUG: CleanFileSet() completed");
         }
 
-        public static void CleanFileSet(this string fileSetXml)
+        public static void CleanFileSet(this string fileSetXml, bool debug)
         {
+            if (debug) Console.WriteLine($"DEBUG: CleanFileSet called with XML (empty={String.IsNullOrEmpty(fileSetXml)})");
             if (!String.IsNullOrEmpty(fileSetXml) && fileSetXml.Contains("<"))
             {
+                if (debug) Console.WriteLine($"DEBUG: XML contains '<', preprocessing...");
                 fileSetXml = fileSetXml.Substring(fileSetXml.IndexOf("<"));
                 fileSetXml = fileSetXml.Replace("FileContents><?xml ", "FileContents>&lt;?xml");
                 XmlDocument doc = new XmlDocument();
                 try
                 {
+                    if (debug) Console.WriteLine($"DEBUG: Loading XML into XmlDocument...");
                     doc.LoadXml(fileSetXml);
+                    if (debug) Console.WriteLine($"DEBUG: XML loaded successfully, root element: {doc.DocumentElement?.Name}");
                 }
                 catch (Exception ex)
                 {
+                    if (debug) {
+                        Console.WriteLine($"DEBUG: XML parsing failed: {ex.Message}");
+                        Console.WriteLine($"DEBUG: XML content preview: {(fileSetXml.Length > 200 ? fileSetXml.Substring(0, 200) + "..." : fileSetXml)}");
+                    }
                     Console.WriteLine($"Warning: XML parsing failed: {ex.Message}");
                     return; // Exit early if XML parsing failed
                 }
                 var fileSetNodes = doc.SelectNodes("//FileSetFile");
+                if (debug) Console.WriteLine($"DEBUG: Found {fileSetNodes?.Count ?? 0} FileSetFile nodes to process");
                 foreach (XmlElement fileSetFileElem in fileSetNodes)
                 {
                     // Delete the file if it matches the contents
                     XmlNode relPathElem = fileSetFileElem.SelectSingleNode("RelativePath");
                     if (!ReferenceEquals(relPathElem, null))
                     {
-                        CleanFileByRelativeName(fileSetFileElem, relPathElem);
+                        if (debug) Console.WriteLine($"DEBUG: Processing file: {relPathElem.InnerText}");
+                        CleanFileByRelativeName(fileSetFileElem, relPathElem, debug);
+                    }
+                    else if (debug)
+                    {
+                        Console.WriteLine($"DEBUG: FileSetFile node missing RelativePath");
                     }
                 }
+                if (debug) Console.WriteLine($"DEBUG: Calling CleanEmptyFolders()");
                 CleanEmptyFolders();
+            }
+            else if (debug)
+            {
+                Console.WriteLine($"DEBUG: XML is empty or doesn't contain '<' - skipping cleanup");
             }
         }
 
@@ -458,17 +480,21 @@ namespace SSoTme.OST.Lib.Extensions
             }
         }
 
-        private static void CleanFileByRelativeName(XmlElement fileSetFileElem, XmlNode relPathElem)
+        private static void CleanFileByRelativeName(XmlElement fileSetFileElem, XmlNode relPathElem, bool debug)
         {
+            if (debug) Console.WriteLine($"DEBUG: CleanFileByRelativeName called for: {relPathElem.InnerText}");
             var skipElement = fileSetFileElem.SelectSingleNode(".//SkipClean");
             if (!ReferenceEquals(skipElement, null) && String.Equals(skipElement.InnerText, "true", StringComparison.OrdinalIgnoreCase))
             {
+                if (debug) Console.WriteLine($"DEBUG: Skipping cleanup for {relPathElem.InnerText} (SkipClean=true)");
                 return;
             }
             else
             {
                 var fullFileName = GetFullFileName(relPathElem.InnerText, new DirectoryInfo("."));
+                if (debug) Console.WriteLine($"DEBUG: Full file path resolved to: {fullFileName}");
                 FileInfo fiToClean = new FileInfo(fullFileName);
+                if (debug) Console.WriteLine($"DEBUG: File exists: {fiToClean.Exists}");
                 if (fiToClean.Exists)
                 {
                     bool neverOverwrite = true;
@@ -517,6 +543,8 @@ namespace SSoTme.OST.Lib.Extensions
                         // SplitFileSetXml writes content with WriteLine() which adds a newline, so we need to match that
                         value = unzippedContent + Environment.NewLine;
                     }
+                    if (debug) Console.WriteLine($"DEBUG: neverOverwrite={neverOverwrite}, hasFileContents={!ReferenceEquals(fileContentsNode, null)}, hasZippedContents={!ReferenceEquals(zippedFileContents, null)}, hasBinaryContents={!ReferenceEquals(binaryFileContentsNode, null)}");
+
                     // Check if file content matches what would be generated
                     bool contentMatches = false;
                     bool hasAnyContent = !ReferenceEquals(fileContentsNode, null) ||
@@ -531,16 +559,42 @@ namespace SSoTme.OST.Lib.Extensions
                     {
                         var fileContent = File.ReadAllText(fiToClean.FullName);
                         contentMatches = fileContent == value;
+                        if (debug) Console.WriteLine($"DEBUG: Text content matches: {contentMatches}");
                     }
                     else if (binaryEquals)
                     {
                         contentMatches = true;
+                        if (debug) Console.WriteLine($"DEBUG: Binary content matches: {contentMatches}");
                     }
 
+                    // Clean logic: Delete if AlwaysOverwrite (neverOverwrite=false) OR if content matches
                     if (!neverOverwrite || contentMatches)
                     {
                         Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
+                        if (debug)
+                        {
+                            if (!neverOverwrite && contentMatches)
+                            {
+                                Console.WriteLine($"DEBUG: File deleted - Reason: AlwaysOverwrite=true AND content matches");
+                            }
+                            else if (!neverOverwrite)
+                            {
+                                Console.WriteLine($"DEBUG: File deleted - Reason: AlwaysOverwrite=true (content match not required)");
+                            }
+                            else if (contentMatches)
+                            {
+                                Console.WriteLine($"DEBUG: File deleted - Reason: Content matches generated output (preserving transpiler changes)");
+                            }
+                        }
                         fiToClean.Delete();
+                        if (debug) Console.WriteLine($"DEBUG: File deletion completed successfully");
+                    }
+                    else
+                    {
+                        if (debug)
+                        {
+                            Console.WriteLine($"DEBUG: File NOT deleted - Reason: Content doesn't match AND OverwriteMode != Always (preserving user changes)");
+                        }
                     }
                 }
             }
@@ -614,11 +668,6 @@ namespace SSoTme.OST.Lib.Extensions
             return fs;
         }
 
-        public static String LowerHyphenName(this string name)
-        {
-            return name.ToTitle().Replace(" ", "-").ToLower();
-        }
-
         public static String StripParamNumber(this string fullParamString)
         {
             fullParamString = fullParamString.SafeToString();
@@ -671,9 +720,6 @@ namespace SSoTme.OST.Lib.Extensions
             return hash.ToString();
         }
 
-
-
-
         public static List<XmlElement> FileSetFilesFromFileSetXml(this string fileSetXml)
         {
             var xdoc = new XmlDocument();
@@ -683,7 +729,6 @@ namespace SSoTme.OST.Lib.Extensions
                        .OfType<XmlElement>()
                        .ToList();
         }
-
 
         public static String GetFileContents(this XmlElement fileSetFileElement)
         {
@@ -727,7 +772,6 @@ namespace SSoTme.OST.Lib.Extensions
             fileSetFile.AppendChild(fileContents);
             return xdoc.OuterXml;
         }
-
 
         private static void ConstructSchema(FileInfo theFile)
         {
@@ -1729,16 +1773,14 @@ namespace SSoTme.OST.Lib.Extensions
         public static String SanitizeUrlForFilename(this string url)
         {
             if (string.IsNullOrEmpty(url)) return string.Empty;
-
             return url
-                .Replace("https://", "")
-                .Replace("http://", "")
-                .Replace("/", "-")
-                .Replace(".", "-")
-                .Replace(":", "-")
-                .Replace("?", "-")
-                .Replace("&", "-")
-                .Replace("=", "-")
+                .Replace("/", "")
+                .Replace(".", "")
+                .Replace(":", "")
+                .Replace("?", "")
+                .Replace("&", "")
+                .Replace("=", "")
+                .Replace(" ", "-")
                 .ToLower();
         }
 

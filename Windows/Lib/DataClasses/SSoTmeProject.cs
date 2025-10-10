@@ -138,12 +138,40 @@ namespace SSoTme.OST.Lib.DataClasses
             this.InitPoco();
         }
 
+        // Helper method to check if a command line represents a remote URL transpiler
+        private static bool IsRemoteUrlCommandLine(string commandLine)
+        {
+            if (string.IsNullOrEmpty(commandLine)) return false;
+
+            var trimmedCmd = commandLine.Trim();
+
+            // Check if command starts with http:// or https://
+            if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Check if command contains -g flag followed by a URL
+            if (trimmedCmd.Contains("-g "))
+            {
+                var parts = trimmedCmd.Split(' ');
+                var gIndex = Array.IndexOf(parts, "-g");
+                if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                {
+                    var nextPart = parts[gIndex + 1];
+                    return nextPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                           nextPart.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            return false;
+        }
+
         public static void Init(bool force = false, String projectName = "")
         {
             var currentDirectoryFI = new DirectoryInfo(Environment.CurrentDirectory);
-
             FileInfo projectFI = GetProjectFIAt(currentDirectoryFI, false);
-
             if (projectFI.Exists)
             {
                 var currentProject = TryToLoad(currentDirectoryFI);
@@ -273,21 +301,8 @@ namespace SSoTme.OST.Lib.DataClasses
         {
             this.RemoveUUIds();
             this.AddSetting(string.Format("project-name={0}", this.Name));
-            this.ProjectTranspilers
-                .ToList()
-                .ForEach(feProjectTranspiler =>
-                {
-                    if (feProjectTranspiler.MatchedTranspiler == null) feProjectTranspiler.MatchedTranspiler = new Transpiler();
-                    feProjectTranspiler.MatchedTranspiler = new Transpiler()
-                    {
-                        TranspilerId = feProjectTranspiler.MatchedTranspiler.TranspilerId,
-                        Name = feProjectTranspiler.MatchedTranspiler.Name,
-                        Description = feProjectTranspiler.MatchedTranspiler.Description,
-                        TranspileRequests = null,
-                        TranspilerInstances = null,
-                        TranspilerVersions = null
-                    };
-                });
+            // Note: MatchedTranspiler is marked with [JsonIgnore] and won't be serialized
+            // The transpiler name will be derived fresh from API responses on each run
             string projectJson = JsonConvert.SerializeObject(this, Newtonsoft.Json.Formatting.Indented);
             var tempTranspiler = JsonConvert.DeserializeObject<SSoTmeProject>(projectJson);
             tempTranspiler.RootPath = null;
@@ -329,10 +344,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 if (transpiler != null)
                 {
                     transpiler.ProjectTranspilerId = Guid.Empty;
-                    if (transpiler.MatchedTranspiler != null)
-                    {
-                        transpiler.MatchedTranspiler.TranspilerId = Guid.Empty;
-                    }
+                    // Note: MatchedTranspiler is not saved to JSON (marked with [JsonIgnore])
                 }
             });
         }
@@ -685,9 +697,9 @@ namespace SSoTme.OST.Lib.DataClasses
             return relativePath.Replace("\\", "/");
         }
 
-        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild)
+        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug)
         {
-            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, true);
+            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, true, debug);
         }
 
         internal void Rebuild(
@@ -697,27 +709,29 @@ namespace SSoTme.OST.Lib.DataClasses
             string buildOnTrigger,
             bool copilotConnect,
             bool isBuildLocal,
+            bool debug,
             bool isBuildAll = false)
         {
             if (!string.IsNullOrEmpty(buildOnTrigger))
             {
                 this.LogMessage("Watching for Airtable changes using baseId: {0}...", buildOnTrigger);
-                this.ListenForChangesAndRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll, buildOnTrigger, copilotConnect);
+                this.ListenForChangesAndRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll, buildOnTrigger, debug, copilotConnect);
             }
             else
             {
-                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll);
+                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
             }
         }
         
         private void ListenForChangesAndRebuild(
-    string buildPath,
-    bool includeDisabled,
-    string transpilerGroup,
-    bool isBuildLocal,
-    bool isBuildAll,
-    string baseId,
-    bool isCopilot = false)
+            string buildPath,
+            bool includeDisabled,
+            string transpilerGroup,
+            bool isBuildLocal,
+            bool isBuildAll,
+            string baseId,
+            bool debug,
+            bool isCopilot = false)
         {
             DateTime? lastChangedTime = null;
             bool changeEverDetected = false;
@@ -774,7 +788,7 @@ namespace SSoTme.OST.Lib.DataClasses
                         Console.WriteLine("No changes in last 10 seconds. Rebuilding...");
                         try
                         {
-                            this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll);
+                            this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
                         }
                         catch (Exception ex)
                         {
@@ -818,8 +832,8 @@ namespace SSoTme.OST.Lib.DataClasses
                 return false;
             }
         }
-        
-        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool isBuildAll = false)
+
+        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool debugOption, bool isBuildAll = false)
         {
             if (!isBuildLocal) this.CheckIfParentIsRootSeed();
             if (isBuildAll) this.FindSSoTmeJsonFiles();
@@ -832,7 +846,7 @@ namespace SSoTme.OST.Lib.DataClasses
                                                                                         String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase));
                 foreach (var pt in matchingProjectTranspilers)
                 {
-                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this);
+                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption);
                     else this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
                 }
                 if (isBuildAll) this.BuildSubSSoTmeProjects();
@@ -902,6 +916,11 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
+        public static String LowerHyphenName(string name)
+        {
+            return name.ToTitle().Replace(" ", "-").ToLower();
+        }
+
         private void CheckIfParentIsRootSeed()
         {
             if (File.Exists("../ssotme.json"))
@@ -920,21 +939,14 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void CleanAll(bool preserveZFS)
+        public void CleanAll(bool preserveZFS, bool purge, bool debugOption)
         {
             var rootPathDI = new DirectoryInfo(this.RootPath);
-            this.Clean(rootPathDI.FullName, preserveZFS, true);
-
-            // Remove unused ZFS files (those not corresponding to current transpilers)
-            if (!preserveZFS)
-            {
-                this.RemoveUnusedZFSFiles();
-            }
-
+            this.Clean(rootPathDI.FullName, preserveZFS, purge, debugOption, true);
             this.RemoveEmptyFolders(rootPathDI.FullName);
         }
 
-        private void RemoveUnusedZFSFiles()
+        private void RemoveUnusedZFSFiles(bool debug)
         {
             try
             {
@@ -949,26 +961,37 @@ namespace SSoTme.OST.Lib.DataClasses
 
                 foreach (var pt in this.ProjectTranspilers)
                 {
+                    // Derive transpiler name from command line (not from saved JSON)
                     // Use same naming logic as ProjectTranspiler.Clean method
-                    string transpilerName;
-                    if (pt.Name.StartsWith("remote-transpiler") && pt.CommandLine.Contains("-g "))
+                    string transpilerName = LowerHyphenName(pt.Name);
+                    if (IsRemoteUrlCommandLine(pt.CommandLine))
                     {
-                        // Extract and sanitize URL from command line for remote transpilers
-                        var parts = pt.CommandLine.Split(' ');
-                        var gIndex = Array.IndexOf(parts, "-g");
-                        if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                        // Extract URL from command line - handle both "-g URL" and direct "URL" syntax
+                        var trimmedCmd = pt.CommandLine.Trim();
+                        string targetUrl = null;
+
+                        if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                            trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                         {
-                            var targetUrl = parts[gIndex + 1];
+                            // Direct URL syntax: extract URL as first word
+                            var parts = trimmedCmd.Split(' ');
+                            targetUrl = parts[0];
+                        }
+                        else if (trimmedCmd.Contains("-g "))
+                        {
+                            // "-g URL" syntax: extract URL after -g flag
+                            var parts = pt.CommandLine.Split(' ');
+                            var gIndex = Array.IndexOf(parts, "-g");
+                            if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                            {
+                                targetUrl = parts[gIndex + 1];
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(targetUrl))
+                        {
                             transpilerName = targetUrl.SanitizeUrlForFilename();
                         }
-                        else
-                        {
-                            transpilerName = pt.Name.ToTitle().ToLower().Replace(" ", "-");
-                        }
-                    }
-                    else
-                    {
-                        transpilerName = pt.MatchedTranspiler?.LowerHyphenName ?? pt.Name.ToTitle().ToLower().Replace(" ", "-");
                     }
 
                     var zfsDI = this.GetZFSDI(pt.RelativePath);
@@ -981,11 +1004,36 @@ namespace SSoTme.OST.Lib.DataClasses
                 {
                     if (!expectedZfsFiles.Contains(zfsFile.FullName))
                     {
+                        if (debug) Console.WriteLine($"Processing orphaned ZFS file: {zfsFile.FullName}");
+
+                        // Extract the relative path from the ZFS file location
+                        // ZFS files are stored in .ssotme/{RelativePath}/{transpiler}.zfs
+                        var ssotmeDirPath = ssotmeDI.FullName;
+                        var zfsFileDir = zfsFile.DirectoryName;
+                        var relativePath = zfsFileDir.Substring(ssotmeDirPath.Length).Trim(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                        // Determine the directory to clean from (transpiler's working directory)
+                        var transpilerWorkingDir = Path.Combine(this.RootPath, relativePath);
+                        var savedCurrentDirectory = Environment.CurrentDirectory;
+
                         try
                         {
+                            // Change to the transpiler's directory before cleaning
+                            if (Directory.Exists(transpilerWorkingDir))
+                            {
+                                Environment.CurrentDirectory = transpilerWorkingDir;
+                                if (debug) Console.WriteLine($"DEBUG: Changed to transpiler directory: {transpilerWorkingDir}");
+                            }
+                            else
+                            {
+                                if (debug) Console.WriteLine($"DEBUG: Transpiler directory doesn't exist: {transpilerWorkingDir}, using current directory");
+                            }
+
                             // Clean the orphaned ZFS file first
                             var zippedFileSet = File.ReadAllBytes(zfsFile.FullName);
-                            zippedFileSet.CleanZippedFileSet();
+                            if (debug) Console.WriteLine($"DEBUG: Read {zippedFileSet.Length} bytes from orphaned ZFS, calling CleanZippedFileSet()");
+                            zippedFileSet.CleanZippedFileSet(debug);
+                            if (debug) Console.WriteLine($"DEBUG: CleanZippedFileSet() completed for orphaned ZFS");
                         }
                         catch (Exception ex)
                         {
@@ -993,7 +1041,11 @@ namespace SSoTme.OST.Lib.DataClasses
                         }
                         finally
                         {
+                            // Restore the original directory
+                            Environment.CurrentDirectory = savedCurrentDirectory;
+
                             // Always remove the orphaned ZFS file after cleaning
+                            if (debug) Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
                             zfsFile.Delete();
                         }
                     }
@@ -1005,7 +1057,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void Clean(string pathFullName, bool preserveZFS, bool cleanAll = false)
+        public void Clean(string pathFullName, bool preserveZFS, bool purge, bool debugOption, bool cleanAll = false)
         {
             var currentDirectory = Environment.CurrentDirectory;
             if (cleanAll) this.FindSSoTmeJsonFiles();
@@ -1015,7 +1067,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 var matchingProjectTranspilers = this.ProjectTranspilers.Where(wherePT => wherePT.IsAtPath(relativePath));
                 foreach (var pt in matchingProjectTranspilers)
                 {
-                    pt.Clean(this, preserveZFS);
+                    pt.Clean(this, preserveZFS, debugOption);
                 }
                 if (cleanAll) this.CleanSubSSoTmeProjects();
             }
@@ -1023,6 +1075,13 @@ namespace SSoTme.OST.Lib.DataClasses
             {
                 Environment.CurrentDirectory = currentDirectory;
             }
+
+            // Remove unused ZFS files (those not corresponding to current transpilers)
+            if (!preserveZFS && purge)
+            {
+                this.RemoveUnusedZFSFiles(debugOption);
+            }
+
             this.RemoveEmptyFolders(currentDirectory);
         }
 
@@ -1098,7 +1157,7 @@ namespace SSoTme.OST.Lib.DataClasses
             firstIndex = Math.Min(firstIndex, this.ProjectTranspilers.Count);
             if (firstIndex >= 0) this.ProjectTranspilers.Insert(firstIndex, projectTranspiler);
             else if (addIfMissing) this.ProjectTranspilers.Add(projectTranspiler);
-            projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name ?? "no-transpiler-found";
+            projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name.Replace("-", "") ?? "noTranspilerFound";
         }
 
         private ProjectTranspiler FindMatchingTranspiler(ProjectTranspiler projectTranspiler)

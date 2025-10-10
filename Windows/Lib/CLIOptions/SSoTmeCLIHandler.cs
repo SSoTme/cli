@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.02.1462";
+        public string CLI_VERSION = "2025.10.08.1106";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -74,6 +74,15 @@ namespace SSoTme.OST.Lib.CLIOptions
                 throw new ProjectNotConfiguredException();
             }
             return this.AICaptureProject;
+        }
+
+        private bool IsHttpUrl(string value)
+        {
+            if (String.IsNullOrEmpty(value))
+                return false;
+
+            return Uri.TryCreate(value, UriKind.Absolute, out var uriResult) &&
+                   (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
         }
 
         public static SSoTmeCLIHandler CreateHandler(string commandLine)
@@ -363,6 +372,24 @@ namespace SSoTme.OST.Lib.CLIOptions
             }
         }
 
+        private static int GetSafeHelpWidth(int min = 80, int pad = 4)
+        {
+            try
+            {
+                // If any stream is redirected, assume non-interactive and use fallback.
+                if (Console.IsOutputRedirected || Console.IsErrorRedirected || Console.IsInputRedirected)
+                    return min;
+
+                // Will throw if there’s no console handle; that’s why this is inside try/catch.
+                var w = Console.WindowWidth;
+                return Math.Max(w - pad, min);
+            }
+            catch
+            {
+                return min; // No console available (CI, service, etc.)
+            }
+        }
+
         private void ParseCommand()
         {
             try
@@ -382,23 +409,30 @@ namespace SSoTme.OST.Lib.CLIOptions
                 // If -g flag is used, prioritize remote transpiler naming regardless of transpiler arg
                 if (!String.IsNullOrEmpty(this.targetUrl))
                 {
-                    this.transpiler = "remote-transpiler-" + this.targetUrl.SanitizeUrlForFilename();
+                    this.transpiler = this.targetUrl.SanitizeUrlForFilename();
                 }
                 else if (String.IsNullOrEmpty(this.transpiler))
                 {
                     this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
 
-                    // First, try to get URL from tool_urls.json
-                    var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
-                    if (!String.IsNullOrEmpty(urlFromFile))
+                    // Check if the transpiler argument itself is a URL (supports ssotme https://... syntax)
+                    if (this.IsHttpUrl(this.transpiler))
                     {
+                        this.targetUrl = this.transpiler;
+                        this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                        // When URL is the transpiler, only count additional args beyond it as "remaining"
+                        this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                    }
+                    // First, try to get URL from tool_urls.json
+                    else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                    {
+                        var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
                         this.targetUrl = urlFromFile;
-                        this.transpiler = "remote-transpiler-" + urlFromFile.SanitizeUrlForFilename();
+                        this.transpiler = urlFromFile.SanitizeUrlForFilename();
                     }
                     else if (this.transpiler.Contains("/"))
                     {
-                        if (!(Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
-                            (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps)))
+                        if (!this.IsHttpUrl(this.transpiler))
                         {
                             // If this not a URL, assume it's a transpiler name with an account prefix
                             this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
@@ -407,7 +441,9 @@ namespace SSoTme.OST.Lib.CLIOptions
                         else
                         {
                             this.targetUrl = this.transpiler;
-                            this.transpiler = "remote-transpiler-" + this.transpiler.SanitizeUrlForFilename();
+                            this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                            // When URL is the transpiler, only count additional args beyond it as "remaining"
+                            this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                         }
                     }
                 }
@@ -416,38 +452,53 @@ namespace SSoTme.OST.Lib.CLIOptions
                     // If transpiler is already set but we also have a -g URL, check if we should still use remote naming
                     if (!String.IsNullOrEmpty(this.transpiler))
                     {
-                        // First, try to get URL from tool_urls.json
-                        var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
-                        if (!String.IsNullOrEmpty(urlFromFile))
+                        // Check if the transpiler argument itself is a URL (supports ssotme https://... syntax)
+                        if (this.IsHttpUrl(this.transpiler))
                         {
+                            this.targetUrl = this.transpiler;
+                            this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                            // When URL is the transpiler, only count additional args beyond it as "remaining"
+                            this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                        }
+                        // First, try to get URL from tool_urls.json
+                        else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                        {
+                            var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
                             this.targetUrl = urlFromFile;
-                            this.transpiler = "remote-transpiler-" + urlFromFile.SanitizeUrlForFilename();
+                            this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
                         else if (this.transpiler.Contains("/"))
                         {
-                            if (Uri.TryCreate(this.transpiler, UriKind.Absolute, out var uriResult) &&
-                                (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps))
+                            if (this.IsHttpUrl(this.transpiler))
                             {
                                 this.targetUrl = this.transpiler;
-                                this.transpiler = "remote-transpiler-" + this.transpiler.SanitizeUrlForFilename();
+                                this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                                // When URL is the transpiler, only count additional args beyond it as "remaining"
+                                this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                             }
                         }
                     }
                 }
-
                 var additionalArgs = remainingArguments.Skip(1).ToList();
                 for (var i = 0; i < additionalArgs.Count; i++)
                 {
                     this.parameters.Add(String.Format("param{0}={1}", i + 1, additionalArgs[i]));
                 }
 
+                if (this.debug) {
+                    Console.WriteLine($"DEBUG OUTPUT ENABLED");
+                }
+
                 if (this.help)
                 {
-                    var helpWidth = Console.WindowWidth - 4;
+                    var helpWidth = GetSafeHelpWidth();
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
                     Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
-                    if (!this.noKey) Console.ReadKey();
+                    if (!Console.IsInputRedirected && !Console.IsOutputRedirected)
+                    {
+                        Console.ReadKey();
+                    }
                     this.SuppressTranspile = true;
                 }
                 else if (this.info)
@@ -460,7 +511,6 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     Console.WriteLine(this.CLI_VERSION);
                     this.SuppressTranspile = true;
-                    this.SuppressKeyPress = true;
                     continueToLoad = false;
                 }
                 else if (this.init)
@@ -521,7 +571,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                             {
                                 this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
                             }
-                            this.AICaptureProject?.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
+                            this.AICaptureProject?.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
                             Console.WriteLine("Auto-build completed successfully.");
                         }
                         catch (Exception ex)
@@ -552,14 +602,12 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     Console.WriteLine("\n********************************\nERROR: {0}\n********************************\n\n", currentException.Message);
                     Console.WriteLine(currentException.StackTrace);
-                    if (!this.noKey) Console.WriteLine("\n\nPress any key to continue...\n");
                     Console.WriteLine("\n\n");
                     if (currentException == ex.InnerException) break;
                     currentException = ex.InnerException;
                 }
                 Console.ForegroundColor = curColor;
                 this.SuppressTranspile = true;
-                if (!this.noKey) Console.ReadKey();
             }
         }
 
@@ -811,13 +859,10 @@ Seed Url: ");
                     break;
 
                 case "build":
+                case "buildlocal":
                 case "rebuild":
                 case "pull":
                     this.build = true;
-                    break;
-
-                case "buildlocal":
-                    this.buildLocal = true;
                     break;
 
                 case "buildall":
@@ -838,7 +883,7 @@ Seed Url: ");
                     this.describe = true;
                     break;
 
-                case "descibeall":
+                case "describeall":
                     this.descibeAll = true;
                     break;
 
@@ -896,7 +941,6 @@ Seed Url: ");
                     var effortlessAPIService = new MyEffortlessAPIService();
                     effortlessAPIService.HandleAuth().Wait();
                     this.SuppressTranspile = true;
-                    this.SuppressKeyPress = true;
                     return 0;
                 }
                 else if (this.localGuide)
@@ -914,7 +958,6 @@ Seed Url: ");
                     
                     effortlessAPIService.HandleLocalGuide(projectName).Wait();
                     this.SuppressTranspile = true;
-                    this.SuppressKeyPress = true;
                     return 0;
                 }
                 else if (this.describe)
@@ -1006,7 +1049,7 @@ Seed Url: ");
                     }
                     SSOTMEKey.SetSSoTmeKey(key, this.runAs);
                 }
-                else if (this.install && this.transpiler.StartsWith("remote-transpiler"))
+                else if (this.install && this.transpiler.StartsWith("http"))
                 {
                     result = new SSOTMEPayload()
                     {
@@ -1034,11 +1077,11 @@ Seed Url: ");
                 }
                 else if (this.build || this.buildLocal)
                 {
-                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
+                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
                 }
                 else if (this.buildAll)
                 {
-                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal);
+                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
                 }
                 else if (this.discuss)
                 {
@@ -1057,22 +1100,22 @@ Seed Url: ");
                     if (zfsFI.Exists)
                     {
                         var zippedFileSet = File.ReadAllBytes(zfsFI.FullName);
-                        zippedFileSet.CleanZippedFileSet();
+                        zippedFileSet.CleanZippedFileSet(this.debug);
                         if (!this.preserveZFS) zfsFI.Delete();
                     }
                 }
                 else if (this.clean && !hasRemainingArguments)
                 {
-                    this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS);
+                    this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
 
                 }
                 else if (this.cleanAll && !hasRemainingArguments)
                 {
-                    this.AICaptureProject?.CleanAll(this.preserveZFS);
+                    this.AICaptureProject?.CleanAll(this.preserveZFS, this.purge, this.debug);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
-                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
+                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && !this.IsHttpUrl(this.transpiler) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
                 {
                     ShowError("Missing argument name of transpiler");
                     return -1;
@@ -1376,7 +1419,6 @@ Seed Url: ");
         public int ParseResult { get; private set; }
         public FileSet OutputFileSet { get; private set; }
         public bool SuppressTranspile { get; private set; }
-        public bool SuppressKeyPress { get; private set; }
 
         public string AICaptureHost
         {
@@ -1430,7 +1472,6 @@ Seed Url: ");
             }
         }
 
-
         public void LoadInputFiles()
         {
             this.SaveOptionalCLIInputs();
@@ -1446,9 +1487,7 @@ Seed Url: ");
                         {
                             this.ImportFile(filePattern, fs);
                         }
-
                         if (fs.FileSetFiles.Any()) this.inputFileContents = fs.FileSetFiles.First().FileContents;
-
                     }
                 }
             }
@@ -1560,7 +1599,6 @@ Seed Url: ");
 
             var di = new DirectoryInfo(Path.Combine(".", Path.GetDirectoryName(filePattern)));
             filePattern = Path.GetFileName(filePattern);
-
             var matchingFiles = new FileInfo[] { };
             if (di.Exists)
             {
@@ -1574,9 +1612,7 @@ Seed Url: ");
                 var fsf = new FileSetFile();
                 fsf.RelativePath = Path.GetFileName(filePattern);
                 fs.FileSetFiles.Add(fsf);
-
                 Console.ForegroundColor = curColor;
-
             }
 
             foreach (var matchingFileFI in matchingFiles)
@@ -1646,7 +1682,7 @@ Seed Url: ");
                     // Set LowerHyphenName for .zfs file creation after transpiler is populated
                     if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
                     {
-                        if (payload.Transpiler.Name.StartsWith("remote-transpiler") && !string.IsNullOrEmpty(this.targetUrl))
+                        if (!string.IsNullOrEmpty(this.targetUrl))
                         {
                             // For remote transpilers, use sanitized URL as the filename
                             var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
@@ -1656,7 +1692,7 @@ Seed Url: ");
                         else
                         {
                             // For other transpilers, derive from name
-                            payload.Transpiler.LowerHyphenName = payload.Transpiler.Name.ToTitle().Replace(" ", "-").ToLower();
+                            payload.Transpiler.LowerHyphenName = SSoTmeProject.LowerHyphenName(payload.Transpiler.Name);
                             Console.WriteLine($"Setting transpiler .zfs name to DERIVED NAME: {payload.Transpiler.LowerHyphenName}");
                         }
                     }
@@ -1670,6 +1706,20 @@ Seed Url: ");
                     {
                         var responseContent = await response.Content.ReadAsStringAsync();
                         var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+
+                        // Fix missing transpiler name from remote transpiler
+                        if (responsePayload?.Transpiler == null)
+                        {
+                            responsePayload.Transpiler = new Transpiler();
+                        }
+
+                        if (string.IsNullOrEmpty(responsePayload.Transpiler.Name))
+                        {
+                            // Remote transpiler didn't set a name, use our sanitized URL
+                            responsePayload.Transpiler.Name = this.transpiler;
+                            responsePayload.Transpiler.LowerHyphenName = this.transpiler;
+                        }
+
                         result = responsePayload;
                         if (result != null)
                         {
@@ -1707,7 +1757,7 @@ Seed Url: ");
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
             {
-                if (payload.Transpiler.Name.StartsWith("remote-transpiler") && !string.IsNullOrEmpty(this.targetUrl))
+                if (!string.IsNullOrEmpty(this.targetUrl))
                 {
                     // For remote transpilers, use sanitized URL as the filename
                     var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
@@ -1717,7 +1767,7 @@ Seed Url: ");
                 else
                 {
                     // For other transpilers, derive from name
-                    payload.Transpiler.LowerHyphenName = payload.Transpiler.Name.ToTitle().Replace(" ", "-").ToLower();
+                    payload.Transpiler.LowerHyphenName = SSoTmeProject.LowerHyphenName(payload.Transpiler.Name);
                     // Console.WriteLine($"Setting transpiler .zfs name to DERIVED NAME: {payload.Transpiler.LowerHyphenName}");
                 }
             }
@@ -1726,7 +1776,6 @@ Seed Url: ");
             payload.TranspileRequest = new TranspileRequest();
             payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
             payload.CLIInputFileContents = string.Empty;
-
             var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}", payload);
             if (response != null)
             {
@@ -1769,21 +1818,42 @@ Seed Url: ");
                 try
                 {
                     var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+
+                    // Fix missing transpiler name from remote transpiler
+                    if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("http"))
+                    {
+                        if (responsePayload?.Transpiler == null)
+                        {
+                            responsePayload.Transpiler = new Transpiler();
+                        }
+
+                        if (string.IsNullOrEmpty(responsePayload.Transpiler.Name))
+                        {
+                            // Remote transpiler didn't set a name, use our sanitized URL
+                            responsePayload.Transpiler.Name = this.transpiler;
+                            responsePayload.Transpiler.LowerHyphenName = SSoTmeProject.LowerHyphenName(this.transpiler);
+                            if (this.debug)
+                            {
+                                Console.WriteLine($"DEBUG: Remote transpiler returned empty name, setting to: {responsePayload.Transpiler.LowerHyphenName}");
+                            }
+                        }
+                    }
+
                     // Debug remote transpiler responses
-                    if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("remote-transpiler"))
+                    if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("http"))
                     {
                         var expectedName = this.transpiler;
                         var returnedName = responsePayload?.Transpiler?.Name ?? "NULL";
                         var hasZippedFileSet = responsePayload?.TranspileRequest?.ZippedOutputFileSet?.Length > 0;
-                        if (!returnedName.StartsWith("remote-transpiler"))
+                        if (!expectedName.StartsWith("http") && this.debug)
                         {
                             Console.WriteLine($"WARNING: Remote server {this.targetUrl} returned unexpected transpiler name.");
-                            Console.WriteLine($"  Expected: '{expectedName}' (or similar remote-transpiler name)");
+                            Console.WriteLine($"  Expected: '{expectedName}' (or similar remote transpiler name)");
                             Console.WriteLine($"  Received: '{returnedName}'");
                             Console.WriteLine($"  JSON Key: Response should set 'Transpiler.Name' to preserve the original name");
                             Console.WriteLine($"  This will cause the transpiler name to be reset during builds.");
                         }
-                        if (!hasZippedFileSet)
+                        if (!hasZippedFileSet && this.debug)
                         {
                             Console.WriteLine($"WARNING: Remote server {this.targetUrl} did not return expected output files.");
                             Console.WriteLine($"  JSON Key: Response should set 'TranspileRequest.ZippedOutputFileSet' with generated files");
@@ -1802,11 +1872,9 @@ Seed Url: ");
                                     {
                                         fileSetXml = fileSetXml.Substring(fileSetXml.IndexOf("<"));
                                         fileSetXml = fileSetXml.Replace("FileContents><?xml ", "FileContents>&lt;?xml");
-
                                         var doc = new System.Xml.XmlDocument();
                                         doc.LoadXml(fileSetXml);
                                         var fileSetNodes = doc.SelectNodes("//FileSetFile");
-
                                         var filesWithNoContent = new List<string>();
 
                                         foreach (System.Xml.XmlElement fileSetFileElem in fileSetNodes)
@@ -1821,7 +1889,6 @@ Seed Url: ");
                                                     zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedFileContents");
                                                 }
                                                 var binaryFileContentsNode = fileSetFileElem.SelectSingleNode("BinaryFileContents");
-
                                                 bool hasContent = (!ReferenceEquals(fileContentsNode, null) && !String.IsNullOrEmpty(fileContentsNode.InnerXml)) ||
                                                                 (!ReferenceEquals(zippedFileContents, null) && !String.IsNullOrEmpty(zippedFileContents.InnerXml)) ||
                                                                 (!ReferenceEquals(binaryFileContentsNode, null) && !String.IsNullOrEmpty(binaryFileContentsNode.InnerText));
@@ -1852,6 +1919,18 @@ Seed Url: ");
                             }
                         }
                     }
+
+                    // Ensure LowerHyphenName is set correctly for remote transpilers after receiving response
+                    if (!string.IsNullOrEmpty(this.targetUrl) && responsePayload?.Transpiler != null)
+                    {
+                        var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
+                        responsePayload.Transpiler.LowerHyphenName = sanitizedUrl;
+                        if (this.debug)
+                        {
+                            Console.WriteLine($"DEBUG: Setting response transpiler .zfs name to SANITIZED URL: {sanitizedUrl}");
+                        }
+                    }
+
                     this.result = responsePayload;
                 }
                 catch (JsonException ex)
