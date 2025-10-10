@@ -59,7 +59,7 @@ jobs:
         shell: pwsh
         run: |
           $output = & ssotme -h 2>&1
-          if ($output -match "Press any key to continue...") {
+          if ($output -match "SSoTme CLI") {
             Write-Host "✅ ssotme CLI ran successfully (help displayed)"
             exit 0
           } else {
@@ -101,7 +101,7 @@ jobs:
         shell: pwsh
         run: |
           $output = & ssotme -h 2>&1
-          if ($output -match "Press any key to continue...") {
+          if ($output -match "SSoTme CLI") {
             Write-Host "✅ ssotme CLI ran successfully (help displayed)"
             exit 0
           } else {
@@ -143,7 +143,7 @@ jobs:
         shell: pwsh
         run: |
           $output = & ssotme -h 2>&1
-          if ($output -match "Press any key to continue...") {
+          if ($output -match "SSoTme CLI") {
             Write-Host "✅ ssotme CLI ran successfully (help displayed)"
             exit 0
           } else {

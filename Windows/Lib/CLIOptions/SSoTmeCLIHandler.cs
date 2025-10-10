@@ -372,6 +372,24 @@ namespace SSoTme.OST.Lib.CLIOptions
             }
         }
 
+        private static int GetSafeHelpWidth(int min = 80, int pad = 4)
+        {
+            try
+            {
+                // If any stream is redirected, assume non-interactive and use fallback.
+                if (Console.IsOutputRedirected || Console.IsErrorRedirected || Console.IsInputRedirected)
+                    return min;
+
+                // Will throw if there’s no console handle; that’s why this is inside try/catch.
+                var w = Console.WindowWidth;
+                return Math.Max(w - pad, min);
+            }
+            catch
+            {
+                return min; // No console available (CI, service, etc.)
+            }
+        }
+
         private void ParseCommand()
         {
             try
@@ -473,11 +491,14 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (this.help)
                 {
-                    var helpWidth = Math.Max(Console.WindowWidth - 4, 80);
+                    var helpWidth = GetSafeHelpWidth();
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
                     Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
-                    Console.ReadKey();
+                    if (!Console.IsInputRedirected && !Console.IsOutputRedirected)
+                    {
+                        Console.ReadKey();
+                    }
                     this.SuppressTranspile = true;
                 }
                 else if (this.info)
