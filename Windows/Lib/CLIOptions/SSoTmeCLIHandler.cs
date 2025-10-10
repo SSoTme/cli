@@ -477,7 +477,10 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
                     Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
-                    Console.ReadKey();
+                    if (!Console.IsInputRedirected && !Console.IsOutputRedirected)
+                    {
+                        Console.ReadKey();
+                    }
                     this.SuppressTranspile = true;
                 }
                 else if (this.info)
