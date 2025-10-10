@@ -66,6 +66,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Don't output the final results - instead, clean", MinOccurs = 0, Aliases = "ca")]
         public bool cleanAll { get; set; }
         
+        [CommandLineOption(Description = "Run clean on all generated files", MinOccurs = 0, Aliases = "")]
+        public bool purge { get; set; }
+        
         [CommandLineOption(Description = "Don't clean the output before cooking", MinOccurs = 0, Aliases = "sc")]
         public bool skipClean { get; set; }
         

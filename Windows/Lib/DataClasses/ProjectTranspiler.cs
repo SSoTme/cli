@@ -107,7 +107,7 @@ namespace SSoTme.OST.Lib.DataClasses
             if (cliResult != 0) throw new Exception("Error RE-Transpiling");
         }
 
-        internal void Clean(SSoTmeProject project, bool preserveZFS)
+        internal void Clean(SSoTmeProject project, bool preserveZFS, bool debug = false)
         {
             Console.WriteLine("CLEANING: " + this.RelativePath + ": " + this.Name);
             Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
@@ -145,7 +145,9 @@ namespace SSoTme.OST.Lib.DataClasses
             if (zfsFI.Exists)
             {
                 var zippedFileSet = File.ReadAllBytes(zfsFI.FullName);
-                zippedFileSet.CleanZippedFileSet();
+                if (debug) Console.WriteLine($"DEBUG: Read {zippedFileSet.Length} bytes from {zfsFI.FullName}, calling CleanZippedFileSet()");
+                zippedFileSet.CleanZippedFileSet(debug);
+                if (debug) Console.WriteLine($"DEBUG: CleanZippedFileSet() completed");
                 if (!preserveZFS)
                 {
                     File.Delete(zfsFI.FullName);

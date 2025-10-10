@@ -906,14 +906,14 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void CleanAll(bool preserveZFS)
+        public void CleanAll(bool preserveZFS, bool purge, bool debugOption)
         {
             var rootPathDI = new DirectoryInfo(this.RootPath);
-            this.Clean(rootPathDI.FullName, preserveZFS, true);
+            this.Clean(rootPathDI.FullName, preserveZFS, purge, debugOption, true);
             this.RemoveEmptyFolders(rootPathDI.FullName);
         }
 
-        private void RemoveUnusedZFSFiles()
+        private void RemoveUnusedZFSFiles(bool debug)
         {
             try
             {
@@ -962,11 +962,36 @@ namespace SSoTme.OST.Lib.DataClasses
                 {
                     if (!expectedZfsFiles.Contains(zfsFile.FullName))
                     {
+                        if (debug) Console.WriteLine($"Processing orphaned ZFS file: {zfsFile.FullName}");
+
+                        // Extract the relative path from the ZFS file location
+                        // ZFS files are stored in .ssotme/{RelativePath}/{transpiler}.zfs
+                        var ssotmeDirPath = ssotmeDI.FullName;
+                        var zfsFileDir = zfsFile.DirectoryName;
+                        var relativePath = zfsFileDir.Substring(ssotmeDirPath.Length).Trim(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                        // Determine the directory to clean from (transpiler's working directory)
+                        var transpilerWorkingDir = Path.Combine(this.RootPath, relativePath);
+                        var savedCurrentDirectory = Environment.CurrentDirectory;
+
                         try
                         {
+                            // Change to the transpiler's directory before cleaning
+                            if (Directory.Exists(transpilerWorkingDir))
+                            {
+                                Environment.CurrentDirectory = transpilerWorkingDir;
+                                if (debug) Console.WriteLine($"DEBUG: Changed to transpiler directory: {transpilerWorkingDir}");
+                            }
+                            else
+                            {
+                                if (debug) Console.WriteLine($"DEBUG: Transpiler directory doesn't exist: {transpilerWorkingDir}, using current directory");
+                            }
+
                             // Clean the orphaned ZFS file first
                             var zippedFileSet = File.ReadAllBytes(zfsFile.FullName);
-                            zippedFileSet.CleanZippedFileSet();
+                            if (debug) Console.WriteLine($"DEBUG: Read {zippedFileSet.Length} bytes from orphaned ZFS, calling CleanZippedFileSet()");
+                            zippedFileSet.CleanZippedFileSet(debug);
+                            if (debug) Console.WriteLine($"DEBUG: CleanZippedFileSet() completed for orphaned ZFS");
                         }
                         catch (Exception ex)
                         {
@@ -974,7 +999,11 @@ namespace SSoTme.OST.Lib.DataClasses
                         }
                         finally
                         {
+                            // Restore the original directory
+                            Environment.CurrentDirectory = savedCurrentDirectory;
+
                             // Always remove the orphaned ZFS file after cleaning
+                            if (debug) Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
                             zfsFile.Delete();
                         }
                     }
@@ -986,7 +1015,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void Clean(string pathFullName, bool preserveZFS, bool cleanAll = false)
+        public void Clean(string pathFullName, bool preserveZFS, bool purge, bool debugOption, bool cleanAll = false)
         {
             var currentDirectory = Environment.CurrentDirectory;
             if (cleanAll) this.FindSSoTmeJsonFiles();
@@ -996,7 +1025,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 var matchingProjectTranspilers = this.ProjectTranspilers.Where(wherePT => wherePT.IsAtPath(relativePath));
                 foreach (var pt in matchingProjectTranspilers)
                 {
-                    pt.Clean(this, preserveZFS);
+                    pt.Clean(this, preserveZFS, debugOption);
                 }
                 if (cleanAll) this.CleanSubSSoTmeProjects();
             }
@@ -1004,6 +1033,13 @@ namespace SSoTme.OST.Lib.DataClasses
             {
                 Environment.CurrentDirectory = currentDirectory;
             }
+
+            // Remove unused ZFS files (those not corresponding to current transpilers)
+            if (!preserveZFS && purge)
+            {
+                this.RemoveUnusedZFSFiles(debugOption);
+            }
+
             this.RemoveEmptyFolders(currentDirectory);
         }
 

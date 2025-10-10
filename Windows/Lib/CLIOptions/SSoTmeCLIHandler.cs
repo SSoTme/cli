@@ -1079,19 +1079,19 @@ Seed Url: ");
                     if (zfsFI.Exists)
                     {
                         var zippedFileSet = File.ReadAllBytes(zfsFI.FullName);
-                        zippedFileSet.CleanZippedFileSet();
+                        zippedFileSet.CleanZippedFileSet(this.debug);
                         if (!this.preserveZFS) zfsFI.Delete();
                     }
                 }
                 else if (this.clean && !hasRemainingArguments)
                 {
-                    this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS);
+                    this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
 
                 }
                 else if (this.cleanAll && !hasRemainingArguments)
                 {
-                    this.AICaptureProject?.CleanAll(this.preserveZFS);
+                    this.AICaptureProject?.CleanAll(this.preserveZFS, this.purge, this.debug);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
                 else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && !this.IsHttpUrl(this.transpiler) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
@@ -1685,6 +1685,20 @@ Seed Url: ");
                     {
                         var responseContent = await response.Content.ReadAsStringAsync();
                         var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+
+                        // Fix missing transpiler name from remote transpiler
+                        if (responsePayload?.Transpiler == null)
+                        {
+                            responsePayload.Transpiler = new Transpiler();
+                        }
+
+                        if (string.IsNullOrEmpty(responsePayload.Transpiler.Name))
+                        {
+                            // Remote transpiler didn't set a name, use our sanitized URL
+                            responsePayload.Transpiler.Name = this.transpiler;
+                            responsePayload.Transpiler.LowerHyphenName = this.transpiler;
+                        }
+
                         result = responsePayload;
                         if (result != null)
                         {
@@ -1783,6 +1797,27 @@ Seed Url: ");
                 try
                 {
                     var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+
+                    // Fix missing transpiler name from remote transpiler
+                    if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("http"))
+                    {
+                        if (responsePayload?.Transpiler == null)
+                        {
+                            responsePayload.Transpiler = new Transpiler();
+                        }
+
+                        if (string.IsNullOrEmpty(responsePayload.Transpiler.Name))
+                        {
+                            // Remote transpiler didn't set a name, use our sanitized URL
+                            responsePayload.Transpiler.Name = this.transpiler;
+                            responsePayload.Transpiler.LowerHyphenName = this.transpiler;
+                            if (this.debug)
+                            {
+                                Console.WriteLine($"DEBUG: Remote transpiler returned empty name, setting to: {this.transpiler}");
+                            }
+                        }
+                    }
+
                     // Debug remote transpiler responses
                     if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("http"))
                     {
