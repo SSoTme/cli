@@ -1682,7 +1682,7 @@ Seed Url: ");
                     // Set LowerHyphenName for .zfs file creation after transpiler is populated
                     if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
                     {
-                        if (payload.Transpiler.Name.StartsWith("http") && !string.IsNullOrEmpty(this.targetUrl))
+                        if (!string.IsNullOrEmpty(this.targetUrl))
                         {
                             // For remote transpilers, use sanitized URL as the filename
                             var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
@@ -1692,7 +1692,7 @@ Seed Url: ");
                         else
                         {
                             // For other transpilers, derive from name
-                            payload.Transpiler.LowerHyphenName = payload.Transpiler.Name.ToTitle().Replace(" ", "-").ToLower();
+                            payload.Transpiler.LowerHyphenName = SSoTmeProject.LowerHyphenName(payload.Transpiler.Name);
                             Console.WriteLine($"Setting transpiler .zfs name to DERIVED NAME: {payload.Transpiler.LowerHyphenName}");
                         }
                     }
@@ -1757,7 +1757,7 @@ Seed Url: ");
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
             {
-                if (payload.Transpiler.Name.StartsWith("http") && !string.IsNullOrEmpty(this.targetUrl))
+                if (!string.IsNullOrEmpty(this.targetUrl))
                 {
                     // For remote transpilers, use sanitized URL as the filename
                     var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
@@ -1767,7 +1767,7 @@ Seed Url: ");
                 else
                 {
                     // For other transpilers, derive from name
-                    payload.Transpiler.LowerHyphenName = payload.Transpiler.Name.ToTitle().Replace(" ", "-").ToLower();
+                    payload.Transpiler.LowerHyphenName = SSoTmeProject.LowerHyphenName(payload.Transpiler.Name);
                     // Console.WriteLine($"Setting transpiler .zfs name to DERIVED NAME: {payload.Transpiler.LowerHyphenName}");
                 }
             }
@@ -1831,10 +1831,10 @@ Seed Url: ");
                         {
                             // Remote transpiler didn't set a name, use our sanitized URL
                             responsePayload.Transpiler.Name = this.transpiler;
-                            responsePayload.Transpiler.LowerHyphenName = this.transpiler;
+                            responsePayload.Transpiler.LowerHyphenName = SSoTmeProject.LowerHyphenName(this.transpiler);
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: Remote transpiler returned empty name, setting to: {this.transpiler}");
+                                Console.WriteLine($"DEBUG: Remote transpiler returned empty name, setting to: {responsePayload.Transpiler.LowerHyphenName}");
                             }
                         }
                     }
@@ -1845,7 +1845,7 @@ Seed Url: ");
                         var expectedName = this.transpiler;
                         var returnedName = responsePayload?.Transpiler?.Name ?? "NULL";
                         var hasZippedFileSet = responsePayload?.TranspileRequest?.ZippedOutputFileSet?.Length > 0;
-                        if (!returnedName.StartsWith("http") && this.debug)
+                        if (!expectedName.StartsWith("http") && this.debug)
                         {
                             Console.WriteLine($"WARNING: Remote server {this.targetUrl} returned unexpected transpiler name.");
                             Console.WriteLine($"  Expected: '{expectedName}' (or similar remote transpiler name)");
@@ -1919,6 +1919,18 @@ Seed Url: ");
                             }
                         }
                     }
+
+                    // Ensure LowerHyphenName is set correctly for remote transpilers after receiving response
+                    if (!string.IsNullOrEmpty(this.targetUrl) && responsePayload?.Transpiler != null)
+                    {
+                        var sanitizedUrl = this.targetUrl.SanitizeUrlForFilename();
+                        responsePayload.Transpiler.LowerHyphenName = sanitizedUrl;
+                        if (this.debug)
+                        {
+                            Console.WriteLine($"DEBUG: Setting response transpiler .zfs name to SANITIZED URL: {sanitizedUrl}");
+                        }
+                    }
+
                     this.result = responsePayload;
                 }
                 catch (JsonException ex)

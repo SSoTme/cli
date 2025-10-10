@@ -38,6 +38,36 @@ namespace SSoTme.OST.Lib.DataClasses
             this.InitPoco();
         }
 
+        // Helper method to check if a command line represents a remote URL transpiler
+        private static bool IsRemoteUrlCommandLine(string commandLine)
+        {
+            if (string.IsNullOrEmpty(commandLine)) return false;
+
+            var trimmedCmd = commandLine.Trim();
+
+            // Check if command starts with http:// or https://
+            if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Check if command contains -g flag followed by a URL
+            if (trimmedCmd.Contains("-g "))
+            {
+                var parts = trimmedCmd.Split(' ');
+                var gIndex = Array.IndexOf(parts, "-g");
+                if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                {
+                    var nextPart = parts[gIndex + 1];
+                    return nextPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                           nextPart.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            return false;
+        }
+
         public bool IsSSoTTranspiler { get; set; }
 
         public override string ToString()
@@ -118,26 +148,35 @@ namespace SSoTme.OST.Lib.DataClasses
 
             // Derive transpiler name from command line (not from saved JSON)
             // For remote transpilers, extract and sanitize the URL from command line
-            string transpilerName;
-            if (this.Name.StartsWith("http") && this.CommandLine.Contains("-g "))
+            string transpilerName = SSoTmeProject.LowerHyphenName(this.Name);
+            if (IsRemoteUrlCommandLine(this.CommandLine))
             {
-                // Extract URL from "-g URL" in command line
-                var parts = this.CommandLine.Split(' ');
-                var gIndex = Array.IndexOf(parts, "-g");
-                if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                // Extract URL from command line - handle both "-g URL" and direct "URL" syntax
+                var trimmedCmd = this.CommandLine.Trim();
+                string targetUrl = null;
+
+                if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    var targetUrl = parts[gIndex + 1];
+                    // Direct URL syntax: extract URL as first word
+                    var parts = trimmedCmd.Split(' ');
+                    targetUrl = parts[0];
+                }
+                else if (trimmedCmd.Contains("-g "))
+                {
+                    // "-g URL" syntax: extract URL after -g flag
+                    var parts = this.CommandLine.Split(' ');
+                    var gIndex = Array.IndexOf(parts, "-g");
+                    if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                    {
+                        targetUrl = parts[gIndex + 1];
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(targetUrl))
+                {
                     transpilerName = targetUrl.SanitizeUrlForFilename();
                 }
-                else
-                {
-                    transpilerName = this.Name.ToLower().Replace(" ", "");
-                }
-            }
-            else
-            {
-                // For local transpilers, derive from Name (lowercase with spaces removed)
-                transpilerName = this.Name.ToLower().Replace(" ", "");
             }
 
             String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
@@ -190,26 +229,35 @@ namespace SSoTme.OST.Lib.DataClasses
             }
 
             // Derive transpiler name from command line (not from saved JSON)
-            string transpilerName;
-            if (this.Name.StartsWith("http") && this.CommandLine.Contains("-g "))
+            string transpilerName = SSoTmeProject.LowerHyphenName(this.Name);
+            if (IsRemoteUrlCommandLine(this.CommandLine))
             {
-                // Extract URL from "-g URL" in command line for remote transpilers
-                var parts = this.CommandLine.Split(' ');
-                var gIndex = Array.IndexOf(parts, "-g");
-                if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                // Extract URL from command line - handle both "-g URL" and direct "URL" syntax
+                var trimmedCmd = this.CommandLine.Trim();
+                string targetUrl = null;
+
+                if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                    trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    var targetUrl = parts[gIndex + 1];
+                    // Direct URL syntax: extract URL as first word
+                    var parts = trimmedCmd.Split(' ');
+                    targetUrl = parts[0];
+                }
+                else if (trimmedCmd.Contains("-g "))
+                {
+                    // "-g URL" syntax: extract URL after -g flag
+                    var parts = this.CommandLine.Split(' ');
+                    var gIndex = Array.IndexOf(parts, "-g");
+                    if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                    {
+                        targetUrl = parts[gIndex + 1];
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(targetUrl))
+                {
                     transpilerName = targetUrl.SanitizeUrlForFilename();
                 }
-                else
-                {
-                    transpilerName = this.Name.ToLower().Replace(" ", "");
-                }
-            }
-            else
-            {
-                // For local transpilers, derive from Name (lowercase with spaces removed)
-                transpilerName = this.Name.ToLower().Replace(" ", "");
             }
 
             cliHandler.AICaptureProject = project;

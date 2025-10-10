@@ -668,11 +668,6 @@ namespace SSoTme.OST.Lib.Extensions
             return fs;
         }
 
-        public static String LowerHyphenName(this string name)
-        {
-            return name.ToTitle().Replace(" ", "-").ToLower();
-        }
-
         public static String StripParamNumber(this string fullParamString)
         {
             fullParamString = fullParamString.SafeToString();
@@ -725,9 +720,6 @@ namespace SSoTme.OST.Lib.Extensions
             return hash.ToString();
         }
 
-
-
-
         public static List<XmlElement> FileSetFilesFromFileSetXml(this string fileSetXml)
         {
             var xdoc = new XmlDocument();
@@ -737,7 +729,6 @@ namespace SSoTme.OST.Lib.Extensions
                        .OfType<XmlElement>()
                        .ToList();
         }
-
 
         public static String GetFileContents(this XmlElement fileSetFileElement)
         {
@@ -781,7 +772,6 @@ namespace SSoTme.OST.Lib.Extensions
             fileSetFile.AppendChild(fileContents);
             return xdoc.OuterXml;
         }
-
 
         private static void ConstructSchema(FileInfo theFile)
         {
@@ -1790,8 +1780,7 @@ namespace SSoTme.OST.Lib.Extensions
                 .Replace("?", "")
                 .Replace("&", "")
                 .Replace("=", "")
-                .Replace("-", "")
-                .Replace(" ", "")
+                .Replace(" ", "-")
                 .ToLower();
         }
 

@@ -138,12 +138,40 @@ namespace SSoTme.OST.Lib.DataClasses
             this.InitPoco();
         }
 
+        // Helper method to check if a command line represents a remote URL transpiler
+        private static bool IsRemoteUrlCommandLine(string commandLine)
+        {
+            if (string.IsNullOrEmpty(commandLine)) return false;
+
+            var trimmedCmd = commandLine.Trim();
+
+            // Check if command starts with http:// or https://
+            if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Check if command contains -g flag followed by a URL
+            if (trimmedCmd.Contains("-g "))
+            {
+                var parts = trimmedCmd.Split(' ');
+                var gIndex = Array.IndexOf(parts, "-g");
+                if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                {
+                    var nextPart = parts[gIndex + 1];
+                    return nextPart.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                           nextPart.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+
+            return false;
+        }
+
         public static void Init(bool force = false, String projectName = "")
         {
             var currentDirectoryFI = new DirectoryInfo(Environment.CurrentDirectory);
-
             FileInfo projectFI = GetProjectFIAt(currentDirectoryFI, false);
-
             if (projectFI.Exists)
             {
                 var currentProject = TryToLoad(currentDirectoryFI);
@@ -888,6 +916,11 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
+        public static String LowerHyphenName(string name)
+        {
+            return name.ToTitle().Replace(" ", "-").ToLower();
+        }
+
         private void CheckIfParentIsRootSeed()
         {
             if (File.Exists("../ssotme.json"))
@@ -930,26 +963,35 @@ namespace SSoTme.OST.Lib.DataClasses
                 {
                     // Derive transpiler name from command line (not from saved JSON)
                     // Use same naming logic as ProjectTranspiler.Clean method
-                    string transpilerName;
-                    if (pt.Name.StartsWith("http") && pt.CommandLine.Contains("-g "))
+                    string transpilerName = LowerHyphenName(pt.Name);
+                    if (IsRemoteUrlCommandLine(pt.CommandLine))
                     {
-                        // Extract and sanitize URL from command line for remote transpilers
-                        var parts = pt.CommandLine.Split(' ');
-                        var gIndex = Array.IndexOf(parts, "-g");
-                        if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                        // Extract URL from command line - handle both "-g URL" and direct "URL" syntax
+                        var trimmedCmd = pt.CommandLine.Trim();
+                        string targetUrl = null;
+
+                        if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                            trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                         {
-                            var targetUrl = parts[gIndex + 1];
+                            // Direct URL syntax: extract URL as first word
+                            var parts = trimmedCmd.Split(' ');
+                            targetUrl = parts[0];
+                        }
+                        else if (trimmedCmd.Contains("-g "))
+                        {
+                            // "-g URL" syntax: extract URL after -g flag
+                            var parts = pt.CommandLine.Split(' ');
+                            var gIndex = Array.IndexOf(parts, "-g");
+                            if (gIndex >= 0 && gIndex + 1 < parts.Length)
+                            {
+                                targetUrl = parts[gIndex + 1];
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(targetUrl))
+                        {
                             transpilerName = targetUrl.SanitizeUrlForFilename();
                         }
-                        else
-                        {
-                            transpilerName = pt.Name.ToLower().Replace(" ", "");
-                        }
-                    }
-                    else
-                    {
-                        // For local transpilers, derive from Name (lowercase with spaces removed)
-                        transpilerName = pt.Name.ToLower().Replace(" ", "");
                     }
 
                     var zfsDI = this.GetZFSDI(pt.RelativePath);

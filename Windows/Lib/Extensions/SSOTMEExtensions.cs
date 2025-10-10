@@ -668,11 +668,6 @@ namespace SSoTme.OST.Lib.Extensions
             return fs;
         }
 
-        public static String LowerHyphenName(this string name)
-        {
-            return name.ToTitle().Replace(" ", "-").ToLower();
-        }
-
         public static String StripParamNumber(this string fullParamString)
         {
             fullParamString = fullParamString.SafeToString();
