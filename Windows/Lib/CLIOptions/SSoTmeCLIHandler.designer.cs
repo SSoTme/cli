@@ -27,9 +27,6 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Removes the current command from the SSoT.me Project file", MinOccurs = 0, Aliases = "")]
         public bool uninstall { get; set; }
         
-        [CommandLineOption(Description = "Build only in the specified subdirectory of the project", MinOccurs = 0, Aliases = "")]
-        public string relativeDir { get; set; }
-        
         [CommandLineOption(Description = "Build any transpilers in the current folder (or children).", MinOccurs = 0, Aliases = "b,replay,rebuild,pull")]
         public bool build { get; set; }
         
@@ -69,7 +66,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Don't output the final results - instead, clean", MinOccurs = 0, Aliases = "ca")]
         public bool cleanAll { get; set; }
         
-        [CommandLineOption(Description = "When supplied with clean, runs clean on all orphaned transpilers", MinOccurs = 0, Aliases = "")]
+        [CommandLineOption(Description = "Run clean on all generated files", MinOccurs = 0, Aliases = "")]
         public bool purge { get; set; }
         
         [CommandLineOption(Description = "Don't clean the output before cooking", MinOccurs = 0, Aliases = "sc")]

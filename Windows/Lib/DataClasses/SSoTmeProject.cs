@@ -697,9 +697,9 @@ namespace SSoTme.OST.Lib.DataClasses
             return relativePath.Replace("\\", "/");
         }
 
-        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, string relativeDir, bool copilotConnect, bool isLocalBuild, bool debug)
+        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug)
         {
-            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, relativeDir, copilotConnect, isLocalBuild, true, debug);
+            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, true, debug);
         }
 
         internal void Rebuild(
@@ -707,7 +707,6 @@ namespace SSoTme.OST.Lib.DataClasses
             bool includeDisabled,
             string transpilerGroup,
             string buildOnTrigger,
-            string relativeDir,
             bool copilotConnect,
             bool isBuildLocal,
             bool debug,
@@ -720,13 +719,10 @@ namespace SSoTme.OST.Lib.DataClasses
             }
             else
             {
-                if (!(String.IsNullOrEmpty(relativeDir)) && debug) {
-                    Console.WriteLine($"Relativedir {relativeDir}");
-                }
-                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, relativeDir, isBuildLocal, debug, isBuildAll);
+                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
             }
         }
-
+        
         private void ListenForChangesAndRebuild(
             string buildPath,
             bool includeDisabled,
@@ -792,7 +788,7 @@ namespace SSoTme.OST.Lib.DataClasses
                         Console.WriteLine("No changes in last 10 seconds. Rebuilding...");
                         try
                         {
-                            this.DoRebuild(buildPath, includeDisabled, transpilerGroup, String.Empty, isBuildLocal, debug, isBuildAll);
+                            this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
                         }
                         catch (Exception ex)
                         {
@@ -837,7 +833,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, string relDirParam, bool isBuildLocal, bool debugOption, bool isBuildAll = false)
+        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool debugOption, bool isBuildAll = false)
         {
             if (!isBuildLocal) this.CheckIfParentIsRootSeed();
             if (isBuildAll) this.FindSSoTmeJsonFiles();
@@ -850,12 +846,8 @@ namespace SSoTme.OST.Lib.DataClasses
                                                                                         String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase));
                 foreach (var pt in matchingProjectTranspilers)
                 {
-                    if (!(String.IsNullOrEmpty(relDirParam)) && (!pt.RelativePath.Contains(relDirParam, StringComparison.OrdinalIgnoreCase))) {
-                        // the user provided a -relativeDir path and the current transpiler is NOT inside the relative folder
-                        if (debugOption) this.LogMessage("\n\n - SKIPPING TRANSPILER THAT DOESN'T MATCH RELATIVEDIR PARAM: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
-                    }
-                    else if (!pt.IsDisabled || includeDisabled) { pt.Rebuild(this, debugOption); }
-                    else { this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine); }
+                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption);
+                    else this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
                 }
                 if (isBuildAll) this.BuildSubSSoTmeProjects();
             }
