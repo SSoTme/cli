@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.08.1106";
+        public string CLI_VERSION = "2025.10.10.1726";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -56,7 +56,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         public DMProxy CoordinatorProxy { get; private set; }
 
 
-        private SSoTmeCLIHandler()
+        internal SSoTmeCLIHandler()
         {
             this.account = "";
             this.waitTimeout = 30000;
@@ -390,7 +390,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             }
         }
 
-        private void ParseCommand()
+        internal void ParseCommand()
         {
             try
             {
@@ -544,10 +544,14 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     if (String.IsNullOrEmpty(this.setAccountAPIKey) && !this.help && !this.authenticate && !this.listSeeds && !this.cloneSeed)
                     {
-                        this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
-                        if (this.AICaptureProject is null) {
-                            // warn user for clarity
-                            ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                        // Only load the project if it hasn't been set externally (e.g., by ProjectTranspiler.Rebuild)
+                        if (this.AICaptureProject == null)
+                        {
+                            this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
+                            if (this.AICaptureProject is null) {
+                                // warn user for clarity
+                                ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                            }
                         }
 
                         // still can continue with basic transpilers
@@ -1496,6 +1500,46 @@ Seed Url: ");
         }
 
         /// <summary>
+        /// Walks up the directory tree from startPath looking for a directory with ssotme.json.
+        /// Returns the directory path containing ssotme.json, or null if not found.
+        /// </summary>
+        private static string TryFindNearestProjectRootFrom(string startPath)
+        {
+            if (string.IsNullOrWhiteSpace(startPath)) return null;
+            try
+            {
+                var di = new DirectoryInfo(Path.GetFullPath(startPath));
+                while (di != null)
+                {
+                    var ssotme = Path.Combine(di.FullName, "ssotme.json");
+                    if (File.Exists(ssotme))
+                        return di.FullName;
+                    di = di.Parent;
+                }
+            }
+            catch
+            {
+                // Path may be invalid, return null
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Ensures a path ends with a directory separator to prevent false-positive prefix matches.
+        /// For example, C:\proj vs C:\proj-other
+        /// </summary>
+        private static string WithTrailingSeparator(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return path;
+            var last = path[path.Length - 1];
+            if (last != Path.DirectorySeparatorChar && last != Path.AltDirectorySeparatorChar)
+            {
+                return path + Path.DirectorySeparatorChar;
+            }
+            return path;
+        }
+
+        /// <summary>
         /// Validates that a file path is within the project scope.
         /// Throws NoStackException if the path attempts to access files outside the project.
         /// </summary>
@@ -1515,8 +1559,9 @@ Seed Url: ");
             try
             {
                 // Resolve both paths to absolute paths to handle .. and symlinks
-                var absoluteProjectRoot = Path.GetFullPath(projectRoot);
-                var absoluteFilePath = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, filePath));
+                // Use WithTrailingSeparator to prevent false-positive prefix matches
+                var absoluteProjectRoot = WithTrailingSeparator(Path.GetFullPath(projectRoot));
+                var absoluteFilePath = WithTrailingSeparator(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, filePath)));
 
                 // Check if the file path starts with the project root
                 // Use case-insensitive comparison for Windows compatibility
@@ -1530,7 +1575,7 @@ Seed Url: ");
                 {
                     foreach (var allowedFolder in allowedFolders)
                     {
-                        var absoluteAllowedFolder = Path.GetFullPath(allowedFolder);
+                        var absoluteAllowedFolder = WithTrailingSeparator(Path.GetFullPath(allowedFolder));
                         if (absoluteFilePath.StartsWith(absoluteAllowedFolder, StringComparison.OrdinalIgnoreCase))
                         {
                             Console.WriteLine($"Allowing access to parent ssotme project: {absoluteAllowedFolder}");
@@ -1541,7 +1586,7 @@ Seed Url: ");
 
                 // Path is not within project root or any allowed folders
                 throw new NoStackException(
-                    $"Access denied: The path '{filePath}' resolves to a directory outside the current project scope.\n" +
+                    $"Access denied: The path '{filePath}' resolves to a directory outside the current project scope ({absoluteFilePath}).\n" +
                     $"Current project: {projectName} ({absoluteProjectRoot})\n" +
                     $"For security reasons, ssotme can only access files within the project directory.");
             }
@@ -1566,35 +1611,38 @@ Seed Url: ");
                 filePattern = filePattern.Substring(filePattern.IndexOf("=") + 1);
             }
 
-            // Validate that the file path is within project scope before processing
-            var projectRoot = this.AICaptureProject?.RootPath;
             var directoryPath = Path.GetDirectoryName(filePattern);
             if (!String.IsNullOrEmpty(directoryPath))
             {
-                var name = "unknown";
-                if (!ReferenceEquals(this.AICaptureProject, null))
+                // Get the effective project root. When building (ProjectTranspiler.Rebuild),
+                // AICaptureProject is set before parsing, so we use that. Otherwise, walk up
+                // from current directory to find ssotme.json (for direct CLI usage).
+                var effectiveProjectRoot = this.AICaptureProject?.RootPath
+                                          ?? TryFindNearestProjectRootFrom(Environment.CurrentDirectory);
+
+                if (string.IsNullOrEmpty(effectiveProjectRoot))
                 {
-                    name = this.AICaptureProject.Name;
+                    throw new InvalidOperationException($"No parent 'ssotme.json' found from {Environment.CurrentDirectory}");
                 }
 
-                // Check if parent directory also has a ssotme.json file
+                var name = this.AICaptureProject?.Name
+                           ?? new DirectoryInfo(effectiveProjectRoot).Name;
+
+                // Parent-project allowance: Check if parent directory also has a ssotme.json file
                 List<string> allowedFolders = null;
-                if (!String.IsNullOrEmpty(projectRoot))
+                var rootDI = new DirectoryInfo(effectiveProjectRoot);
+                var parentDI = rootDI.Parent;
+                if (parentDI != null)
                 {
-                    var projectRootDI = new DirectoryInfo(projectRoot);
-                    var parentDI = projectRootDI.Parent;
-                    if (parentDI != null)
+                    var parentSsotme = Path.Combine(parentDI.FullName, "ssotme.json");
+                    if (File.Exists(parentSsotme))
                     {
-                        var parentSsotmeFile = new FileInfo(Path.Combine(parentDI.FullName, "ssotme.json"));
-                        if (parentSsotmeFile.Exists)
-                        {
-                            // Parent has ssotme.json, so allow reading from parent directory
-                            allowedFolders = new List<string> { parentDI.FullName };
-                        }
+                        // Parent has ssotme.json, so allow reading from parent directory
+                        allowedFolders = new List<string> { parentDI.FullName };
                     }
                 }
 
-                ValidatePathIsInProjectScope(directoryPath, name, projectRoot, allowedFolders);
+                ValidatePathIsInProjectScope(directoryPath, name, effectiveProjectRoot, allowedFolders);
             }
 
             var di = new DirectoryInfo(Path.Combine(".", Path.GetDirectoryName(filePattern)));

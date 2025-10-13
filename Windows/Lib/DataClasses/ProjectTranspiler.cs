@@ -131,10 +131,27 @@ namespace SSoTme.OST.Lib.DataClasses
             Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
             var transpileRootDI = new DirectoryInfo(Path.Combine(project.RootPath, $"{this.RelativePath}".Trim("\\/".ToCharArray())));
             if (!transpileRootDI.Exists) transpileRootDI.Create();
-            Environment.CurrentDirectory = transpileRootDI.FullName;
-            var cliHandler = SSoTmeCLIHandler.CreateHandler(this.CommandLine);
-            var cliResult = cliHandler.TranspileProject(this);
-            if (cliResult != 0) throw new Exception("Error RE-Transpiling");
+
+            // Store original directory to restore later
+            var originalDirectory = Environment.CurrentDirectory;
+            try
+            {
+                Environment.CurrentDirectory = transpileRootDI.FullName;
+
+                // Create handler and set the project BEFORE parsing
+                // This ensures ImportFile() uses the correct project root
+                var cliHandler = new SSoTmeCLIHandler();
+                cliHandler.AICaptureProject = project;
+                cliHandler.commandLine = this.CommandLine;
+                cliHandler.ParseCommand();
+
+                var cliResult = cliHandler.TranspileProject(this);
+                if (cliResult != 0) throw new Exception("Error RE-Transpiling");
+            }
+            finally
+            {
+                Environment.CurrentDirectory = originalDirectory;
+            }
         }
 
         internal void Clean(SSoTmeProject project, bool preserveZFS, bool debug = false)

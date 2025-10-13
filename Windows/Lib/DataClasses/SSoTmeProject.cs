@@ -841,9 +841,10 @@ namespace SSoTme.OST.Lib.DataClasses
             try
             {
                 var relativePath = this.GetProjectRelativePath(buildPath);
-                var matchingProjectTranspilers = this.ProjectTranspilers?.Where(wherePT => wherePT.IsAtPath(relativePath)) ?? new List<ProjectTranspiler>();
-                matchingProjectTranspilers = matchingProjectTranspilers.Where(wherePT => String.IsNullOrEmpty(transpilerGroup) ||
-                                                                                        String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase));
+                var matchingProjectTranspilers = (this.ProjectTranspilers?.Where(wherePT => wherePT.IsAtPath(relativePath)) ?? new List<ProjectTranspiler>())
+                    .Where(wherePT => String.IsNullOrEmpty(transpilerGroup) ||
+                                      String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase))
+                    .ToList();  // Materialize the query to prevent "Collection was modified" error
                 foreach (var pt in matchingProjectTranspilers)
                 {
                     if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption);
