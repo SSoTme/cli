@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.08.1106";
+        public string CLI_VERSION = "2025.10.10.1726";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -571,7 +571,16 @@ namespace SSoTme.OST.Lib.CLIOptions
                             {
                                 this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
                             }
-                            this.AICaptureProject?.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
+                            this.AICaptureProject?.Rebuild(
+                                Environment.CurrentDirectory,
+                                this.includeDisabled,
+                                this.transpilerGroup,
+                                this.buildOnTrigger,
+                                this.relativeDir,
+                                this.copilotConnect,
+                                this.buildLocal,
+                                this.debug
+                            );
                             Console.WriteLine("Auto-build completed successfully.");
                         }
                         catch (Exception ex)
@@ -1077,11 +1086,29 @@ Seed Url: ");
                 }
                 else if (this.build || this.buildLocal)
                 {
-                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
+                    GetProjectOrThrow().Rebuild(
+                        Environment.CurrentDirectory,
+                        this.includeDisabled,
+                        this.transpilerGroup,
+                        this.buildOnTrigger,
+                        this.relativeDir,
+                        this.copilotConnect,
+                        this.buildLocal,
+                        this.debug
+                    );
                 }
                 else if (this.buildAll)
                 {
-                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
+                    GetProjectOrThrow().RebuildAll(
+                        this.AICaptureProject.RootPath,
+                        this.includeDisabled,
+                        this.transpilerGroup,
+                        this.buildOnTrigger,
+                        this.relativeDir,
+                        this.copilotConnect,
+                        this.buildLocal,
+                        this.debug
+                    );
                 }
                 else if (this.discuss)
                 {
