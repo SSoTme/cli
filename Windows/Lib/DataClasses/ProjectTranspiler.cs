@@ -124,11 +124,15 @@ namespace SSoTme.OST.Lib.DataClasses
 
         internal void Rebuild(SSoTmeProject project, bool debugOption)
         {
-            if (debugOption) {
-                this.CommandLine += " -debug";
+            // Build command line with debug flag if needed, but don't mutate this.CommandLine
+            var commandLineToRun = this.CommandLine;
+            if (debugOption)
+            {
+                commandLineToRun += " -debug";
             }
+
             Console.WriteLine("\n\n **** " + this.RelativePath + ": " + this.Name + " ****");
-            Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
+            Console.WriteLine("CommandLine:> ssotme {0}", commandLineToRun);
             var transpileRootDI = new DirectoryInfo(Path.Combine(project.RootPath, $"{this.RelativePath}".Trim("\\/".ToCharArray())));
             if (!transpileRootDI.Exists) transpileRootDI.Create();
 
@@ -142,7 +146,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 // This ensures ImportFile() uses the correct project root
                 var cliHandler = new SSoTmeCLIHandler();
                 cliHandler.AICaptureProject = project;
-                cliHandler.commandLine = this.CommandLine;
+                cliHandler.commandLine = commandLineToRun;  // Use the modified command line, not this.CommandLine
                 cliHandler.ParseCommand();
 
                 var cliResult = cliHandler.TranspileProject(this);
@@ -222,13 +226,22 @@ namespace SSoTme.OST.Lib.DataClasses
 
         public bool IsAtPath(string relativePath)
         {
-            relativePath = relativePath.Replace("\\", "/").ToLower();
+            // Normalize paths - trim leading/trailing slashes and convert to lowercase
+            relativePath = relativePath.Replace("\\", "/").Trim('/').ToLower();
+            var transpilerPath = this.RelativePath
+                                   .SafeToString()
+                                   .Replace("\\", "/")
+                                   .Trim('/')
+                                   .ToLower();
 
-            return this.RelativePath
-                       .SafeToString()
-                       .Replace("\\", "/")
-                       .ToLower()
-                       .StartsWith(relativePath);
+            // If checking from project root, all transpilers match
+            if (string.IsNullOrEmpty(relativePath)) return true;
+
+            // If transpiler is at root but we're in a subdirectory, no match
+            if (string.IsNullOrEmpty(transpilerPath)) return false;
+
+            // Check if transpiler path starts with or equals the relative path
+            return transpilerPath.StartsWith(relativePath) || transpilerPath == relativePath;
         }
 
         public void LoadInputAndOuputFiles(SSoTmeProject project, bool includeContents)

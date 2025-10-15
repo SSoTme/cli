@@ -699,7 +699,7 @@ namespace SSoTme.OST.Lib.DataClasses
 
         internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug)
         {
-            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, true, debug);
+            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, debug, true);
         }
 
         internal void Rebuild(
