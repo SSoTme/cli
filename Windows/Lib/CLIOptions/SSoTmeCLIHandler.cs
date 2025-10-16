@@ -158,7 +158,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 }
                 else
                 {
-                    Console.WriteLine($"Tool '{this.viewToolUrl}' is not configured in this project's SSoT/tool_urls.json file.");
+                    Console.WriteLine($"Tool '{this.viewToolUrl}' is not configured in ~/.ssotme/tool_urls.json file.");
                 }
             }
             catch (Exception e)
@@ -171,12 +171,11 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
 
                 if (!File.Exists(toolUrlsPath))
                 {
-                    Console.WriteLine("No tool URLs configured. The SSoT/tool_urls.json file does not exist.");
+                    Console.WriteLine("No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.");
                     Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
                     return;
                 }
@@ -186,7 +185,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (urlMappings == null || !urlMappings.Any())
                 {
-                    Console.WriteLine("No tool URLs configured in SSoT/tool_urls.json.");
+                    Console.WriteLine("No tool URLs configured in ~/.ssotme/tool_urls.json.");
                     Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
                     return;
                 }
@@ -234,15 +233,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
-
-                // Ensure SSoT directory exists
-                var ssotDir = Path.Combine(rootPath, "SSoT");
-                if (!Directory.Exists(ssotDir))
-                {
-                    Directory.CreateDirectory(ssotDir);
-                }
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
 
                 // Load existing mappings or create new dictionary
                 Dictionary<string, string> urlMappings;
@@ -315,8 +306,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
 
                 if (!File.Exists(toolUrlsPath))
                 {
@@ -329,7 +319,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (urlMappings == null || !urlMappings.ContainsKey(toolName))
                 {
-                    throw new Exception($"Tool '{toolName}' is not configured in this project's tool URLs.");
+                    throw new Exception($"Tool '{toolName}' is not configured in your tool URLs.");
                 }
 
                 // Remove the tool URL
@@ -364,7 +354,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 }
 
                 this.RemoveToolUrl(toolName);
-                Console.WriteLine($"Tool '{toolName}' URL has been removed from the project configuration.");
+                Console.WriteLine($"Tool '{toolName}' URL has been removed from your user configuration.");
             }
             catch (Exception e)
             {
@@ -1317,8 +1307,7 @@ Seed Url: ");
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
                 if (!File.Exists(toolUrlsPath))
                 {
                     return null;
@@ -1333,7 +1322,7 @@ Seed Url: ");
             catch (Exception ex)
             {
                 // Log the error but don't fail the entire operation
-                Console.WriteLine($"Warning: Error reading SSoT/tool_urls.json: {ex.Message}");
+                Console.WriteLine($"Warning: Error reading ~/.ssotme/tool_urls.json: {ex.Message}");
             }
             return null;
         }
