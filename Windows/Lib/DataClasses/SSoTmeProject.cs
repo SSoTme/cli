@@ -841,7 +841,7 @@ namespace SSoTme.OST.Lib.DataClasses
             try
             {
                 var relativePath = this.GetProjectRelativePath(buildPath);
-                var matchingProjectTranspilers = (this.ProjectTranspilers?.Where(wherePT => wherePT.IsAtPath(relativePath)) ?? new List<ProjectTranspiler>())
+                var matchingProjectTranspilers = (this.ProjectTranspilers?.Where(wherePT => wherePT.IsAtPath(relativePath, exactMatch: isBuildLocal)) ?? new List<ProjectTranspiler>())
                     .Where(wherePT => String.IsNullOrEmpty(transpilerGroup) ||
                                       String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase))
                     .ToList();  // Materialize the query to prevent "Collection was modified" error

@@ -224,7 +224,7 @@ namespace SSoTme.OST.Lib.DataClasses
             Console.WriteLine("\nCommand Line:> ssotme {0}\n", this.CommandLine);
         }
 
-        public bool IsAtPath(string relativePath)
+        public bool IsAtPath(string relativePath, bool exactMatch = false)
         {
             // Normalize paths - trim leading/trailing slashes and convert to lowercase
             relativePath = relativePath.Replace("\\", "/").Trim('/').ToLower();
@@ -234,13 +234,22 @@ namespace SSoTme.OST.Lib.DataClasses
                                    .Trim('/')
                                    .ToLower();
 
-            // If checking from project root, all transpilers match
-            if (string.IsNullOrEmpty(relativePath)) return true;
+            // If checking from project root
+            if (string.IsNullOrEmpty(relativePath))
+            {
+                // For exact match, only match transpilers at root (empty path)
+                if (exactMatch) return string.IsNullOrEmpty(transpilerPath);
+                // For non-exact match, all transpilers match
+                return true;
+            }
 
             // If transpiler is at root but we're in a subdirectory, no match
             if (string.IsNullOrEmpty(transpilerPath)) return false;
 
-            // Check if transpiler path starts with or equals the relative path
+            // For exact match, only check equality
+            if (exactMatch) return transpilerPath == relativePath;
+
+            // For non-exact match, check if transpiler path starts with or equals the relative path
             return transpilerPath.StartsWith(relativePath) || transpilerPath == relativePath;
         }
 

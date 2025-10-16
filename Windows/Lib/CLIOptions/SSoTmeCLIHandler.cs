@@ -852,8 +852,12 @@ Seed Url: ");
                     this.listSeeds = true;
                     break;
 
-                case "build":
                 case "buildlocal":
+                    this.buildLocal = true;
+                //    this.build = true;
+                    break;
+
+                case "build":
                 case "rebuild":
                 case "pull":
                     this.build = true;
