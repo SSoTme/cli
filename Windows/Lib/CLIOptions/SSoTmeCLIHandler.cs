@@ -1109,18 +1109,62 @@ Seed Url: ");
                 else if (this.clean && !hasRemainingArguments)
                 {
                     this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug);
-                    Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
-
+                    try
+                    {
+                        var currentDir = Environment.CurrentDirectory;
+                        if (Directory.Exists(currentDir))
+                        {
+                            Task.Run(() => new DirectoryInfo(currentDir).ApplySeedReplacementsAsync(true)).Wait();
+                        }
+                        else if (this.debug)
+                        {
+                            Console.WriteLine("DEBUG: Skipping seed replacements - current directory was deleted during clean");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.debug) Console.WriteLine($"DEBUG: Error applying seed replacements: {ex.Message}");
+                    }
                 }
                 else if (this.cleanLocal && !hasRemainingArguments)
                 {
                     this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug, cleanLocal: true);
-                    Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
+                    try
+                    {
+                        var currentDir = Environment.CurrentDirectory;
+                        if (Directory.Exists(currentDir))
+                        {
+                            Task.Run(() => new DirectoryInfo(currentDir).ApplySeedReplacementsAsync(true)).Wait();
+                        }
+                        else if (this.debug)
+                        {
+                            Console.WriteLine("DEBUG: Skipping seed replacements - current directory was deleted during clean");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.debug) Console.WriteLine($"DEBUG: Error applying seed replacements: {ex.Message}");
+                    }
                 }
                 else if (this.cleanAll && !hasRemainingArguments)
                 {
                     this.AICaptureProject?.CleanAll(this.preserveZFS, this.purge, this.debug);
-                    Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
+                    try
+                    {
+                        var currentDir = Environment.CurrentDirectory;
+                        if (Directory.Exists(currentDir))
+                        {
+                            Task.Run(() => new DirectoryInfo(currentDir).ApplySeedReplacementsAsync(true)).Wait();
+                        }
+                        else if (this.debug)
+                        {
+                            Console.WriteLine("DEBUG: Skipping seed replacements - current directory was deleted during clean");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.debug) Console.WriteLine($"DEBUG: Error applying seed replacements: {ex.Message}");
+                    }
                 }
                 else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && !this.IsHttpUrl(this.transpiler) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
                 {
