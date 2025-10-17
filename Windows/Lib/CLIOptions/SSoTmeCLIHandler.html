@@ -1,5 +1,5 @@
 <html><head><title>Command Line Arguments - summary</title></head><body><h1>Command Line Arguments</h1><p>
-    There are 52 command line arguments defined at this time.  They are:
+    There are 53 command line arguments defined at this time.  They are:
       
       <div style=""><h3>
         -help  or -h    [bool]
@@ -28,7 +28,7 @@
       </div></div><div style=""><h3>
         -buildLocal  or -bl,replaylocal,rebuildLocal,pullLocal    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Builds only the root level transpilers, not the sub-directories.
+      Build only the transpilers installed in the current folder
       </div></div><div style=""><h3>
         -buildOnTrigger  or -bot    [string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
@@ -64,15 +64,19 @@
       </div></div><div style=""><h3>
         -clean  or -c    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Don't output the final results - instead, clean
+      Clean all transpilers installed in and downstream of this folder
       </div></div><div style=""><h3>
         -cleanAll  or -ca    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Don't output the final results - instead, clean
+      Clean all project transpilers
+      </div></div><div style=""><h3>
+        -cleanLocal  or -cl    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Cleans only transpilers installed in the current folder
       </div></div><div style=""><h3>
         -purge  [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Run clean on all generated files
+      When supplied with clean, runs clean on all orphaned transpilers
       </div></div><div style=""><h3>
         -skipClean  or -sc    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">

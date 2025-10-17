@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.10.1726";
+        public string CLI_VERSION = "2025.10.13.1840";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -158,7 +158,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 }
                 else
                 {
-                    Console.WriteLine($"Tool '{this.viewToolUrl}' is not configured in this project's SSoT/tool_urls.json file.");
+                    Console.WriteLine($"Tool '{this.viewToolUrl}' is not configured in ~/.ssotme/tool_urls.json file.");
                 }
             }
             catch (Exception e)
@@ -171,12 +171,11 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
 
                 if (!File.Exists(toolUrlsPath))
                 {
-                    Console.WriteLine("No tool URLs configured. The SSoT/tool_urls.json file does not exist.");
+                    Console.WriteLine("No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.");
                     Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
                     return;
                 }
@@ -186,7 +185,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (urlMappings == null || !urlMappings.Any())
                 {
-                    Console.WriteLine("No tool URLs configured in SSoT/tool_urls.json.");
+                    Console.WriteLine("No tool URLs configured in ~/.ssotme/tool_urls.json.");
                     Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
                     return;
                 }
@@ -234,15 +233,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
-
-                // Ensure SSoT directory exists
-                var ssotDir = Path.Combine(rootPath, "SSoT");
-                if (!Directory.Exists(ssotDir))
-                {
-                    Directory.CreateDirectory(ssotDir);
-                }
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
 
                 // Load existing mappings or create new dictionary
                 Dictionary<string, string> urlMappings;
@@ -315,8 +306,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
 
                 if (!File.Exists(toolUrlsPath))
                 {
@@ -329,7 +319,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (urlMappings == null || !urlMappings.ContainsKey(toolName))
                 {
-                    throw new Exception($"Tool '{toolName}' is not configured in this project's tool URLs.");
+                    throw new Exception($"Tool '{toolName}' is not configured in your tool URLs.");
                 }
 
                 // Remove the tool URL
@@ -364,7 +354,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 }
 
                 this.RemoveToolUrl(toolName);
-                Console.WriteLine($"Tool '{toolName}' URL has been removed from the project configuration.");
+                Console.WriteLine($"Tool '{toolName}' URL has been removed from your user configuration.");
             }
             catch (Exception e)
             {
@@ -862,8 +852,12 @@ Seed Url: ");
                     this.listSeeds = true;
                     break;
 
-                case "build":
                 case "buildlocal":
+                    this.buildLocal = true;
+                //    this.build = true;
+                    break;
+
+                case "build":
                 case "rebuild":
                 case "pull":
                     this.build = true;
@@ -877,6 +871,10 @@ Seed Url: ");
 
                 case "clean":
                     this.clean = true;
+                    break;
+
+                case "cleanlocal":
+                    this.cleanLocal = true;
                     break;
 
                 case "cleanall":
@@ -1111,13 +1109,62 @@ Seed Url: ");
                 else if (this.clean && !hasRemainingArguments)
                 {
                     this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug);
-                    Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
-
+                    try
+                    {
+                        var currentDir = Environment.CurrentDirectory;
+                        if (Directory.Exists(currentDir))
+                        {
+                            Task.Run(() => new DirectoryInfo(currentDir).ApplySeedReplacementsAsync(true)).Wait();
+                        }
+                        else if (this.debug)
+                        {
+                            Console.WriteLine("DEBUG: Skipping seed replacements - current directory was deleted during clean");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.debug) Console.WriteLine($"DEBUG: Error applying seed replacements: {ex.Message}");
+                    }
+                }
+                else if (this.cleanLocal && !hasRemainingArguments)
+                {
+                    this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug, cleanLocal: true);
+                    try
+                    {
+                        var currentDir = Environment.CurrentDirectory;
+                        if (Directory.Exists(currentDir))
+                        {
+                            Task.Run(() => new DirectoryInfo(currentDir).ApplySeedReplacementsAsync(true)).Wait();
+                        }
+                        else if (this.debug)
+                        {
+                            Console.WriteLine("DEBUG: Skipping seed replacements - current directory was deleted during clean");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.debug) Console.WriteLine($"DEBUG: Error applying seed replacements: {ex.Message}");
+                    }
                 }
                 else if (this.cleanAll && !hasRemainingArguments)
                 {
                     this.AICaptureProject?.CleanAll(this.preserveZFS, this.purge, this.debug);
-                    Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
+                    try
+                    {
+                        var currentDir = Environment.CurrentDirectory;
+                        if (Directory.Exists(currentDir))
+                        {
+                            Task.Run(() => new DirectoryInfo(currentDir).ApplySeedReplacementsAsync(true)).Wait();
+                        }
+                        else if (this.debug)
+                        {
+                            Console.WriteLine("DEBUG: Skipping seed replacements - current directory was deleted during clean");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.debug) Console.WriteLine($"DEBUG: Error applying seed replacements: {ex.Message}");
+                    }
                 }
                 else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && !this.IsHttpUrl(this.transpiler) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl))
                 {
@@ -1317,8 +1364,7 @@ Seed Url: ");
         {
             try
             {
-                var rootPath = FindProjectRoot();
-                var toolUrlsPath = Path.Combine(rootPath, "SSoT", "tool_urls.json");
+                var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
                 if (!File.Exists(toolUrlsPath))
                 {
                     return null;
@@ -1333,7 +1379,7 @@ Seed Url: ");
             catch (Exception ex)
             {
                 // Log the error but don't fail the entire operation
-                Console.WriteLine($"Warning: Error reading SSoT/tool_urls.json: {ex.Message}");
+                Console.WriteLine($"Warning: Error reading ~/.ssotme/tool_urls.json: {ex.Message}");
             }
             return null;
         }
