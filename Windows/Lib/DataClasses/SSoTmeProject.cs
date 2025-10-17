@@ -1015,7 +1015,16 @@ namespace SSoTme.OST.Lib.DataClasses
 
                         // Determine the directory to clean from (transpiler's working directory)
                         var transpilerWorkingDir = Path.Combine(this.RootPath, relativePath);
-                        var savedCurrentDirectory = Environment.CurrentDirectory;
+                        string savedCurrentDirectory;
+                        try
+                        {
+                            savedCurrentDirectory = Environment.CurrentDirectory;
+                        }
+                        catch (Exception)
+                        {
+                            // Current directory might have been deleted
+                            savedCurrentDirectory = this.RootPath;
+                        }
 
                         try
                         {
@@ -1042,12 +1051,37 @@ namespace SSoTme.OST.Lib.DataClasses
                         }
                         finally
                         {
-                            // Restore the original directory
-                            Environment.CurrentDirectory = savedCurrentDirectory;
+                            // Try to restore the original directory
+                            try
+                            {
+                                if (Directory.Exists(savedCurrentDirectory))
+                                {
+                                    Environment.CurrentDirectory = savedCurrentDirectory;
+                                }
+                                else if (Directory.Exists(this.RootPath))
+                                {
+                                    Environment.CurrentDirectory = this.RootPath;
+                                }
+                            }
+                            catch (Exception)
+                            {
+                                // If we can't restore, try to go to project root
+                                if (Directory.Exists(this.RootPath))
+                                {
+                                    try { Environment.CurrentDirectory = this.RootPath; } catch { }
+                                }
+                            }
 
                             // Always remove the orphaned ZFS file after cleaning
-                            if (debug) Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
-                            zfsFile.Delete();
+                            try
+                            {
+                                if (debug) Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
+                                zfsFile.Delete();
+                            }
+                            catch (Exception ex)
+                            {
+                                if (debug) Console.WriteLine($"Warning: Could not delete orphaned ZFS file: {ex.Message}");
+                            }
                         }
                     }
                 }
@@ -1058,32 +1092,96 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void Clean(string pathFullName, bool preserveZFS, bool purge, bool debugOption, bool cleanAll = false)
+        public void Clean(string pathFullName, bool preserveZFS, bool purge, bool debugOption, bool cleanAll = false, bool cleanLocal = false)
         {
-            var currentDirectory = Environment.CurrentDirectory;
+            string currentDirectory;
+            try
+            {
+                currentDirectory = Environment.CurrentDirectory;
+            }
+            catch (Exception)
+            {
+                // On macOS, Environment.CurrentDirectory throws if the directory was deleted
+                currentDirectory = pathFullName;
+            }
+
             if (cleanAll) this.FindSSoTmeJsonFiles();
             try
             {
                 var relativePath = this.GetProjectRelativePath(pathFullName);
-                var matchingProjectTranspilers = this.ProjectTranspilers.Where(wherePT => wherePT.IsAtPath(relativePath));
+                var matchingProjectTranspilers = this.ProjectTranspilers.Where(wherePT => wherePT.IsAtPath(relativePath, exactMatch: cleanLocal));
                 foreach (var pt in matchingProjectTranspilers)
                 {
                     pt.Clean(this, preserveZFS, debugOption);
+
+                    // After each clean, check if current directory still exists
+                    // If not, navigate to parent or project root
+                    try
+                    {
+                        var testDir = Environment.CurrentDirectory;
+                    }
+                    catch (Exception)
+                    {
+                        // Current directory was deleted, navigate to project root
+                        if (Directory.Exists(this.RootPath))
+                        {
+                            Environment.CurrentDirectory = this.RootPath;
+                        }
+                    }
                 }
                 if (cleanAll) this.CleanSubSSoTmeProjects();
             }
             finally
             {
-                Environment.CurrentDirectory = currentDirectory;
+                // Try to restore current directory, but it might have been deleted
+                try
+                {
+                    if (Directory.Exists(currentDirectory))
+                    {
+                        Environment.CurrentDirectory = currentDirectory;
+                    }
+                    else
+                    {
+                        // Current directory was deleted, navigate to project root
+                        if (Directory.Exists(this.RootPath))
+                        {
+                            Environment.CurrentDirectory = this.RootPath;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // If we can't restore, go to project root
+                    if (Directory.Exists(this.RootPath))
+                    {
+                        Environment.CurrentDirectory = this.RootPath;
+                    }
+                }
             }
 
             // Remove unused ZFS files (those not corresponding to current transpilers)
             if (!preserveZFS && purge)
             {
-                this.RemoveUnusedZFSFiles(debugOption);
+                try
+                {
+                    this.RemoveUnusedZFSFiles(debugOption);
+                }
+                catch (Exception ex)
+                {
+                    // Already shows warning in RemoveUnusedZFSFiles, but catch to prevent crash
+                    if (debugOption) Console.WriteLine($"DEBUG: RemoveUnusedZFSFiles exception: {ex.Message}");
+                }
             }
 
-            this.RemoveEmptyFolders(currentDirectory);
+            // Only try to remove empty folders if the directory exists
+            if (Directory.Exists(currentDirectory))
+            {
+                this.RemoveEmptyFolders(currentDirectory);
+            }
+            else if (Directory.Exists(pathFullName))
+            {
+                this.RemoveEmptyFolders(pathFullName);
+            }
         }
 
         private void RemoveEmptyFolders(string pathToClean)
@@ -1107,12 +1205,68 @@ namespace SSoTme.OST.Lib.DataClasses
                 var files = childDir.GetFiles();
                 if (files.Any()) continue;
 
+                // Safety check: Never delete the project root
+                if (String.Equals(childDir.FullName, this.RootPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new Exception($"ERROR: Cannot delete project root directory: {this.RootPath}");
+                }
+
+                // If deleting current working directory, change to parent first
+                try
+                {
+                    var currentDir = Environment.CurrentDirectory;
+                    if (String.Equals(childDir.FullName, currentDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (childDir.Parent != null)
+                        {
+                            Environment.CurrentDirectory = childDir.Parent.FullName;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // CurrentDirectory may throw if the directory was already deleted on macOS
+                    // Safe to continue - just navigate to project root
+                    if (Directory.Exists(this.RootPath))
+                    {
+                        try { Environment.CurrentDirectory = this.RootPath; } catch { }
+                    }
+                }
+
                 childDir.Delete();
             }
 
             cleanDI.Refresh();
             if (cleanDI.GetDirectories().Any()) return;
             if (cleanDI.GetFiles().Any()) return;
+
+            // Safety check: Never delete the project root
+            if (String.Equals(cleanDI.FullName, this.RootPath, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new Exception($"ERROR: Cannot delete project root directory: {this.RootPath}");
+            }
+
+            // If deleting current working directory, change to parent first
+            try
+            {
+                var currentDir = Environment.CurrentDirectory;
+                if (String.Equals(cleanDI.FullName, currentDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (cleanDI.Parent != null)
+                    {
+                        Environment.CurrentDirectory = cleanDI.Parent.FullName;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // CurrentDirectory may throw if the directory was already deleted on macOS
+                // Safe to continue - just navigate to project root
+                if (Directory.Exists(this.RootPath))
+                {
+                    try { Environment.CurrentDirectory = this.RootPath; } catch { }
+                }
+            }
 
             cleanDI.Delete();
         }

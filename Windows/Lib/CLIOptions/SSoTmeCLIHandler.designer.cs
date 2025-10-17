@@ -33,7 +33,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Builds all transpilers in the project", MinOccurs = 0, Aliases = "ba,replayall,rebuildAll,pullAll")]
         public bool buildAll { get; set; }
         
-        [CommandLineOption(Description = "Builds only the root level transpilers, not the sub-directories.", MinOccurs = 0, Aliases = "bl,replaylocal,rebuildLocal,pullLocal")]
+        [CommandLineOption(Description = "Build only the transpilers installed in the current folder", MinOccurs = 0, Aliases = "bl,replaylocal,rebuildLocal,pullLocal")]
         public bool buildLocal { get; set; }
         
         [CommandLineOption(Description = "Builds whenever a trigger is invoked (see readme for URL)", MinOccurs = 0, Aliases = "bot")]
@@ -60,13 +60,16 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Output filename", MinOccurs = 0, Aliases = "o")]
         public string output { get; set; }
         
-        [CommandLineOption(Description = "Don't output the final results - instead, clean", MinOccurs = 0, Aliases = "c")]
+        [CommandLineOption(Description = "Clean all transpilers installed in and downstream of this folder", MinOccurs = 0, Aliases = "c")]
         public bool clean { get; set; }
         
-        [CommandLineOption(Description = "Don't output the final results - instead, clean", MinOccurs = 0, Aliases = "ca")]
+        [CommandLineOption(Description = "Clean all project transpilers", MinOccurs = 0, Aliases = "ca")]
         public bool cleanAll { get; set; }
         
-        [CommandLineOption(Description = "Run clean on all generated files", MinOccurs = 0, Aliases = "")]
+        [CommandLineOption(Description = "Cleans only transpilers installed in the current folder", MinOccurs = 0, Aliases = "cl")]
+        public bool cleanLocal { get; set; }
+        
+        [CommandLineOption(Description = "When supplied with clean, runs clean on all orphaned transpilers", MinOccurs = 0, Aliases = "")]
         public bool purge { get; set; }
         
         [CommandLineOption(Description = "Don't clean the output before cooking", MinOccurs = 0, Aliases = "sc")]

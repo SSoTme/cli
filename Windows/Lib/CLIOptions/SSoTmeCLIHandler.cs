@@ -873,6 +873,10 @@ Seed Url: ");
                     this.clean = true;
                     break;
 
+                case "cleanlocal":
+                    this.cleanLocal = true;
+                    break;
+
                 case "cleanall":
                     this.cleanAll = true;
                     break;
@@ -1107,6 +1111,11 @@ Seed Url: ");
                     this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug);
                     Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
 
+                }
+                else if (this.cleanLocal && !hasRemainingArguments)
+                {
+                    this.AICaptureProject?.Clean(Environment.CurrentDirectory, this.preserveZFS, this.purge, this.debug, cleanLocal: true);
+                    Task.Run(() => new DirectoryInfo(Environment.CurrentDirectory).ApplySeedReplacementsAsync(true)).Wait();
                 }
                 else if (this.cleanAll && !hasRemainingArguments)
                 {
