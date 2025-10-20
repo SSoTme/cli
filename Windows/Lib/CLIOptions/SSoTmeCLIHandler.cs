@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.13.1840";
+        public string CLI_VERSION = "2025.10.17.1628";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -1983,9 +1983,11 @@ Seed Url: ");
                                                     zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedFileContents");
                                                 }
                                                 var binaryFileContentsNode = fileSetFileElem.SelectSingleNode("BinaryFileContents");
+                                                var zippedBinaryFileContentsNode = fileSetFileElem.SelectSingleNode("ZippedBinaryFileContents");
                                                 bool hasContent = (!ReferenceEquals(fileContentsNode, null) && !String.IsNullOrEmpty(fileContentsNode.InnerXml)) ||
                                                                 (!ReferenceEquals(zippedFileContents, null) && !String.IsNullOrEmpty(zippedFileContents.InnerXml)) ||
-                                                                (!ReferenceEquals(binaryFileContentsNode, null) && !String.IsNullOrEmpty(binaryFileContentsNode.InnerText));
+                                                                (!ReferenceEquals(binaryFileContentsNode, null) && !String.IsNullOrEmpty(binaryFileContentsNode.InnerText)) ||
+                                                                (!ReferenceEquals(zippedBinaryFileContentsNode, null) && !String.IsNullOrEmpty(zippedBinaryFileContentsNode.InnerText));
 
                                                 if (!hasContent)
                                                 {
@@ -1994,7 +1996,7 @@ Seed Url: ");
                                             }
                                         }
 
-                                        if (filesWithNoContent.Any())
+                                        if (filesWithNoContent.Any() && this.debug)
                                         {
                                             Console.WriteLine($"WARNING: ZFS contains file entries with no content:");
                                             foreach (var file in filesWithNoContent)
