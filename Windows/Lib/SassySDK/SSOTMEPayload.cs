@@ -110,6 +110,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         public List<String> CLIParams { get; set; }
         public String CLITranspiler { get; set; }
         public int CLIWaitTimeout { get; set; }
+        public bool CLIDebug { get; set; }
         public List<FileType> FileTypes { get; set; }
         public SSoTmeProject SSoTmeProject { get; set; }
         public SSOTMEKey SSoTmeKey { get; set; }
@@ -198,6 +199,14 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             var zfsFI = this.GetZFSFI();
             if (!zfsFI.Directory.Exists) zfsFI.Directory.Create();
             File.WriteAllBytes(zfsFI.FullName, fileSetXml.Zip());
+
+            // Save debug XML file if debug mode is enabled
+            if (this.CLIDebug)
+            {
+                var debugXmlPath = Path.Combine(zfsFI.Directory.FullName, $"{this.Transpiler.LowerHyphenName}.xml");
+                File.WriteAllText(debugXmlPath, fileSetXml);
+                Console.WriteLine($"DEBUG: Saved transpiler XML output to: {debugXmlPath}");
+            }
         }
 
         private FileInfo GetZFSFI()
@@ -243,6 +252,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             this.CLIParams = sSoTmeCLIHandler.parameters;
             this.CLITranspiler = sSoTmeCLIHandler.transpiler;
             this.CLIWaitTimeout = sSoTmeCLIHandler.waitTimeout;
+            this.CLIDebug = sSoTmeCLIHandler.debug;
         }
     }
 }

@@ -2027,6 +2027,8 @@ Seed Url: ");
                         }
                     }
 
+                    // Preserve CLI debug flag from request to response
+                    responsePayload.CLIDebug = this.debug;
                     this.result = responsePayload;
                 }
                 catch (JsonException ex)

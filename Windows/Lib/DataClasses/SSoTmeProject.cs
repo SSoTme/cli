@@ -1077,6 +1077,14 @@ namespace SSoTme.OST.Lib.DataClasses
                             {
                                 if (debug) Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
                                 zfsFile.Delete();
+
+                                // Also remove corresponding debug XML file if it exists
+                                var xmlFile = new FileInfo(Path.ChangeExtension(zfsFile.FullName, ".xml"));
+                                if (xmlFile.Exists)
+                                {
+                                    if (debug) Console.WriteLine($"Removing orphaned debug XML file: {xmlFile.FullName}");
+                                    xmlFile.Delete();
+                                }
                             }
                             catch (Exception ex)
                             {
