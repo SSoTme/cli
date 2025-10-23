@@ -1241,7 +1241,15 @@ namespace SSoTme.OST.Lib.DataClasses
                     }
                 }
 
-                childDir.Delete();
+                try
+                {
+                    childDir.Delete();
+                }
+                catch (IOException)
+                {
+                    // On Linux, may not be able to delete current working directory even after changing it
+                    // Skip this directory and continue cleaning others
+                }
             }
 
             cleanDI.Refresh();
@@ -1276,7 +1284,15 @@ namespace SSoTme.OST.Lib.DataClasses
                 }
             }
 
-            cleanDI.Delete();
+            try
+            {
+                cleanDI.Delete();
+            }
+            catch (IOException)
+            {
+                // On Linux, may not be able to delete current working directory even after changing it
+                // Skip this directory and continue cleaning others
+            }
         }
 
 
