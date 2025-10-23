@@ -213,6 +213,15 @@ namespace SSoTme.OST.Lib.DataClasses
                     File.Delete(zfsFI.FullName);
                 }
             }
+
+            // Also remove debug XML file if it exists
+            String xmlFileName = String.Format("{0}/{1}.xml", zfsDI.FullName, transpilerName);
+            var xmlFI = new FileInfo(xmlFileName);
+            if (xmlFI.Exists)
+            {
+                if (debug) Console.WriteLine($"DEBUG: Removing debug XML file: {xmlFI.FullName}");
+                xmlFI.Delete();
+            }
         }
 
         public void Describe(SSoTmeProject project)

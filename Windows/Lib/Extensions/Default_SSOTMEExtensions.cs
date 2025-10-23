@@ -527,7 +527,7 @@ namespace SSoTme.OST.Lib.Extensions
                                        !ReferenceEquals(zippedFileContents, null) ||
                                        !ReferenceEquals(binaryFileContentsNode, null);
 
-                    if (!hasAnyContent)
+                    if (!hasAnyContent && debug)
                     {
                         Console.WriteLine($"WARNING: Cannot clean {fiToClean.FullName} - ZFS entry has no content nodes (FileContents, ZippedTextFileContents, ZippedFileContents, or BinaryFileContents)");
                     }
