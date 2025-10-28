@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.10.13.1840";
+        public string CLI_VERSION = "2025.10.17.1628";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -417,6 +417,18 @@ namespace SSoTme.OST.Lib.CLIOptions
                     else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
                     {
                         var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+
+                        // Check if the tool name has account prefix before overwriting transpiler
+                        if (this.transpiler.Contains("/") && !this.IsHttpUrl(this.transpiler))
+                        {
+                            this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+
+                            if (this.debug)
+                            {
+                                Console.WriteLine($"DEBUG: Extracted account '{this.account}' from tool name before URL lookup");
+                            }
+                        }
+
                         this.targetUrl = urlFromFile;
                         this.transpiler = urlFromFile.SanitizeUrlForFilename();
                     }
@@ -427,6 +439,11 @@ namespace SSoTme.OST.Lib.CLIOptions
                             // If this not a URL, assume it's a transpiler name with an account prefix
                             this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
                             this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
+
+                            if (this.debug)
+                            {
+                                Console.WriteLine($"DEBUG: Extracted account '{this.account}' from transpiler name");
+                            }
                         }
                         else
                         {
@@ -454,6 +471,18 @@ namespace SSoTme.OST.Lib.CLIOptions
                         else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
                         {
                             var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+
+                            // Check if the tool name has account prefix before overwriting transpiler
+                            if (this.transpiler.Contains("/") && !this.IsHttpUrl(this.transpiler))
+                            {
+                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+
+                                if (this.debug)
+                                {
+                                    Console.WriteLine($"DEBUG: Extracted account '{this.account}' from tool name before URL lookup (else block)");
+                                }
+                            }
+
                             this.targetUrl = urlFromFile;
                             this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
@@ -465,6 +494,17 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 this.transpiler = this.transpiler.SanitizeUrlForFilename();
                                 // When URL is the transpiler, only count additional args beyond it as "remaining"
                                 this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                            }
+                            else
+                            {
+                                // If this not a URL, assume it's a transpiler name with an account prefix
+                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+                                this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
+
+                                if (this.debug)
+                                {
+                                    Console.WriteLine($"DEBUG: Extracted account '{this.account}' from transpiler name (else block)");
+                                }
                             }
                         }
                     }
@@ -577,9 +617,45 @@ namespace SSoTme.OST.Lib.CLIOptions
                     this.LoadInputFiles();
 
                     var key = SSOTMEKey.GetSSoTmeKey(this.runAs);
-                    if (key.APIKeys.ContainsKey(this.account))
+                    if (!String.IsNullOrEmpty(this.account))
                     {
-                        this.parameters.Add(String.Format("apiKey={0}", key.APIKeys[this.account]));
+                        if (this.debug)
+                        {
+                            Console.WriteLine($"DEBUG: Account is set to '{this.account}', looking up API key...");
+                        }
+
+                        if (key.APIKeys.ContainsKey(this.account))
+                        {
+                            var apiKeyValue = key.APIKeys[this.account];
+
+                            // Check if the API key is a simple string or JSON/complex format
+                            if (apiKeyValue.TrimStart().StartsWith("{") || apiKeyValue.TrimStart().StartsWith("["))
+                            {
+                                // JSON format detected
+                                throw new Exception($"The API key for account '{this.account}' is in JSON format and cannot be used directly as apiKey parameter. Please store simple string API keys in the format: ssotme -setAccountAPIKey={this.account}/YOUR_API_KEY");
+                            }
+
+                            if (this.debug)
+                            {
+                                Console.WriteLine($"DEBUG: Adding apiKey parameter from account '{this.account}'");
+                            }
+
+                            this.parameters.Add(String.Format("apiKey={0}", apiKeyValue));
+                        }
+                        else
+                        {
+                            if (this.debug)
+                            {
+                                Console.WriteLine($"DEBUG: No API key found for account '{this.account}'");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (this.debug)
+                        {
+                            Console.WriteLine($"DEBUG: No account specified, not adding API key");
+                        }
                     }
                     if (!ReferenceEquals(this.FileSet, null))
                     {
@@ -1983,9 +2059,11 @@ Seed Url: ");
                                                     zippedFileContents = fileSetFileElem.SelectSingleNode("ZippedFileContents");
                                                 }
                                                 var binaryFileContentsNode = fileSetFileElem.SelectSingleNode("BinaryFileContents");
+                                                var zippedBinaryFileContentsNode = fileSetFileElem.SelectSingleNode("ZippedBinaryFileContents");
                                                 bool hasContent = (!ReferenceEquals(fileContentsNode, null) && !String.IsNullOrEmpty(fileContentsNode.InnerXml)) ||
                                                                 (!ReferenceEquals(zippedFileContents, null) && !String.IsNullOrEmpty(zippedFileContents.InnerXml)) ||
-                                                                (!ReferenceEquals(binaryFileContentsNode, null) && !String.IsNullOrEmpty(binaryFileContentsNode.InnerText));
+                                                                (!ReferenceEquals(binaryFileContentsNode, null) && !String.IsNullOrEmpty(binaryFileContentsNode.InnerText)) ||
+                                                                (!ReferenceEquals(zippedBinaryFileContentsNode, null) && !String.IsNullOrEmpty(zippedBinaryFileContentsNode.InnerText));
 
                                                 if (!hasContent)
                                                 {
@@ -1994,7 +2072,7 @@ Seed Url: ");
                                             }
                                         }
 
-                                        if (filesWithNoContent.Any())
+                                        if (filesWithNoContent.Any() && this.debug)
                                         {
                                             Console.WriteLine($"WARNING: ZFS contains file entries with no content:");
                                             foreach (var file in filesWithNoContent)
@@ -2025,6 +2103,8 @@ Seed Url: ");
                         }
                     }
 
+                    // Preserve CLI debug flag from request to response
+                    responsePayload.CLIDebug = this.debug;
                     this.result = responsePayload;
                 }
                 catch (JsonException ex)

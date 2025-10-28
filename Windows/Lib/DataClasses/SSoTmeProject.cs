@@ -1077,6 +1077,14 @@ namespace SSoTme.OST.Lib.DataClasses
                             {
                                 if (debug) Console.WriteLine($"Removing orphaned ZFS file: {zfsFile.FullName}");
                                 zfsFile.Delete();
+
+                                // Also remove corresponding debug XML file if it exists
+                                var xmlFile = new FileInfo(Path.ChangeExtension(zfsFile.FullName, ".xml"));
+                                if (xmlFile.Exists)
+                                {
+                                    if (debug) Console.WriteLine($"Removing orphaned debug XML file: {xmlFile.FullName}");
+                                    xmlFile.Delete();
+                                }
                             }
                             catch (Exception ex)
                             {
@@ -1233,7 +1241,15 @@ namespace SSoTme.OST.Lib.DataClasses
                     }
                 }
 
-                childDir.Delete();
+                try
+                {
+                    childDir.Delete();
+                }
+                catch (IOException)
+                {
+                    // On Linux, may not be able to delete current working directory even after changing it
+                    // Skip this directory and continue cleaning others
+                }
             }
 
             cleanDI.Refresh();
@@ -1268,7 +1284,15 @@ namespace SSoTme.OST.Lib.DataClasses
                 }
             }
 
-            cleanDI.Delete();
+            try
+            {
+                cleanDI.Delete();
+            }
+            catch (IOException)
+            {
+                // On Linux, may not be able to delete current working directory even after changing it
+                // Skip this directory and continue cleaning others
+            }
         }
 
 
