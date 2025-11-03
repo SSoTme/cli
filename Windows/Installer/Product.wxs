@@ -51,6 +51,10 @@
 				<File Id="AiCaptureExe" Name="aicapture.exe" Source="Resources\aicapture.exe" KeyPath="yes" />
 			</Component>
 
+			<Component Id="EffortlessCLI" Guid="{E3F4A5B6-C7D8-50E1-2F3A-4B5C6D7E8F0A}">
+				<File Id="EffortlessExe" Name="effortless.exe" Source="Resources\effortless.exe" KeyPath="yes" />
+			</Component>
+
 			<Component Id="CLIReadme" Guid="{E4F5A6B7-C8D9-40E1-2F3A-4B5C6D7E8F9A}">
 				<File Id="ReadmeFile" Name="README.md" Source="Resources\README.md" KeyPath="yes" />
 			</Component>
@@ -100,8 +104,6 @@
 
 		<Component Id="ApplicationShortcut" Directory="ApplicationProgramsFolder" Guid="{A1B2C3D4-E5F6-47A8-9B0C-1D2E3F4A5B6C}">
 			<Shortcut Id="SSoTmeShortcut" Name="SSoTme CLI" Description="SSoTme Command Line Interface" Target="[BinFolder]ssotme.exe" WorkingDirectory="BinFolder" />
-			<Shortcut Id="AicShortcut" Name="AIC" Description="AI Capture tool" Target="[BinFolder]aic.exe" WorkingDirectory="BinFolder" />
-			<Shortcut Id="AiCaptureShortcut" Name="AI Capture" Description="AI Capture application" Target="[BinFolder]aicapture.exe" WorkingDirectory="BinFolder" />
 			<Shortcut Id="UninstallShortcut" Name="Uninstall SSoTme CLI" Description="Uninstalls SSoTme CLI" Target="[SystemFolder]msiexec.exe" Arguments="/x [ProductCode]" />
 
 			<!-- Registry entry for KeyPath -->

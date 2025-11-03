@@ -666,6 +666,19 @@ namespace SSoTme.OST.Lib.CLIOptions
             catch (Exception ex)
             {
                 var curColor = Console.ForegroundColor;
+
+                // Provide helpful context about the error
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("\n=======================================================");
+                Console.WriteLine("*** TRANSPILER ERROR ***");
+                Console.WriteLine("=======================================================");
+                Console.WriteLine(!String.IsNullOrEmpty(transpiler)
+                    ? $"This is likely an issue with the transpiler '{transpiler}', not with SSoTme."
+                    : "This is likely an issue with the transpiler, not with SSoTme.");
+                Console.WriteLine("The transpiler may have received invalid input or encountered an internal error.");
+                Console.WriteLine("=======================================================\n");
+                Console.ForegroundColor = curColor;
+
                 Console.ForegroundColor = ConsoleColor.Red;
                 var currentException = ex;
                 while (!(currentException is null))
@@ -1253,6 +1266,27 @@ Seed Url: ");
 
                     if (!ReferenceEquals(result.Exception, null))
                     {
+                        // Provide helpful context about the error
+                        ShowError("\n=======================================================", ConsoleColor.Yellow);
+                        ShowError("*** TRANSPILER ERROR ***", ConsoleColor.Yellow);
+                        ShowError("=======================================================", ConsoleColor.Yellow);
+
+                        if (!ReferenceEquals(result.Transpiler, null) && !string.IsNullOrEmpty(result.Transpiler.Name))
+                        {
+                            ShowError($"This is likely an issue with the transpiler '{result.Transpiler.Name}', not with SSoTme.", ConsoleColor.Yellow);
+                        }
+                        else if (!string.IsNullOrEmpty(transpiler))
+                        {
+                            ShowError($"This is likely an issue with the transpiler '{transpiler}', not with SSoTme.", ConsoleColor.Yellow);
+                        }
+                        else
+                        {
+                            ShowError("This is likely an issue with the transpiler, not with SSoTme.", ConsoleColor.Yellow);
+                        }
+
+                        ShowError("The transpiler may have received invalid input or encountered an internal error.", ConsoleColor.Yellow);
+                        ShowError("=======================================================\n", ConsoleColor.Yellow);
+
                         var nextException = result.Exception;
                         while (!(nextException is null))
                         {
