@@ -89,7 +89,6 @@ namespace SSoTme.OST.Lib.DataClasses
         : this()
         {
             bool localCommand = (ReferenceEquals(result, null));
-
             this.Name = localCommand ? "LocalCommand" : result.Transpiler.Name;
 
             this.RelativePath = relativePath.SafeToString().Replace("\\", "/");
@@ -100,12 +99,22 @@ namespace SSoTme.OST.Lib.DataClasses
             else if (lowerCLI.Contains("/aicapture.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture.ost.cli.dll") + "/aicapture.ost.cli.dll".Length);            
             else if (lowerCLI.Contains("/ssotme")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme") + "/ssotme".Length);
             else if (lowerCLI.Contains("/aicapture")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture") + "/aicapture".Length);
+            else if (lowerCLI.Contains("/effortless")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture") + "/aicapture".Length);
             else if (lowerCLI.Contains("/aic")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic") + "/aic".Length);
 
             // some common errors - on install we should remove all these prefixes from the CommandLine in the json
             cmd0 = cmd0.Trim(" '\"".ToCharArray());
             if (cmd0.StartsWith("/ssotme ")) {
                 cmd0 = cmd0.Substring("/ssotme ".Length);
+            }
+            if (cmd0.StartsWith("/aic ")) {
+                cmd0 = cmd0.Substring("/aic ".Length);
+            }
+            if (cmd0.StartsWith("/aicapture ")) {
+                cmd0 = cmd0.Substring("/aicapture ".Length);
+            }
+            if (cmd0.StartsWith("/effortless ")) {
+                cmd0 = cmd0.Substring("/effortless ".Length);
             }
             if (cmd0.StartsWith("install ")) {
                 cmd0 = cmd0.Substring("install ".Length);
@@ -115,6 +124,15 @@ namespace SSoTme.OST.Lib.DataClasses
             }
             if (cmd0.StartsWith("ssotme ")) {
                 cmd0 = cmd0.Substring("ssotme ".Length);
+            }
+            if (cmd0.StartsWith("aic ")) {
+                cmd0 = cmd0.Substring("aic ".Length);
+            }
+            if (cmd0.StartsWith("aicapture ")) {
+                cmd0 = cmd0.Substring("aicapture ".Length);
+            }
+            if (cmd0.StartsWith("effortless ")) {
+                cmd0 = cmd0.Substring("effortless ".Length);
             }
             cmd0 = cmd0.Trim(" '\"".ToCharArray());
             Console.WriteLine($"COMMAND LINE: {cmd0}");

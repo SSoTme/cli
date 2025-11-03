@@ -6,6 +6,7 @@
   "bin": {
     "ssotme": "cli.js",
     "aicapture": "cli.js",
+    "effortless": "cli.js",
     "aic": "cli.js"
   },
   "scripts": {
