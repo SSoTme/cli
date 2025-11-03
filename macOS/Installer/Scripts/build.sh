@@ -143,13 +143,15 @@ dotnet publish "$CSPROJ_FILE" -r "osx-$PUB_ARCH" -c Release /p:PublishSingleFile
   --self-contained true -o "$RESOURCES_DIR"
 mv "$RESOURCES_DIR/SSoTme.OST.CLI" "$RESOURCES_DIR/ssotme"
 
-# copy into aic and aicapture
+# copy into aic, aicapture & effortless
 cp "$RESOURCES_DIR/ssotme" "$RESOURCES_DIR/aic"
 cp "$RESOURCES_DIR/ssotme" "$RESOURCES_DIR/aicapture"
+cp "$RESOURCES_DIR/ssotme" "$RESOURCES_DIR/effortless"
 
 chmod +x "$RESOURCES_DIR/ssotme"
 chmod +x "$RESOURCES_DIR/aic"
 chmod +x "$RESOURCES_DIR/aicapture"
+chmod +x "$RESOURCES_DIR/effortless"
 
 # sign the exes
 codesign --force --timestamp --options runtime \
@@ -161,6 +163,9 @@ codesign --force --timestamp --options runtime \
 codesign --force --timestamp --options runtime \
   --entitlements "$SOURCE_DIR/entitlements.plist" \
   --sign "$DEV_EXECUTABLE_KEYCHAIN_ID" "$RESOURCES_DIR/aicapture" --identifier "com.effortlessapi.aicapture"
+codesign --force --timestamp --options runtime \
+  --entitlements "$SOURCE_DIR/entitlements.plist" \
+  --sign "$DEV_EXECUTABLE_KEYCHAIN_ID" "$RESOURCES_DIR/effortless" --identifier "com.effortlessapi.effortless"
 
 
 echo "Building package..."
@@ -171,6 +176,7 @@ echo "Verifying code signature on copied binaries..."
 codesign -dv --verbose=4 "$RESOURCES_DIR/ssotme"
 codesign -dv --verbose=4 "$RESOURCES_DIR/aic"
 codesign -dv --verbose=4 "$RESOURCES_DIR/aicapture"
+codesign -dv --verbose=4 "$RESOURCES_DIR/effortless"
 
 # Build a single package directly
 pkgbuild --root "$BUILD_DIR/payload" \
@@ -188,8 +194,3 @@ echo "Build completed. Installer is at: $BIN_DIR/signed/$THE_INSTALLER_FILENAME"
 echo ""
 echo "$SCRIPT_DIR/notarize.sh" "$BIN_DIR/signed/$THE_INSTALLER_FILENAME" $APPLE_EMAIL $NOTARYPASS
 /bin/bash "$SCRIPT_DIR/notarize.sh" "$BIN_DIR/signed/$THE_INSTALLER_FILENAME" $APPLE_EMAIL $NOTARYPASS
-
-# run on the x86 one too
-#echo "$SCRIPT_DIR/notarize.sh" "$HOME/Downloads/SSoTme-Installer-x86_64.pkg" $APPLE_EMAIL $NOTARYPASS
-#/bin/bash "$SCRIPT_DIR/notarize.sh" "$HOME/Downloads/SSoTme-Installer-x86_64.pkg" $APPLE_EMAIL $NOTARYPASS
-#open "$BIN_DIR/signed" -a Finder

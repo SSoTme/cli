@@ -23,6 +23,7 @@ echo "[INFO] Creating symbolic links..."
 ln -sf "/Applications/SSoTme/ssotme" "/usr/local/bin/ssotme"
 ln -sf "/Applications/SSoTme/aic" "/usr/local/bin/aic"
 ln -sf "/Applications/SSoTme/aicapture" "/usr/local/bin/aicapture"
+ln -sf "/Applications/SSoTme/effortless" "/usr/local/bin/effortless"
 
 echo "[INFO] Postinstall script completed successfully."
 exit 0

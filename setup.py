@@ -397,7 +397,7 @@ class Installer:
                 raise RuntimeError(f"Failed to copy build output: {e}")
                 
             print("Installation completed successfully!")
-            print("You can now use the 'ssotme', 'aicapture', or 'aic' commands from your terminal.")
+            print("You can now use the 'ssotme', 'aicapture', 'aic', or 'effortless' commands from your terminal.")
             
         except Exception as e:
             print("\n" + "=" * 60)
@@ -436,6 +436,7 @@ def run_setup():
                 "console_scripts": [
                     "ssotme = ssotme.cli:main",
                     "aicapture = ssotme.cli:main",
+                    "effortless = ssotme.cli:main",
                     "aic = ssotme.cli:main",
                 ]
             },

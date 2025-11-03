@@ -1,11 +1,12 @@
 {
   "name": "ssotme",
-  "version": "2025.10.28.1750",
+  "version": "2025.11.03.1144",
   "dotnet": "8.0.410",
   "description": "",
   "bin": {
     "ssotme": "cli.js",
     "aicapture": "cli.js",
+    "effortless": "cli.js",
     "aic": "cli.js"
   },
   "scripts": {

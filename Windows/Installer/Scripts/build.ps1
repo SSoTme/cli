@@ -182,10 +182,11 @@ try {
 
     Write-Host "Found ssotme.exe, creating alias executables..."
     
-    # Copy the ssotme.exe into ssotme, aic, aicapture (these are the CLI entry points)
+    # Copy the ssotme.exe into ssotme, aic, aicapture, effortless (these are the CLI entry points)
     Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/ssotme.exe" -Force
     Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/aic.exe" -Force
     Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/aicapture.exe" -Force
+    Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/effortless.exe" -Force
 
     Write-Host "Created alias executables in: $ResourcesDir"
 }

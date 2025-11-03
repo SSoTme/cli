@@ -11,6 +11,7 @@ case "$response" in
         # Remove symbolic links from /usr/local/bin
         sudo rm -f /usr/local/bin/ssotme
         sudo rm -f /usr/local/bin/aic
+        sudo rm -f /usr/local/bin/effortless
         sudo rm -f /usr/local/bin/aicapture
 
         # Remove application files

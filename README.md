@@ -94,7 +94,7 @@ You can also install this tool using pip:
 
 **Note:** a pip +git installation will clone the repo and run a dotnet build on the product, so you'll need both `dotnet>=8.0` and `python>=3.7`
 
-After installation, the commands `ssotme`, `aicapture`, and `aic` will be usable in your terminal, and you can continue
+After installation, the commands `ssotme`, `aicapture`, `aic`, & `effortless` will be usable in your terminal, and you can continue
 following the setup listed above in the **Auth** section.
 
 ### Troubleshooting the PIP install
