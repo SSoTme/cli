@@ -49,7 +49,56 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
         {
             FileInfo ssotmeKeyFI = GetKeyForAccount(account);
             String ssotmeJson = JsonConvert.SerializeObject(value, Formatting.Indented);
-            File.WriteAllText(ssotmeKeyFI.FullName, ssotmeJson);
+
+            try
+            {
+                // Ensure directory exists and is writable
+                if (!ssotmeKeyFI.Directory.Exists)
+                {
+                    ssotmeKeyFI.Directory.Create();
+                }
+
+                // Try to write the file
+                File.WriteAllText(ssotmeKeyFI.FullName, ssotmeJson);
+
+                // On Unix systems, ensure the file has proper permissions (user read/write only)
+                if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+                {
+                    try
+                    {
+                        // Set file permissions to 600 (user read/write only)
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "chmod",
+                            Arguments = $"600 \"{ssotmeKeyFI.FullName}\"",
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        })?.WaitForExit();
+                    }
+                    catch
+                    {
+                        // Silently ignore chmod failures
+                    }
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new UnauthorizedAccessException(
+                    $"Cannot write to '{ssotmeKeyFI.FullName}'. " +
+                    $"Please ensure the directory '{ssotmeKeyFI.Directory.FullName}' exists and you have write permissions. " +
+                    $"You may need to run: chmod 700 \"{ssotmeKeyFI.Directory.FullName}\"",
+                    ex);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException(
+                    $"Cannot write to '{ssotmeKeyFI.FullName}'. " +
+                    $"Please ensure you have write permissions to this location. " +
+                    $"You may need to run: chmod 700 \"{ssotmeKeyFI.Directory.FullName}\" && chmod 600 \"{ssotmeKeyFI.FullName}\"",
+                    ex);
+            }
         }
 
         public static SSOTMEKey GetSSoTmeKey(string runAs = "")
@@ -75,7 +124,32 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
             get
             {
                 var ssoTmeDir = new DirectoryInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssotme"));
-                if (!ssoTmeDir.Exists) ssoTmeDir.Create();
+                if (!ssoTmeDir.Exists)
+                {
+                    ssoTmeDir.Create();
+
+                    // On Unix systems, ensure the directory has proper permissions (user read/write/execute only)
+                    if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+                    {
+                        try
+                        {
+                            // Set directory permissions to 700 (user read/write/execute only)
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = "chmod",
+                                Arguments = $"700 \"{ssoTmeDir.FullName}\"",
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true,
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            })?.WaitForExit();
+                        }
+                        catch
+                        {
+                            // Silently ignore chmod failures
+                        }
+                    }
+                }
                 return ssoTmeDir;
             }
 

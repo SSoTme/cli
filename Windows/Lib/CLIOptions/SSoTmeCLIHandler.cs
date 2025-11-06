@@ -47,7 +47,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.11.03.1144";
+        public string CLI_VERSION = "2025.11.06.1225";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -666,7 +666,21 @@ namespace SSoTme.OST.Lib.CLIOptions
             catch (Exception ex)
             {
                 var curColor = Console.ForegroundColor;
+                var exceptionMessage = ex.Message ?? "";
+                var isTranspilerNotFound = exceptionMessage.Contains("Could not find transpiler") ||
+                                          exceptionMessage.Contains("transpiler status message");
 
+                // For "transpiler not found" errors, show a simpler message without the warning box
+                if (isTranspilerNotFound)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("\nERROR: {0}\n", ex.Message);
+                    Console.ForegroundColor = curColor;
+                    this.SuppressTranspile = true;
+                    return;
+                }
+
+                // For other transpiler errors, show the full warning box
                 // Provide helpful context about the error
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("\n=======================================================");
@@ -1266,7 +1280,18 @@ Seed Url: ");
 
                     if (!ReferenceEquals(result.Exception, null))
                     {
-                        // Provide helpful context about the error
+                        var exceptionMessage = result.Exception.Message ?? "";
+                        var isTranspilerNotFound = exceptionMessage.Contains("Could not find transpiler") ||
+                                                  exceptionMessage.Contains("transpiler status message");
+
+                        // For "transpiler not found" errors, show a simpler message without the warning box
+                        if (isTranspilerNotFound)
+                        {
+                            ShowError("\nERROR: " + result.Exception.Message);
+                            return -1;
+                        }
+
+                        // For other transpiler errors, show the full warning box
                         ShowError("\n=======================================================", ConsoleColor.Yellow);
                         ShowError("*** TRANSPILER ERROR ***", ConsoleColor.Yellow);
                         ShowError("=======================================================", ConsoleColor.Yellow);
