@@ -48,8 +48,8 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Describes the current SSoT.me Project (and all transpilers)", MinOccurs = 0, Aliases = "d")]
         public bool describe { get; set; }
         
-        [CommandLineOption(Description = "Descibe all of the transpiler in the project", MinOccurs = 0, Aliases = "da")]
-        public bool descibeAll { get; set; }
+        [CommandLineOption(Description = "Describe all of the transpiler in the project", MinOccurs = 0, Aliases = "da")]
+        public bool describeAll { get; set; }
         
         [CommandLineOption(Description = "Discuss the project with an AI", MinOccurs = 0, Aliases = "ai")]
         public bool discuss { get; set; }
@@ -96,7 +96,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Adds a setting to the SSoT.me Project", MinOccurs = 0, Aliases = "as")]
         public List<string> addSetting { get; set; }
         
-        [CommandLineOption(Description = "REmoves a setting from the SSoT.me Project", MinOccurs = 0, Aliases = "rs")]
+        [CommandLineOption(Description = "Removes a setting from the SSoT.me Project", MinOccurs = 0, Aliases = "rs")]
         public List<string> removeSetting { get; set; }
         
         [CommandLineOption(Description = "The keyfile to use.  By default it looks for ~/.ssotme/ssotme.key. (or ~/.ssotme/ssotme.{username}.key)", MinOccurs = 0, Aliases = "f")]
@@ -162,17 +162,20 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "TargetUrl of the tool bing invoked", MinOccurs = 0, Aliases = "g")]
         public string targetUrl { get; set; }
         
-        [CommandLineOption(Description = "List all custom tool urls defined for this project", MinOccurs = 0, Aliases = "lt")]
+        [CommandLineOption(Description = "List all custom tool urls defined for this user", MinOccurs = 0, Aliases = "lt")]
         public bool listToolUrls { get; set; }
         
-        [CommandLineOption(Description = "View the url defined for the specified tool for this project", MinOccurs = 0, Aliases = "vt")]
+        [CommandLineOption(Description = "View the url defined for the specified tool for this user", MinOccurs = 0, Aliases = "vt")]
         public string viewToolUrl { get; set; }
         
-        [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this project", MinOccurs = 0, Aliases = "st")]
+        [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this user", MinOccurs = 0, Aliases = "st")]
         public string setToolUrl { get; set; }
         
-        [CommandLineOption(Description = "Removes a custom tool URL for this project, setting it back to the default value.", MinOccurs = 0, Aliases = "rt")]
+        [CommandLineOption(Description = "Remove a custom tool URL from this user's config, setting it back to the default value.", MinOccurs = 0, Aliases = "rt")]
         public string removeToolUrl { get; set; }
+        
+        [CommandLineOption(Description = "Check the user's configured URLs for updates, if they match an online transpiller name.", MinOccurs = 0, Aliases = "ut")]
+        public bool updateToolUrls { get; set; }
         
     }
 }
