@@ -1051,13 +1051,15 @@ Seed Url: ");
             return null;
         }
 
-        private bool PromptUserForUpdate(ToolUpdateInfo updateInfo)
+        private bool PromptUserForUpdate(ToolUpdateInfo updateInfo, string localToolKey)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"  FOUND MATCH FOR TRANSPILER {updateInfo.ToolName}: {updateInfo.TranspilerFullName}");
-            Console.WriteLine($"  CONFIDENCE {updateInfo.Confidence}%");
-            Console.WriteLine($"  New version: {updateInfo.LatestVersion}");
-            Console.WriteLine($"  New URL: {updateInfo.NewUrl}");
+            if (updateInfo.Confidence < 60)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine($"  WARN: Low confidence match ({updateInfo.Confidence}%) - Please verify that your local configured tool URL `{localToolKey}` matches the transpiler name `{updateInfo.TranspilerName}` before updating!");
+                Console.ForegroundColor = ConsoleColor.Gray;
+            }
+
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.Write("  [U]pdate or [I]gnore? ");
             Console.ForegroundColor = ConsoleColor.Gray;
@@ -1093,7 +1095,9 @@ Seed Url: ");
 
                 if (!string.IsNullOrEmpty(extractedVersion))
                 {
-                    Console.WriteLine($"  Current version: {extractedVersion}");
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("  Current version: ");
+                    Console.WriteLine($"  -  {toolName}/{extractedVersion} (URL {currentUrl})");
                 }
 
                 // Step 3: Get the latest version from the bridge server
@@ -1111,15 +1115,48 @@ Seed Url: ");
 
                 updateInfo.LatestVersion = latestVersionInfo.Version;
                 updateInfo.NewUrl = latestVersionInfo.POSTUrl;
+                updateInfo.TranspilerName = latestVersionInfo.TranspilerName;
                 updateInfo.TranspilerFullName = latestVersionInfo.TranspilerFullName;
                 updateInfo.Confidence = latestVersionInfo.Confidence;
 
-                // Step 4: Compare versions
-                if (extractedVersion == latestVersionInfo.Version)
+                string confidenceString = " ";
+                if (latestVersionInfo.Confidence < 60)
+                {
+                    confidenceString = " POSSIBLE ";
+                }
+                else if (latestVersionInfo.Confidence < 90)
+                {
+                    confidenceString = " POTENTIAL ";
+                }
+  
+                // Always show matched transpiler info
+                if (string.IsNullOrEmpty(latestVersionInfo.TranspilerName))
+                {
+                    latestVersionInfo.TranspilerName = "unknown";
+                }
+
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"  FOUND{confidenceString}MATCH: {latestVersionInfo.TranspilerName}/{latestVersionInfo.Version} (URL {latestVersionInfo.POSTUrl})");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                
+                // Step 4: Compare versions and URLs
+                bool versionMatches = extractedVersion == latestVersionInfo.Version;
+                bool urlMatches = currentUrl.Equals(latestVersionInfo.POSTUrl, StringComparison.OrdinalIgnoreCase);
+
+                if (versionMatches && urlMatches)
                 {
                     updateInfo.StatusMessage = "UP TO DATE";
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"  UP TO DATE (version {extractedVersion})");
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                }
+                else if (versionMatches && !urlMatches)
+                {
+                    updateInfo.ShouldUpdate = true;
+                    updateInfo.StatusMessage = "URL MISMATCH";
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("  Matched version:");
+                    Console.WriteLine($"  -  {latestVersionInfo.TranspilerName}/{latestVersionInfo.Version} (URL {latestVersionInfo.POSTUrl})");
                     Console.ForegroundColor = ConsoleColor.Gray;
                 }
                 else
@@ -1127,8 +1164,8 @@ Seed Url: ");
                     updateInfo.ShouldUpdate = true;
                     updateInfo.StatusMessage = "UPDATE AVAILABLE";
                     Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"  Latest version: {latestVersionInfo.Version}");
-                    Console.WriteLine($"  New URL: {latestVersionInfo.POSTUrl}");
+                    Console.WriteLine($"  New version:     {latestVersionInfo.TranspilerName}/{latestVersionInfo.Version}");
+                    Console.WriteLine($"  Current version: {toolName}/{extractedVersion}");
                     Console.ForegroundColor = ConsoleColor.Gray;
                 }
             }
@@ -1167,24 +1204,32 @@ Seed Url: ");
                     return;
                 }
 
+                // Show configured tool URLs first
+                Console.WriteLine("Configured tool URLs:");
+                Console.WriteLine();
+                foreach (var kvp in toolUrls.OrderBy(x => x.Key))
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+                Console.WriteLine();
+                Console.WriteLine($"Total: {toolUrls.Count} tool(s) configured");
+                Console.WriteLine();
                 Console.WriteLine($"Checking {toolUrls.Count} tool(s) for updates...\n");
 
                 bool hasUpdates = false;
                 var updatedUrls = new Dictionary<string, string>(toolUrls);
 
-                foreach (var tool in toolUrls)
+                foreach (var tool in toolUrls.OrderBy(x => x.Key))
                 {
                     var toolName = tool.Key;
                     var currentUrl = tool.Value;
 
                     Console.WriteLine($"Checking: {toolName}");
-                    Console.WriteLine($"  Current URL: {currentUrl}");
-
                     var updateInfo = CheckToolForUpdate(toolName, currentUrl);
 
                     if (updateInfo.ShouldUpdate)
                     {
-                        if (PromptUserForUpdate(updateInfo))
+                        if (PromptUserForUpdate(updateInfo, toolName))
                         {
                             updatedUrls[toolName] = updateInfo.NewUrl;
                             hasUpdates = true;
@@ -2562,6 +2607,7 @@ Seed Url: ");
             public string CurrentVersion { get; set; }
             public string LatestVersion { get; set; }
             public string NewUrl { get; set; }
+            public string TranspilerName { get; set; }
             public string TranspilerFullName { get; set; }
             public int Confidence { get; set; }
             public bool ShouldUpdate { get; set; }
