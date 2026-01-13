@@ -1,35 +1,15 @@
-/**/bin/**
-/**/obj/**
-/**/packages/**
-/**/Debug/**
-/**/.vs/**
-/.ssotme/**
-/Windows/CLI/SSoTme.OST.CLI.csproj.user
-/Windows/CLI/Properties/launchSettings.json
-/Windows/Lib/go-live.ps1
-/AICapture/Backup/*.zip
-/package-lock.json
-*.DS_Store
-.idea/
-.vscode/
+# Ignore conversation data
+conversations/
+conversations/**/*
 
-# pip install stuff
-*.egg-info
-*.pyc
-ssotme/lib/
-ssotme/*.json
+# Ignore user-specific data
+current_state.json
 
-# pyinstaller stuff
-build/
-dist/
-ssotme.spec
-
-# installer stuff
-Windows/Installer/Resources
-macOS/Installer/Resources
-
-**/ssotme-win64-inno-msi/publish/**
-
-# test folder used to test locally
-.claude/
-test/
+# Ignore temporary files
+*.tmp
+*.temp
+.DS_Store
+*.zfs
+**/obj
+**/bin
+**/build

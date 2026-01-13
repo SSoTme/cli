@@ -1,7 +1,0 @@
-{
-  "name": "ssotme-seed",
-  "version": "1.0.0",
-  "description": "Seed project for SSoT.me",
-  "start-on-complete": ["SinglePageDocs.html"],
-  "replacements": []
-}
