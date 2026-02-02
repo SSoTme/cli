@@ -1386,7 +1386,7 @@ Seed Url: ");
             if (additionalArgs.Count > 0) additionalArgs.RemoveAt(0);
         }
 
-        public int TranspileProject(ProjectTranspiler projectTranspiler = null)
+        public int TranspileProject(ProjectTranspiler projectTranspiler = null, bool isBuildOperation = false)
         {
             bool updateProject = false;
             try
@@ -1705,10 +1705,19 @@ Seed Url: ");
                 if (!ReferenceEquals(AccountHolder, null)) AccountHolder.Disconnect();
                 if (updateProject)
                 {
-                    if (this.install) this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
-                    else if (!ReferenceEquals(projectTranspiler, null))
+                    if (isBuildOperation && !ReferenceEquals(projectTranspiler, null))
                     {
-                        GetProjectOrThrow().Update(projectTranspiler, result);
+                        // Update runtime-only properties without saving during build operations
+                        GetProjectOrThrow().UpdateRuntimeOnly(projectTranspiler, result);
+                    }
+                    else
+                    {
+                        // Full update with save for non-build operations
+                        if (this.install) this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
+                        else if (!ReferenceEquals(projectTranspiler, null))
+                        {
+                            GetProjectOrThrow().Update(projectTranspiler, result);
+                        }
                     }
                 }
             }

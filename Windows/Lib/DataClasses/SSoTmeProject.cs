@@ -684,6 +684,13 @@ namespace SSoTme.OST.Lib.DataClasses
             this.Save();
         }
 
+        internal void UpdateRuntimeOnly(ProjectTranspiler projectTranspiler, SSOTMEPayload result)
+        {
+            // Only update runtime properties without saving to disk
+            // This is used during build operations where the transpiler configuration is already correct
+            projectTranspiler.MatchedTranspiler = ReferenceEquals(result, null) ? default(Transpiler) : result.Transpiler;
+        }
+
         public string GetProjectRelativePath(DirectoryInfo di)
         {
             if (ReferenceEquals(di, null)) return "/";

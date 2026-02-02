@@ -168,7 +168,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 cliHandler.commandLine = commandLineToRun;  // Use the modified command line, not this.CommandLine
                 cliHandler.ParseCommand();
 
-                var cliResult = cliHandler.TranspileProject(this);
+                var cliResult = cliHandler.TranspileProject(this, isBuildOperation: true);
                 if (cliResult != 0) throw new Exception("Error RE-Transpiling");
             }
             finally
