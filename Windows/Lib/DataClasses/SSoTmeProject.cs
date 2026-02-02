@@ -302,26 +302,89 @@ namespace SSoTme.OST.Lib.DataClasses
         {
             this.RemoveUUIds();
             this.AddSetting(string.Format("project-name={0}", this.Name));
+
+            var projectFileName = this.GetProjectFileName(false);
+            Newtonsoft.Json.Linq.JObject existingJson = null;
+
+            // Read existing JSON to preserve custom properties
+            if (File.Exists(projectFileName))
+            {
+                try
+                {
+                    var existingContent = File.ReadAllText(projectFileName);
+                    existingJson = Newtonsoft.Json.Linq.JObject.Parse(existingContent);
+                }
+                catch
+                {
+                    // If parsing fails, we'll just serialize fresh
+                    existingJson = null;
+                }
+            }
+
+            // Serialize current state
             // Note: MatchedTranspiler is marked with [JsonIgnore] and won't be serialized
             // The transpiler name will be derived fresh from API responses on each run
             string projectJson = JsonConvert.SerializeObject(this, Newtonsoft.Json.Formatting.Indented);
-            var tempTranspiler = JsonConvert.DeserializeObject<SSoTmeProject>(projectJson);
-            tempTranspiler.RootPath = null;
-            if (!ReferenceEquals(tempTranspiler.ExpandedPaths, null) &&
-                    !tempTranspiler.ExpandedPaths.Any()) tempTranspiler.ExpandedPaths = null;
-            if (!ReferenceEquals(tempTranspiler.HiddenPaths, null) &&
-                    !tempTranspiler.HiddenPaths.Any()) tempTranspiler.HiddenPaths = null;
-            projectJson = JsonConvert.SerializeObject(tempTranspiler, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings()
+            var newJson = Newtonsoft.Json.Linq.JObject.Parse(projectJson);
+
+            // Clean up runtime-only properties
+            newJson.Remove("RootPath");
+            if (newJson["ExpandedPaths"] != null && !newJson["ExpandedPaths"].Any())
+                newJson.Remove("ExpandedPaths");
+            if (newJson["HiddenPaths"] != null && !newJson["HiddenPaths"].Any())
+                newJson.Remove("HiddenPaths");
+
+            // If we have existing JSON, merge transpilers to preserve custom properties
+            if (existingJson != null && existingJson["ProjectTranspilers"] != null && newJson["ProjectTranspilers"] != null)
             {
-                NullValueHandling = NullValueHandling.Ignore
-            });
+                var existingTranspilers = existingJson["ProjectTranspilers"] as Newtonsoft.Json.Linq.JArray;
+                var newTranspilers = newJson["ProjectTranspilers"] as Newtonsoft.Json.Linq.JArray;
+
+                if (existingTranspilers != null && newTranspilers != null)
+                {
+                    // For each new transpiler, find matching existing one and preserve extra properties
+                    for (int i = 0; i < newTranspilers.Count; i++)
+                    {
+                        var newTranspiler = newTranspilers[i] as Newtonsoft.Json.Linq.JObject;
+                        if (newTranspiler != null)
+                        {
+                            var name = newTranspiler["Name"]?.ToString();
+                            var relativePath = newTranspiler["RelativePath"]?.ToString();
+                            var transpilerGroup = newTranspiler["TranspilerGroup"]?.ToString();
+
+                            // Find matching existing transpiler
+                            var existingMatch = existingTranspilers
+                                .Cast<Newtonsoft.Json.Linq.JObject>()
+                                .FirstOrDefault(t =>
+                                    t["Name"]?.ToString() == name &&
+                                    t["RelativePath"]?.ToString() == relativePath &&
+                                    t["TranspilerGroup"]?.ToString() == transpilerGroup);
+
+                            if (existingMatch != null)
+                            {
+                                // Preserve any extra properties from existing
+                                foreach (var prop in existingMatch.Properties())
+                                {
+                                    if (newTranspiler[prop.Name] == null)
+                                    {
+                                        newTranspiler[prop.Name] = prop.Value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            projectJson = newJson.ToString(Newtonsoft.Json.Formatting.Indented);
             projectJson = $"{projectJson}{Environment.NewLine}";
+
             var count = 0;
             while (count < 5)
             {
                 try
                 {
-                    File.WriteAllText(this.GetProjectFileName(false), projectJson);
+                    File.WriteAllText(projectFileName, projectJson);
                     break;
                 }
                 catch (System.IO.IOException ioex)
@@ -682,6 +745,13 @@ namespace SSoTme.OST.Lib.DataClasses
             this.IntegrateExistingTranspiler(projectTranspiler);
 
             this.Save();
+        }
+
+        internal void UpdateRuntimeOnly(ProjectTranspiler projectTranspiler, SSOTMEPayload result)
+        {
+            // Only update runtime properties without saving to disk
+            // This is used during build operations where the transpiler configuration is already correct
+            projectTranspiler.MatchedTranspiler = ReferenceEquals(result, null) ? default(Transpiler) : result.Transpiler;
         }
 
         public string GetProjectRelativePath(DirectoryInfo di)

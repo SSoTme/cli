@@ -27,13 +27,6 @@ namespace SSoTme.OST.Lib.DataClasses
         [JsonIgnore]
         public SSoTmeCLIHandler CLIHandler { get; private set; }
 
-        // Fields used by the my.effortlessapi tool marketplace that should get preserved during builds
-        // CLI doesn't use these fields, just preserves if they exist
-        public string MarketToolName { get; set; }
-        public string MarketToolVersion { get; set; }
-        public string LastUsed { get; set; }
-        public string NumExecutions { get; set; }
-
         public ProjectTranspiler()
         {
             this.InitPoco();
@@ -168,7 +161,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 cliHandler.commandLine = commandLineToRun;  // Use the modified command line, not this.CommandLine
                 cliHandler.ParseCommand();
 
-                var cliResult = cliHandler.TranspileProject(this);
+                var cliResult = cliHandler.TranspileProject(this, isBuildOperation: true);
                 if (cliResult != 0) throw new Exception("Error RE-Transpiling");
             }
             finally
