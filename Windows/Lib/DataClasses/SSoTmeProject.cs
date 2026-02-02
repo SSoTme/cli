@@ -754,6 +754,44 @@ namespace SSoTme.OST.Lib.DataClasses
             projectTranspiler.MatchedTranspiler = ReferenceEquals(result, null) ? default(Transpiler) : result.Transpiler;
         }
 
+        public void Uninstall(string transpilerName, string transpilerGroup = null)
+        {
+            string currentDir;
+            try
+            {
+                currentDir = Environment.CurrentDirectory;
+            }
+            catch (Exception)
+            {
+                // On macOS, Environment.CurrentDirectory throws if the directory was deleted during cleaning
+                // Fall back to the stored path from the payload if available
+                currentDir = this.RootPath;
+            }
+            string relativePath = this.GetProjectRelativePath(currentDir);
+
+            // Find and remove matching transpilers
+            var transpilersToRemove = this.ProjectTranspilers
+                .Where(pt =>
+                    String.Equals(pt.Name, transpilerName, StringComparison.OrdinalIgnoreCase) &&
+                    String.Equals(pt.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase) &&
+                    (String.IsNullOrEmpty(transpilerGroup) || String.Equals(pt.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase)))
+                .ToList(); // Materialize to avoid collection modification issues
+
+            if (transpilersToRemove.Any())
+            {
+                foreach (var transpiler in transpilersToRemove)
+                {
+                    this.ProjectTranspilers.Remove(transpiler);
+                    this.LogMessage("Removed transpiler: {0} from {1}", transpiler.Name, transpiler.RelativePath);
+                }
+                this.Save();
+            }
+            else
+            {
+                this.LogMessage("No matching transpiler found with name '{0}' in path '{1}'", transpilerName, relativePath);
+            }
+        }
+
         public string GetProjectRelativePath(DirectoryInfo di)
         {
             if (ReferenceEquals(di, null)) return "/";

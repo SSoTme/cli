@@ -1289,6 +1289,10 @@ Seed Url: ");
                     this.install = true;
                     break;
 
+                case "uninstall":
+                    this.uninstall = true;
+                    break;
+
                 case "cloneseed":
                 case "clone":
                     this.cloneSeed = true;
@@ -1544,6 +1548,17 @@ Seed Url: ");
                 else if (this.buildAll)
                 {
                     GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
+                }
+                else if (this.uninstall)
+                {
+                    // Get the transpiler name from remaining arguments
+                    var transpilerName = this.RemainingArguments.FirstOrDefault();
+                    if (String.IsNullOrEmpty(transpilerName))
+                    {
+                        ShowError("Please specify a transpiler name to uninstall");
+                        return -1;
+                    }
+                    GetProjectOrThrow().Uninstall(transpilerName, this.transpilerGroup);
                 }
                 else if (this.discuss)
                 {
