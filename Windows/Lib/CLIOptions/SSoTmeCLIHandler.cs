@@ -48,7 +48,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2025.12.23.1616";
+        public string CLI_VERSION = "2026.02.13.1136";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -1946,12 +1946,19 @@ Seed Url: ");
 
         private void StartTranspile()
         {
-            this.AccountHolder = new SMQAccountHolder();
+            // Disable RabbitMQ if transpiler is a URL or exists in local tool URLs
+            bool isLocalOrUrl = this.IsHttpUrl(this.transpiler) || !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler));
+            bool useRabbitMQ = !isLocalOrUrl;
+
+            this.AccountHolder = new SMQAccountHolder(isAutoConnect: useRabbitMQ);
             var currentSSoTmeKey = SSOTMEKey.GetSSoTmeKey(this.runAs);
             result = null;
 
             //this.AccountHolder.ReplyTo += AccountHolder_ReplyTo;
-            this.AccountHolder.Init("cli@aicapture.io", "e8f398c3c1854bf7b9b0deb123ba0127");
+            if (useRabbitMQ)
+            {
+                this.AccountHolder.Init("cli@aicapture.io", "e8f398c3c1854bf7b9b0deb123ba0127");
+            }
             this.ProxyRequest();
 
             var waitForCook = Task.Factory.StartNew(() =>
