@@ -7,12 +7,17 @@
 
 # Parse command line arguments
 NO_UPDATE=false
+TARGET_ARCH=""
 ARGS=()
 while [[ $# -gt 0 ]]; do
     case $1 in
         --no-update)
             NO_UPDATE=true
             shift
+            ;;
+        --arch)
+            TARGET_ARCH="$2"
+            shift 2
             ;;
         *)
             ARGS+=("$1")
@@ -115,8 +120,11 @@ else
 fi
 chmod +x "$BUILD_DIR/scripts/postinstall"
 
-# we need to make sure that the target mac's cpu type matches the type we're building on
-TARGET_ARCH=$(uname -m)
+# we need to make sure that the target mac's cpu type matches the type we're building for
+# If not explicitly set via --arch, detect from the current system
+if [ -z "$TARGET_ARCH" ]; then
+    TARGET_ARCH=$(uname -m)
+fi
 echo "#!/bin/bash
       TARGET_ARCH=\"$TARGET_ARCH\" 
       if [ \$(uname -m) != \"\$TARGET_ARCH\" ]; then 
