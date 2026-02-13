@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-intel:
-    runs-on: macos-15  # Intel architecture
+    runs-on: macos-13  # Intel architecture (x86_64)
     
     steps:
     - uses: actions/checkout@v4
@@ -197,6 +197,7 @@ jobs:
         /bin/bash macOS/Installer/Scripts/build.sh --no-update "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
     
     - name: Upload ARM Installer
+      if: steps.early_check_arm.outputs.pkg_count < '2'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-arm64
