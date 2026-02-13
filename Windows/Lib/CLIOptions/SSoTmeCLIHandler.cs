@@ -215,20 +215,29 @@ namespace SSoTme.OST.Lib.CLIOptions
                 return this.AICaptureProject.RootPath;
             }
 
-            // Otherwise, search up the directory tree for project files
-            var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
-            while (currentDir != null)
+            try
             {
-                var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
-                if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
+                // Otherwise, search up the directory tree for project files
+                var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
+                while (currentDir != null)
                 {
-                    return currentDir.FullName;
+                    var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
+                    if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
+                    {
+                        return currentDir.FullName;
+                    }
+                    currentDir = currentDir.Parent;
                 }
-                currentDir = currentDir.Parent;
-            }
 
-            // If no project found, fall back to current directory
-            return Environment.CurrentDirectory;
+                // If no project found, fall back to current directory
+                return Environment.CurrentDirectory;
+            }
+            catch (Exception)
+            {
+                // If we can't access the current directory, return null
+                // The caller should handle this appropriately
+                return null;
+            }
         }
 
         private void SetToolUrl(string toolName, string url)
@@ -549,7 +558,23 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     if (String.IsNullOrEmpty(this.projectName))
                     {
-                        this.projectName = Path.GetFileName(Environment.CurrentDirectory);
+                        try
+                        {
+                            this.projectName = Path.GetFileName(Environment.CurrentDirectory);
+                        }
+                        catch (Exception ex)
+                        {
+                            ShowError("ERROR: Unable to determine current directory.", ConsoleColor.Red);
+                            ShowError("The current directory may not exist or is inaccessible.", ConsoleColor.Red);
+                            ShowError($"\nPlease navigate to a valid directory and try again.", ConsoleColor.Red);
+                            if (this.debug)
+                            {
+                                ShowError($"\nDetails: {ex.Message}", ConsoleColor.Yellow);
+                            }
+                            this.ParseResult = -1;
+                            this.SuppressTranspile = true;
+                            return;
+                        }
                     }
                     var force = this.args.Count() == 2 && this.args[1] == "force";
                     DataClasses.AICaptureProject.Init(force, this.projectName);
@@ -579,10 +604,26 @@ namespace SSoTme.OST.Lib.CLIOptions
                         // Only load the project if it hasn't been set externally (e.g., by ProjectTranspiler.Rebuild)
                         if (this.AICaptureProject == null)
                         {
-                            this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
-                            if (this.AICaptureProject is null) {
-                                // warn user for clarity
-                                ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                            try
+                            {
+                                this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
+                                if (this.AICaptureProject is null) {
+                                    // warn user for clarity
+                                    ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Show clear error when project doesn't exist
+                                ShowError($"ERROR: No SSoTme project found in this directory.", ConsoleColor.Red);
+                                ShowError($"\nRun `ssotme -init` to create a new project in this directory.", ConsoleColor.Red);
+                                if (this.debug)
+                                {
+                                    ShowError($"\nDetails: {ex.Message}", ConsoleColor.Yellow);
+                                }
+                                this.ParseResult = -1;
+                                this.SuppressTranspile = true;
+                                return;
                             }
                         }
 
@@ -676,7 +717,12 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (isTranspilerNotFound)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("\nERROR: {0}\n", ex.Message);
+                    Console.WriteLine("\nERROR: Tool '{0}' does not exist.", this.transpiler);
+                    Console.WriteLine("\nThe tool was not found locally or on the SSoTme server.");
+                    Console.WriteLine("\nTo see available tools, run:");
+                    Console.WriteLine("  ssotme -list-tool-urls");
+                    Console.WriteLine("\nTo add a new tool URL mapping, run:");
+                    Console.WriteLine("  ssotme -set-tool-url <tool-name>=<url>");
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                     return;
@@ -1659,7 +1705,12 @@ Seed Url: ");
                         // For "transpiler not found" errors, show a simpler message without the warning box
                         if (isTranspilerNotFound)
                         {
-                            ShowError("\nERROR: " + result.Exception.Message);
+                            ShowError("\nERROR: Tool '" + this.transpiler + "' does not exist.");
+                            ShowError("\nThe tool was not found locally or on the SSoTme server.");
+                            ShowError("\nTo see available tools, run:");
+                            ShowError("  ssotme -list-tool-urls");
+                            ShowError("\nTo add a new tool URL mapping, run:");
+                            ShowError("  ssotme -set-tool-url <tool-name>=<url>");
                             return -1;
                         }
 
