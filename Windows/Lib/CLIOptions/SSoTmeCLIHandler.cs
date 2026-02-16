@@ -1930,9 +1930,18 @@ Seed Url: ");
         /// <summary>
         /// Displays a log entry from a tool/transpiler with appropriate color coding
         /// </summary>
-        private static void DisplayLogEntry(SassyMQ.SSOTME.Lib.RMQActors.LogEntry log)
+        /// <param name="log">The log entry to display</param>
+        /// <param name="showDebug">Whether to show DEBUG level logs</param>
+        /// <param name="transpilerName">The name of the transpiler (prepended to log text)</param>
+        private static void DisplayLogEntry(SassyMQ.SSOTME.Lib.RMQActors.LogEntry log, bool showDebug, string transpilerName = null)
         {
             if (log == null || string.IsNullOrEmpty(log.Text))
+            {
+                return;
+            }
+
+            // Filter out DEBUG logs when debug flag is not set
+            if ((log.Level ?? "message").ToLower() == "debug" && !showDebug)
             {
                 return;
             }
@@ -1960,7 +1969,14 @@ Seed Url: ");
                     break;
             }
 
-            Console.WriteLine(log.Text);
+            // Prepend transpiler name if provided
+            var logText = log.Text;
+            if (!string.IsNullOrEmpty(transpilerName))
+            {
+                logText = $"[{transpilerName}] {logText}";
+            }
+
+            Console.WriteLine(logText);
             Console.ForegroundColor = curColor;
         }
 
@@ -2639,12 +2655,38 @@ Seed Url: ");
                         }
                     }
 
-                    // Display logs if present in response
-                    if (responsePayload.Logs != null && responsePayload.Logs.Any())
+                    // Display logs if present in response (defensive handling for older transpilers)
+                    try
                     {
-                        foreach (var log in responsePayload.Logs)
+                        // Try to access Logs property dynamically to handle transpilers without it
+                        var logsProperty = responsePayload.GetType().GetProperty("Logs");
+                        if (logsProperty != null)
                         {
-                            DisplayLogEntry(log);
+                            var logs = logsProperty.GetValue(responsePayload);
+                            if (logs != null)
+                            {
+                                var transpilerName = responsePayload.Transpiler?.Name ?? this.transpiler;
+
+                                // Try to enumerate logs (could be array or list)
+                                if (logs is System.Collections.IEnumerable enumerable)
+                                {
+                                    foreach (var log in enumerable)
+                                    {
+                                        if (log != null && log is SassyMQ.SSOTME.Lib.RMQActors.LogEntry logEntry)
+                                        {
+                                            DisplayLogEntry(logEntry, this.debug, transpilerName);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception logEx)
+                    {
+                        // Silently ignore log display errors - transpiler might not support logs yet
+                        if (this.debug)
+                        {
+                            Console.WriteLine($"[DEBUG] Could not display transpiler logs: {logEx.Message}");
                         }
                     }
 
