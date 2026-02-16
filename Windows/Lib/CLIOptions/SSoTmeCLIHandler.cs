@@ -48,7 +48,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.02.13.1136";
+        public string CLI_VERSION = "2026.02.16.1217";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -215,20 +215,29 @@ namespace SSoTme.OST.Lib.CLIOptions
                 return this.AICaptureProject.RootPath;
             }
 
-            // Otherwise, search up the directory tree for project files
-            var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
-            while (currentDir != null)
+            try
             {
-                var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
-                if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
+                // Otherwise, search up the directory tree for project files
+                var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
+                while (currentDir != null)
                 {
-                    return currentDir.FullName;
+                    var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
+                    if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
+                    {
+                        return currentDir.FullName;
+                    }
+                    currentDir = currentDir.Parent;
                 }
-                currentDir = currentDir.Parent;
-            }
 
-            // If no project found, fall back to current directory
-            return Environment.CurrentDirectory;
+                // If no project found, fall back to current directory
+                return Environment.CurrentDirectory;
+            }
+            catch (Exception)
+            {
+                // If we can't access the current directory, return null
+                // The caller should handle this appropriately
+                return null;
+            }
         }
 
         private void SetToolUrl(string toolName, string url)
@@ -549,7 +558,23 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     if (String.IsNullOrEmpty(this.projectName))
                     {
-                        this.projectName = Path.GetFileName(Environment.CurrentDirectory);
+                        try
+                        {
+                            this.projectName = Path.GetFileName(Environment.CurrentDirectory);
+                        }
+                        catch (Exception ex)
+                        {
+                            ShowError("ERROR: Unable to determine current directory.", ConsoleColor.Red);
+                            ShowError("The current directory may not exist or is inaccessible.", ConsoleColor.Red);
+                            ShowError($"\nPlease navigate to a valid directory and try again.", ConsoleColor.Red);
+                            if (this.debug)
+                            {
+                                ShowError($"\nDetails: {ex.Message}", ConsoleColor.Yellow);
+                            }
+                            this.ParseResult = -1;
+                            this.SuppressTranspile = true;
+                            return;
+                        }
                     }
                     var force = this.args.Count() == 2 && this.args[1] == "force";
                     DataClasses.AICaptureProject.Init(force, this.projectName);
@@ -579,10 +604,26 @@ namespace SSoTme.OST.Lib.CLIOptions
                         // Only load the project if it hasn't been set externally (e.g., by ProjectTranspiler.Rebuild)
                         if (this.AICaptureProject == null)
                         {
-                            this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
-                            if (this.AICaptureProject is null) {
-                                // warn user for clarity
-                                ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                            try
+                            {
+                                this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
+                                if (this.AICaptureProject is null) {
+                                    // warn user for clarity
+                                    ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Show clear error when project doesn't exist
+                                ShowError($"ERROR: No SSoTme project found in this directory.", ConsoleColor.Red);
+                                ShowError($"\nRun `ssotme -init` to create a new project in this directory.", ConsoleColor.Red);
+                                if (this.debug)
+                                {
+                                    ShowError($"\nDetails: {ex.Message}", ConsoleColor.Yellow);
+                                }
+                                this.ParseResult = -1;
+                                this.SuppressTranspile = true;
+                                return;
                             }
                         }
 
@@ -676,7 +717,12 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (isTranspilerNotFound)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("\nERROR: {0}\n", ex.Message);
+                    Console.WriteLine("\nERROR: Tool '{0}' does not exist.", this.transpiler);
+                    Console.WriteLine("\nThe tool was not found locally or on the SSoTme server.");
+                    Console.WriteLine("\nTo see available tools, run:");
+                    Console.WriteLine("  ssotme -list-tool-urls");
+                    Console.WriteLine("\nTo add a new tool URL mapping, run:");
+                    Console.WriteLine("  ssotme -set-tool-url <tool-name>=<url>");
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                     return;
@@ -1659,7 +1705,12 @@ Seed Url: ");
                         // For "transpiler not found" errors, show a simpler message without the warning box
                         if (isTranspilerNotFound)
                         {
-                            ShowError("\nERROR: " + result.Exception.Message);
+                            ShowError("\nERROR: Tool '" + this.transpiler + "' does not exist.");
+                            ShowError("\nThe tool was not found locally or on the SSoTme server.");
+                            ShowError("\nTo see available tools, run:");
+                            ShowError("  ssotme -list-tool-urls");
+                            ShowError("\nTo add a new tool URL mapping, run:");
+                            ShowError("  ssotme -set-tool-url <tool-name>=<url>");
                             return -1;
                         }
 
@@ -1873,6 +1924,59 @@ Seed Url: ");
             var curColor = Console.ForegroundColor;
             Console.ForegroundColor = color;
             Console.WriteLine(msg);
+            Console.ForegroundColor = curColor;
+        }
+
+        /// <summary>
+        /// Displays a log entry from a tool/transpiler with appropriate color coding
+        /// </summary>
+        /// <param name="log">The log entry to display</param>
+        /// <param name="showDebug">Whether to show DEBUG level logs</param>
+        /// <param name="transpilerName">The name of the transpiler (prepended to log text)</param>
+        private static void DisplayLogEntry(SassyMQ.SSOTME.Lib.RMQActors.LogEntry log, bool showDebug, string transpilerName = null)
+        {
+            if (log == null || string.IsNullOrEmpty(log.Text))
+            {
+                return;
+            }
+
+            // Filter out DEBUG logs when debug flag is not set
+            if ((log.Level ?? "message").ToLower() == "debug" && !showDebug)
+            {
+                return;
+            }
+
+            var curColor = Console.ForegroundColor;
+
+            // Set color based on log level
+            switch ((log.Level ?? "message").ToLower())
+            {
+                case "error":
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case "warning":
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case "info":
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    break;
+                case "debug":
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    break;
+                case "message":
+                default:
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    break;
+            }
+
+            // Prepend transpiler name if provided
+            var logText = log.Text;
+            if (!string.IsNullOrEmpty(transpilerName))
+            {
+                logText = $"[{transpilerName}] {logText}";
+            }
+
+            Console.WriteLine(logText);
             Console.ForegroundColor = curColor;
         }
 
@@ -2548,6 +2652,41 @@ Seed Url: ");
                         if (this.debug)
                         {
                             Console.WriteLine($"DEBUG: Setting response transpiler .zfs name to SANITIZED URL: {sanitizedUrl}");
+                        }
+                    }
+
+                    // Display logs if present in response (defensive handling for older transpilers)
+                    try
+                    {
+                        // Try to access Logs property dynamically to handle transpilers without it
+                        var logsProperty = responsePayload.GetType().GetProperty("Logs");
+                        if (logsProperty != null)
+                        {
+                            var logs = logsProperty.GetValue(responsePayload);
+                            if (logs != null)
+                            {
+                                var transpilerName = responsePayload.Transpiler?.Name ?? this.transpiler;
+
+                                // Try to enumerate logs (could be array or list)
+                                if (logs is System.Collections.IEnumerable enumerable)
+                                {
+                                    foreach (var log in enumerable)
+                                    {
+                                        if (log != null && log is SassyMQ.SSOTME.Lib.RMQActors.LogEntry logEntry)
+                                        {
+                                            DisplayLogEntry(logEntry, this.debug, transpilerName);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception logEx)
+                    {
+                        // Silently ignore log display errors - transpiler might not support logs yet
+                        if (this.debug)
+                        {
+                            Console.WriteLine($"[DEBUG] Could not display transpiler logs: {logEx.Message}");
                         }
                     }
 
