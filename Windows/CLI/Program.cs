@@ -24,10 +24,12 @@ namespace SSoTme.OST.ConApp
             try
             {
                 // Thread.Sleep(20000);
-                var returnValue = -1;
                 var handler = SSoTmeCLIHandler.CreateHandler(args);
-                if (!handler.SuppressTranspile) returnValue = handler.TranspileProject();
-                return returnValue;
+                if (!handler.SuppressTranspile)
+                {
+                    return handler.TranspileProject();
+                }
+                return handler.ParseResult;
             }
             catch (ProjectNotConfiguredException ex)
             {
