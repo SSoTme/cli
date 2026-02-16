@@ -48,7 +48,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.02.13.1136";
+        public string CLI_VERSION = "2026.02.16.1217";
       
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -1927,6 +1927,43 @@ Seed Url: ");
             Console.ForegroundColor = curColor;
         }
 
+        /// <summary>
+        /// Displays a log entry from a tool/transpiler with appropriate color coding
+        /// </summary>
+        private static void DisplayLogEntry(SassyMQ.SSOTME.Lib.RMQActors.LogEntry log)
+        {
+            if (log == null || string.IsNullOrEmpty(log.Text))
+            {
+                return;
+            }
+
+            var curColor = Console.ForegroundColor;
+
+            // Set color based on log level
+            switch ((log.Level ?? "message").ToLower())
+            {
+                case "error":
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                case "warning":
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                case "info":
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    break;
+                case "debug":
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    break;
+                case "message":
+                default:
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    break;
+            }
+
+            Console.WriteLine(log.Text);
+            Console.ForegroundColor = curColor;
+        }
+
         private string TryGetUrlFromFileUrls(string transpilerName)
         {
             try
@@ -2599,6 +2636,15 @@ Seed Url: ");
                         if (this.debug)
                         {
                             Console.WriteLine($"DEBUG: Setting response transpiler .zfs name to SANITIZED URL: {sanitizedUrl}");
+                        }
+                    }
+
+                    // Display logs if present in response
+                    if (responsePayload.Logs != null && responsePayload.Logs.Any())
+                    {
+                        foreach (var log in responsePayload.Logs)
+                        {
+                            DisplayLogEntry(log);
                         }
                     }
 
