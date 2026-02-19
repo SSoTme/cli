@@ -2051,7 +2051,7 @@ Seed Url: ");
         private void StartTranspile()
         {
             // Disable RabbitMQ if transpiler is a URL or exists in local tool URLs
-            bool isLocalOrUrl = this.IsHttpUrl(this.transpiler) || !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler));
+            bool isLocalOrUrl = !String.IsNullOrEmpty(this.targetUrl) || this.IsHttpUrl(this.transpiler) || !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler));
             bool useRabbitMQ = !isLocalOrUrl;
 
             this.AccountHolder = new SMQAccountHolder(isAutoConnect: useRabbitMQ);
