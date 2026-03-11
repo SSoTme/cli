@@ -174,6 +174,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             try
             {
                 var toolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
+                if (this.debug) Console.WriteLine($"DEBUG: tool_urls.json path: {toolUrlsPath}");
 
                 if (!File.Exists(toolUrlsPath))
                 {
@@ -2666,6 +2667,7 @@ Seed Url: ");
                             if (logs != null)
                             {
                                 var transpilerName = responsePayload.Transpiler?.Name ?? this.transpiler;
+                                string firstErrorMessage = null;
 
                                 // Try to enumerate logs (could be array or list)
                                 if (logs is System.Collections.IEnumerable enumerable)
@@ -2675,8 +2677,17 @@ Seed Url: ");
                                         if (log != null && log is SassyMQ.SSOTME.Lib.RMQActors.LogEntry logEntry)
                                         {
                                             DisplayLogEntry(logEntry, this.debug, transpilerName);
+                                            if (firstErrorMessage == null && string.Equals(logEntry.Level, "error", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                firstErrorMessage = logEntry.Text?.Trim();
+                                            }
                                         }
                                     }
+                                }
+
+                                if (firstErrorMessage != null && ReferenceEquals(responsePayload.Exception, null))
+                                {
+                                    responsePayload.Exception = new Exception(firstErrorMessage);
                                 }
                             }
                         }

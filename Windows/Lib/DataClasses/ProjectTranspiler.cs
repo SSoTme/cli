@@ -162,7 +162,17 @@ namespace SSoTme.OST.Lib.DataClasses
                 cliHandler.ParseCommand();
 
                 var cliResult = cliHandler.TranspileProject(this, isBuildOperation: true);
-                if (cliResult != 0) throw new Exception("Error RE-Transpiling");
+                if (cliResult != 0)
+                {
+                    if (cliHandler.ignoreError)
+                    {
+                        Console.WriteLine($"WARNING: Transpiler '{this.Name}' failed but -ignoreErrors is set — continuing build.");
+                    }
+                    else
+                    {
+                        throw new Exception("Error RE-Transpiling");
+                    }
+                }
             }
             finally
             {
