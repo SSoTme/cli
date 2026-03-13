@@ -1,5 +1,5 @@
 <html><head><title>Command Line Arguments - summary</title></head><body><h1>Command Line Arguments</h1><p>
-    There are 57 command line arguments defined at this time.  They are:
+    There are 58 command line arguments defined at this time.  They are:
       
       <div style=""><h3>
         -help  or -h    [bool]
@@ -198,37 +198,41 @@
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       TargetUrl of the tool bing invoked
       </div></div><div style=""><h3>
-        -listToolUrls  or -lt    [bool]
+        -listUrls  or -lu,lt    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       List all custom tool urls defined for this user
       </div></div><div style=""><h3>
-        -viewToolUrl  or -vt    [string]
+        -viewUrl  or -vu,vt    [string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      View the url defined for the specified tool for this user
+      View the url for the specified tool
       </div></div><div style=""><h3>
-        -setToolUrl  or -st    [string]
+        -setUrl  or -su,setToolUrl    [string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Set a tool's URL to a custom endpoint for this user
       </div></div><div style=""><h3>
-        -removeToolUrl  or -rt    [string]
+        -removeUrl  or -ru,removeToolUrl    [string]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Remove a custom tool URL from this user's config, setting it back to the default value.
       </div></div><div style=""><h3>
-        -updateToolUrls  or -ut    [bool]
+        -updateUrls  or -ut,updateToolUrls,uu    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      Check the user's configured URLs for updates, if they match an online transpiller name.
+      Check the user's configured URLs for updates, if they match an online transpiler name.
       </div></div><div style=""><h3>
         -ignoreErrors  or -ignoreError    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Ignore errors sent by this transpiler (continue build if it fails)
       </div></div><div style=""><h3>
-        -noPrompt  or -np    [bool]
-      </h3><div style="font-size: 0.8em; margin-top: -1em;">
-      When used with updateToolUrls, automatically apply updates without prompting when match confidence is >= 70%.
-      </div></div><div style=""><h3>
-        -list  or -l    [bool]
+        -listVersions  or -lv    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       List all available versions of the tool
+      </div></div><div style=""><h3>
+        -refreshTools  or -rt    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Purge and re-fetch the remote tools index
+      </div></div><div style=""><h3>
+        -legacy  [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Mark the tool being run as legacy. It will query the legacy RabbitMQ server instead of the v2 system
       </div></div><div></div></p><div>
             Extracted from: //CommandLineArg
         </div></body></html>
