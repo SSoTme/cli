@@ -162,23 +162,32 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "TargetUrl of the tool bing invoked", MinOccurs = 0, Aliases = "g")]
         public string targetUrl { get; set; }
         
-        [CommandLineOption(Description = "List all custom tool urls defined for this user", MinOccurs = 0, Aliases = "lt")]
-        public bool listToolUrls { get; set; }
+        [CommandLineOption(Description = "List all custom tool urls defined for this user", MinOccurs = 0, Aliases = "lu,lt")]
+        public bool listUrls { get; set; }
         
-        [CommandLineOption(Description = "View the url defined for the specified tool for this user", MinOccurs = 0, Aliases = "vt")]
-        public string viewToolUrl { get; set; }
+        [CommandLineOption(Description = "View the url for the specified tool", MinOccurs = 0, Aliases = "vu,vt")]
+        public string viewUrl { get; set; }
         
-        [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this user", MinOccurs = 0, Aliases = "st")]
-        public string setToolUrl { get; set; }
+        [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this user", MinOccurs = 0, Aliases = "su,setToolUrl")]
+        public string setUrl { get; set; }
         
-        [CommandLineOption(Description = "Remove a custom tool URL from this user's config, setting it back to the default value.", MinOccurs = 0, Aliases = "rt")]
-        public string removeToolUrl { get; set; }
+        [CommandLineOption(Description = "Remove a custom tool URL from this user's config, setting it back to the default value.", MinOccurs = 0, Aliases = "ru,removeToolUrl")]
+        public string removeUrl { get; set; }
         
-        [CommandLineOption(Description = "Check the user's configured URLs for updates, if they match an online transpiller name.", MinOccurs = 0, Aliases = "ut")]
-        public bool updateToolUrls { get; set; }
+        [CommandLineOption(Description = "Check the user's configured URLs for updates, if they match an online transpiler name.", MinOccurs = 0, Aliases = "ut,updateToolUrls,uu")]
+        public bool updateUrls { get; set; }
         
-        [CommandLineOption(Description = "Ignore errors sent by this transpiler (continue build if it fails)", MinOccurs = 0, Aliases = "ignoreErrors")]
-        public bool ignoreError { get; set; }
+        [CommandLineOption(Description = "Ignore errors sent by this transpiler (continue build if it fails)", MinOccurs = 0, Aliases = "ignoreError")]
+        public bool ignoreErrors { get; set; }
+        
+        [CommandLineOption(Description = "List all available versions of the tool", MinOccurs = 0, Aliases = "lv")]
+        public bool listVersions { get; set; }
+        
+        [CommandLineOption(Description = "Purge and re-fetch the remote tools index", MinOccurs = 0, Aliases = "rt")]
+        public bool refreshTools { get; set; }
+        
+        [CommandLineOption(Description = "Mark the tool being run as legacy. It will query the legacy RabbitMQ server instead of the v2 system", MinOccurs = 0, Aliases = "")]
+        public bool legacy { get; set; }
         
     }
 }

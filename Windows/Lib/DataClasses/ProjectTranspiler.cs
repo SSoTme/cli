@@ -164,7 +164,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 var cliResult = cliHandler.TranspileProject(this, isBuildOperation: true);
                 if (cliResult != 0)
                 {
-                    if (cliHandler.ignoreError)
+                    if (cliHandler.ignoreErrors)
                     {
                         Console.WriteLine($"WARNING: Transpiler '{this.Name}' failed but -ignoreErrors is set — continuing build.");
                     }

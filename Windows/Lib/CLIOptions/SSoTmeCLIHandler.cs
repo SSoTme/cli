@@ -48,8 +48,17 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.02.19.1504";
-      
+        public string CLI_VERSION = "2026.03.13.1651";
+
+        // url to the latest version of the transpiler-lister service
+        public string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-13-1534-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL
+        public string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
+
+        private bool _hasRunRemoteToolsUpdate = false;
+        internal bool skipRemoteToolsLookup = false;
+        private string _rawTranspilerArg = null;
+
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
 
@@ -146,21 +155,21 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                if (String.IsNullOrEmpty(this.viewToolUrl))
+                if (String.IsNullOrEmpty(this.viewUrl))
                 {
-                    Console.WriteLine("Error: Tool name is required. Usage: ssotme viewToolUrl <toolname>");
-                    Console.WriteLine("To list all configured tools, use: ssotme listToolUrls");
+                    Console.WriteLine("Error: Tool name is required. Usage: ssotme viewUrl <toolname>");
+                    Console.WriteLine("To list all configured tools, use: ssotme listUrls");
                     return;
                 }
 
-                var url = this.TryGetUrlFromFileUrls(this.viewToolUrl);
+                var url = this.TryGetUrlFromFileUrls(this.viewUrl);
                 if (!String.IsNullOrEmpty(url))
                 {
-                    Console.WriteLine($"Tool '{this.viewToolUrl}' is configured with URL: {url}");
+                    Console.WriteLine($"Tool '{this.viewUrl}' is configured with URL: {url}");
                 }
                 else
                 {
-                    Console.WriteLine($"Tool '{this.viewToolUrl}' is not configured in ~/.ssotme/tool_urls.json file.");
+                    Console.WriteLine($"Tool '{this.viewUrl}' is not configured in ~/.ssotme/tool_urls.json file.");
                 }
             }
             catch (Exception e)
@@ -179,7 +188,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (!File.Exists(toolUrlsPath))
                 {
                     Console.WriteLine("No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.");
-                    Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
+                    Console.WriteLine($"Use 'ssotme setUrl toolname=url' to configure tool URLs.");
                     return;
                 }
 
@@ -189,7 +198,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (urlMappings == null || !urlMappings.Any())
                 {
                     Console.WriteLine("No tool URLs configured in ~/.ssotme/tool_urls.json.");
-                    Console.WriteLine($"Use 'ssotme setToolUrl toolname=url' to configure tool URLs.");
+                    Console.WriteLine($"Use 'ssotme setUrl toolname=url' to configure tool URLs.");
                     return;
                 }
 
@@ -276,17 +285,17 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                if (String.IsNullOrEmpty(this.setToolUrl))
+                if (String.IsNullOrEmpty(this.setUrl))
                 {
-                    Console.WriteLine("Error: Tool name and URL are required. Usage: ssotme -setToolUrl toolname=url");
+                    Console.WriteLine("Error: Tool name and URL are required. Usage: ssotme -setUrl toolname=url");
                     return;
                 }
 
                 // Parse toolname=url format
-                var parts = this.setToolUrl.Split('=');
+                var parts = this.setUrl.Split('=');
                 if (parts.Length != 2)
                 {
-                    Console.WriteLine("Error: Invalid format. Usage: ssotme -setToolUrl toolname=url");
+                    Console.WriteLine("Error: Invalid format. Usage: ssotme -setUrl toolname=url");
                     return;
                 }
 
@@ -295,8 +304,14 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (String.IsNullOrEmpty(toolName) || String.IsNullOrEmpty(url))
                 {
-                    Console.WriteLine("Error: Both tool name and URL must be specified. Usage: ssotme -setToolUrl toolname=url");
+                    Console.WriteLine("Error: Both tool name and URL must be specified. Usage: ssotme -setUrl toolname=url");
                     return;
+                }
+
+                if (String.Equals(toolName, this.TRANSPILERS_LISTER_TOOL_NAME, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"Warning: '{this.TRANSPILERS_LISTER_TOOL_NAME}' is an internal ssotme-managed tool. Overriding it may break remote tool resolution.");
+                    Console.WriteLine($"To restore default functionality, run: ssotme -removeUrl {this.TRANSPILERS_LISTER_TOOL_NAME}");
                 }
 
                 // Add https:// if no protocol is specified
@@ -351,17 +366,24 @@ namespace SSoTme.OST.Lib.CLIOptions
         {
             try
             {
-                if (String.IsNullOrEmpty(this.removeToolUrl))
+                if (String.IsNullOrEmpty(this.removeUrl))
                 {
-                    Console.WriteLine("Error: Tool name is required. Usage: ssotme removeToolUrl <toolname>");
+                    Console.WriteLine("Error: Tool name is required. Usage: ssotme removeUrl <toolname>");
                     return;
                 }
 
-                var toolName = this.removeToolUrl.Trim();
+                var toolName = this.removeUrl.Trim();
 
                 if (String.IsNullOrEmpty(toolName))
                 {
-                    Console.WriteLine("Error: Tool name must be specified. Usage: ssotme removeToolUrl <toolname>");
+                    Console.WriteLine("Error: Tool name must be specified. Usage: ssotme removeUrl <toolname>");
+                    return;
+                }
+
+                if (String.Equals(toolName, this.TRANSPILERS_LISTER_TOOL_NAME, StringComparison.OrdinalIgnoreCase))
+                {
+                    this.SetToolUrl(toolName, this.LATEST_TRANSPILERS_LISTER_URL);
+                    Console.WriteLine($"Tool '{toolName}' URL restored to built-in default: {this.LATEST_TRANSPILERS_LISTER_URL}");
                     return;
                 }
 
@@ -416,6 +438,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 else if (String.IsNullOrEmpty(this.transpiler))
                 {
                     this.transpiler = remainingArguments.FirstOrDefault().SafeToString();
+                    this._rawTranspilerArg = this.transpiler; // preserve before URL resolution overwrites it
 
                     // Check if the transpiler argument itself is a URL (supports ssotme https://... syntax)
                     if (this.IsHttpUrl(this.transpiler))
@@ -425,8 +448,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                         // When URL is the transpiler, only count additional args beyond it as "remaining"
                         this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                     }
-                    // First, try to get URL from tool_urls.json
-                    else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                    // First, try to get URL from tool_urls.json (skipped in -legacy mode)
+                    else if (!this.legacy && !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
                     {
                         var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
 
@@ -441,28 +464,39 @@ namespace SSoTme.OST.Lib.CLIOptions
                             }
                         }
 
+                        if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
                         this.targetUrl = urlFromFile;
                         this.transpiler = urlFromFile.SanitizeUrlForFilename();
                     }
-                    else if (this.transpiler.Contains("/"))
+                    else
                     {
-                        if (!this.IsHttpUrl(this.transpiler))
+                        var urlFromRemote = !this.legacy ? this.TryGetUrlFromRemoteTools(this.transpiler) : null;
+                        if (!String.IsNullOrEmpty(urlFromRemote))
                         {
-                            // If this not a URL, assume it's a transpiler name with an account prefix
-                            this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
-                            this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
-
-                            if (this.debug)
-                            {
-                                Console.WriteLine($"DEBUG: Extracted account '{this.account}' from transpiler name");
-                            }
+                            if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from remote_tools: {urlFromRemote}");
+                            this.targetUrl = urlFromRemote;
+                            this.transpiler = urlFromRemote.SanitizeUrlForFilename();
                         }
-                        else
+                        else if (this.transpiler.Contains("/"))
                         {
-                            this.targetUrl = this.transpiler;
-                            this.transpiler = this.transpiler.SanitizeUrlForFilename();
-                            // When URL is the transpiler, only count additional args beyond it as "remaining"
-                            this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                            if (!this.IsHttpUrl(this.transpiler))
+                            {
+                                // If this not a URL, assume it's a transpiler name with an account prefix
+                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+                                this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
+
+                                if (this.debug)
+                                {
+                                    Console.WriteLine($"DEBUG: Extracted account '{this.account}' from transpiler name");
+                                }
+                            }
+                            else
+                            {
+                                this.targetUrl = this.transpiler;
+                                this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                                // When URL is the transpiler, only count additional args beyond it as "remaining"
+                                this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                            }
                         }
                     }
                 }
@@ -479,8 +513,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                             // When URL is the transpiler, only count additional args beyond it as "remaining"
                             this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                         }
-                        // First, try to get URL from tool_urls.json
-                        else if (!String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                        // First, try to get URL from tool_urls.json (skipped in -legacy mode)
+                        else if (!this.legacy && !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
                         {
                             var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
 
@@ -495,27 +529,38 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 }
                             }
 
+                            if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
                             this.targetUrl = urlFromFile;
                             this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
-                        else if (this.transpiler.Contains("/"))
+                        else
                         {
-                            if (this.IsHttpUrl(this.transpiler))
+                            var urlFromRemote = !this.legacy ? this.TryGetUrlFromRemoteTools(this.transpiler) : null;
+                            if (!String.IsNullOrEmpty(urlFromRemote))
                             {
-                                this.targetUrl = this.transpiler;
-                                this.transpiler = this.transpiler.SanitizeUrlForFilename();
-                                // When URL is the transpiler, only count additional args beyond it as "remaining"
-                                this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                                if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from remote_tools: {urlFromRemote}");
+                                this.targetUrl = urlFromRemote;
+                                this.transpiler = urlFromRemote.SanitizeUrlForFilename();
                             }
-                            else
+                            else if (this.transpiler.Contains("/"))
                             {
-                                // If this not a URL, assume it's a transpiler name with an account prefix
-                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
-                                this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
-
-                                if (this.debug)
+                                if (this.IsHttpUrl(this.transpiler))
                                 {
-                                    Console.WriteLine($"DEBUG: Extracted account '{this.account}' from transpiler name (else block)");
+                                    this.targetUrl = this.transpiler;
+                                    this.transpiler = this.transpiler.SanitizeUrlForFilename();
+                                    // When URL is the transpiler, only count additional args beyond it as "remaining"
+                                    this.HasRemainingArguments = remainingArguments.Skip(1).Any();
+                                }
+                                else
+                                {
+                                    // If this not a URL, assume it's a transpiler name with an account prefix
+                                    this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+                                    this.transpiler = this.transpiler.Substring(this.transpiler.IndexOf("/") + 1);
+
+                                    if (this.debug)
+                                    {
+                                        Console.WriteLine($"DEBUG: Extracted account '{this.account}' from transpiler name (else block)");
+                                    }
                                 }
                             }
                         }
@@ -591,7 +636,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewToolUrl) || !String.IsNullOrEmpty(this.setToolUrl) || this.listToolUrls || !String.IsNullOrEmpty(this.removeToolUrl) || this.updateToolUrls)
+                else if (this.listVersions || this.refreshTools || this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
                 {
                     continueToLoad = false;
                 }
@@ -600,7 +645,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 // Check for api keys
                 if (continueToLoad)
                 {
-                    if (String.IsNullOrEmpty(this.setAccountAPIKey) && !this.help && !this.authenticate && !this.listSeeds && !this.cloneSeed && !this.updateToolUrls)
+                    if (String.IsNullOrEmpty(this.setAccountAPIKey) && !this.help && !this.authenticate && !this.listSeeds && !this.cloneSeed && !this.updateUrls)
                     {
                         // Only load the project if it hasn't been set externally (e.g., by ProjectTranspiler.Rebuild)
                         if (this.AICaptureProject == null)
@@ -711,8 +756,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             {
                 var curColor = Console.ForegroundColor;
                 var exceptionMessage = ex.Message ?? "";
-                var isTranspilerNotFound = exceptionMessage.Contains("Could not find transpiler") ||
-                                          exceptionMessage.Contains("transpiler status message");
+                var isTranspilerNotFound = exceptionMessage.Contains("Could not find transpiler") || exceptionMessage.Contains("transpiler status message");
 
                 // For "transpiler not found" errors, show a simpler message without the warning box
                 if (isTranspilerNotFound)
@@ -987,6 +1031,42 @@ Seed Url: ");
             return new FileInfo(toolUrlsPath);
         }
 
+        // Parse a version key like "v2026.03.13.1534" into a comparable tuple.
+        // From a list of fully-qualified tool names (account/package/tool), pick the best:
+        // prefer the one whose account segment is "effortless", otherwise alphabetical first.
+        private string SelectBestCandidate(List<string> candidates)
+        {
+            var effortlessMatch = candidates
+                .Where(c => c.IndexOf('/') >= 0 &&
+                            c.Substring(0, c.IndexOf('/')).Equals("effortless", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault();
+
+            if (effortlessMatch != null) return effortlessMatch;
+
+            return candidates.OrderBy(c => c, StringComparer.OrdinalIgnoreCase).First();
+        }
+
+        // Matches the format produced by ExtractVersionFromUrl.
+        private (int, int, int, int) ParseVersionKey(string key)
+        {
+            try
+            {
+                var s = key.TrimStart('v');
+                var parts = s.Split('.');
+                if (parts.Length == 4 &&
+                    int.TryParse(parts[0], out int y) &&
+                    int.TryParse(parts[1], out int mo) &&
+                    int.TryParse(parts[2], out int d) &&
+                    int.TryParse(parts[3], out int t))
+                {
+                    return (y, mo, d, t);
+                }
+            }
+            catch { }
+            return (0, 0, 0, 0);
+        }
+
         private string ExtractVersionFromUrl(string url)
         {
             try
@@ -1108,14 +1188,14 @@ Seed Url: ");
             }
 
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write("  [U]pdate or [I]gnore? ");
+            Console.Write("  [U]pdate/[Y]es or [I]gnore? ");
             Console.ForegroundColor = ConsoleColor.Gray;
 
             var key = Console.ReadKey();
             Console.WriteLine(); // New line after key press
 
-            return key.Key == ConsoleKey.U || key.KeyChar == 'u' ||
-                   key.KeyChar == 'U';
+            return key.Key == ConsoleKey.U || key.KeyChar == 'u' || key.KeyChar == 'U' ||
+                   key.Key == ConsoleKey.Y || key.KeyChar == 'y' || key.KeyChar == 'Y';
         }
 
         private ToolUpdateInfo CheckToolForUpdate(string toolName, string currentUrl)
@@ -1227,28 +1307,35 @@ Seed Url: ");
             return updateInfo;
         }
 
-        private void UpdateToolUrls()
+        private void UpdateToolUrls(Dictionary<string, string> toolUrlsOverride = null)
         {
             try
             {
                 var toolUrlsFile = GetToolUrlsFilePath();
+                Dictionary<string, string> toolUrls;
 
-                if (!toolUrlsFile.Exists)
+                if (toolUrlsOverride != null)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"No tool_urls.json file found at: {toolUrlsFile.FullName}");
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    return;
+                    toolUrls = toolUrlsOverride;
                 }
-
-                // Load the tool_urls.json file
-                var toolUrlsJson = File.ReadAllText(toolUrlsFile.FullName);
-                var toolUrls = JsonConvert.DeserializeObject<Dictionary<string, string>>(toolUrlsJson);
-
-                if (toolUrls == null || !toolUrls.Any())
+                else
                 {
-                    Console.WriteLine("No tools found in tool_urls.json");
-                    return;
+                    if (!toolUrlsFile.Exists)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"No tool_urls.json file found at: {toolUrlsFile.FullName}");
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                        return;
+                    }
+
+                    var toolUrlsJson = File.ReadAllText(toolUrlsFile.FullName);
+                    toolUrls = JsonConvert.DeserializeObject<Dictionary<string, string>>(toolUrlsJson);
+
+                    if (toolUrls == null || !toolUrls.Any())
+                    {
+                        Console.WriteLine("No tools found in tool_urls.json");
+                        return;
+                    }
                 }
 
                 // Show configured tool URLs first
@@ -1276,7 +1363,9 @@ Seed Url: ");
 
                     if (updateInfo.ShouldUpdate)
                     {
-                        if (PromptUserForUpdate(updateInfo, toolName))
+                        bool doUpdate = PromptUserForUpdate(updateInfo, toolName);
+
+                        if (doUpdate)
                         {
                             updatedUrls[toolName] = updateInfo.NewUrl;
                             hasUpdates = true;
@@ -1297,9 +1386,14 @@ Seed Url: ");
 
                 if (hasUpdates)
                 {
-                    // Save the updated tool_urls.json
-                    var updatedJson = JsonConvert.SerializeObject(updatedUrls, Formatting.Indented);
-                    File.WriteAllText(toolUrlsFile.FullName, updatedJson);
+                    // Load the full global file, merge in updated entries, write back
+                    var allUrls = toolUrlsFile.Exists
+                        ? JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(toolUrlsFile.FullName)) ?? new Dictionary<string, string>()
+                        : new Dictionary<string, string>();
+                    foreach (var kvp in updatedUrls)
+                        allUrls[kvp.Key] = kvp.Value;
+
+                    File.WriteAllText(toolUrlsFile.FullName, JsonConvert.SerializeObject(allUrls, Formatting.Indented));
 
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"\nSuccessfully updated tool_urls.json at: {toolUrlsFile.FullName}");
@@ -1396,23 +1490,31 @@ Seed Url: ");
                     break;
 
                 case "listtoolurls":
+                case "listurls":
+                case "lu":
                 case "lt":
-                    this.listToolUrls = true;
+                    this.listUrls = true;
                     break;
 
                 case "viewtoolurl":
+                case "viewurl":
+                case "vu":
                 case "vt":
-                    this.viewToolUrl = additionalArgs.Skip(1).FirstOrDefault() ?? "";
+                    this.viewUrl = additionalArgs.Skip(1).FirstOrDefault() ?? "";
                     break;
 
                 case "settoolurl":
+                case "seturl":
+                case "su":
                 case "st":
-                    this.setToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    this.setUrl = additionalArgs.Skip(1).FirstOrDefault();
                     break;
 
                 case "removetoolurl":
+                case "removeurl":
+                case "ru":
                 case "rt":
-                    this.removeToolUrl = additionalArgs.Skip(1).FirstOrDefault();
+                    this.removeUrl = additionalArgs.Skip(1).FirstOrDefault();
                     break;
 
                 case "version":
@@ -1425,8 +1527,10 @@ Seed Url: ");
                     break;
 
                 case "updatetoolurls":
+                case "updateurls":
                 case "ut":
-                    this.updateToolUrls = true;
+                case "uu":
+                    this.updateUrls = true;
                     break;
 
                 default:
@@ -1499,30 +1603,45 @@ Seed Url: ");
                     this.InitiateCloneSeedingProcess();
                     this.SuppressTranspile = true;
                 }
-                else if (!String.IsNullOrEmpty(this.viewToolUrl))
+                else if (!String.IsNullOrEmpty(this.viewUrl))
                 {
                     this.HandleViewToolUrlCommand();
                     this.SuppressTranspile = true;
                 }
-                else if (!String.IsNullOrEmpty(this.setToolUrl))
+                else if (!String.IsNullOrEmpty(this.setUrl))
                 {
                     this.HandleSetToolUrlCommand();
                     this.SuppressTranspile = true;
                 }
-                else if (this.listToolUrls)
+                else if (this.listUrls)
                 {
                     this.ListAllConfiguredToolUrls();
                     this.SuppressTranspile = true;
                 }
-                else if (!String.IsNullOrEmpty(this.removeToolUrl))
+                else if (!String.IsNullOrEmpty(this.removeUrl))
                 {
                     this.HandleRemoveToolUrlCommand();
                     this.SuppressTranspile = true;
                 }
-                else if (this.updateToolUrls)
+                else if (this.updateUrls)
                 {
                     this.UpdateToolUrls();
                     this.SuppressTranspile = true;
+                }
+                else if (this.refreshTools)
+                {
+                    this.RefreshRemoteTools();
+                    this.SuppressTranspile = true;
+                }
+                else if (this.listVersions)
+                {
+                    if (this.ListTranspilerVersions(this._rawTranspilerArg ?? this.transpiler))
+                        this.SuppressTranspile = true;
+                    else
+                    {
+                        Console.WriteLine($"No versions for '{this._rawTranspilerArg ?? this.transpiler}' were found in the remote tools index. It may still exist in our legacy system.");
+                        this.SuppressTranspile = true;
+                    }
                 }
                 else if (this.removeSetting.Any())
                 {
@@ -1688,7 +1807,7 @@ Seed Url: ");
                         if (this.debug) Console.WriteLine($"DEBUG: Error applying seed replacements: {ex.Message}");
                     }
                 }
-                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && !this.IsHttpUrl(this.transpiler) && this.viewToolUrl == null && String.IsNullOrEmpty(this.setToolUrl) && !this.listToolUrls && String.IsNullOrEmpty(this.removeToolUrl) && !this.updateToolUrls)
+                else if (!hasRemainingArguments && !this.clean && String.IsNullOrEmpty(this.targetUrl) && !this.IsHttpUrl(this.transpiler) && this.viewUrl == null && String.IsNullOrEmpty(this.setUrl) && !this.listUrls && String.IsNullOrEmpty(this.removeUrl) && !this.updateUrls)
                 {
                     ShowError("Missing argument name of transpiler");
                     return -1;
@@ -2003,6 +2122,342 @@ Seed Url: ");
                 Console.WriteLine($"Warning: Error reading ~/.ssotme/tool_urls.json: {ex.Message}");
             }
             return null;
+        }
+
+        private string GetRemoteToolsDir()
+        {
+            return Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "remote_tools");
+        }
+
+        private SSoTmeCLIHandler CreateInternalHandler()
+        {
+            var handler = new SSoTmeCLIHandler();
+            handler.skipRemoteToolsLookup = true;
+            handler.debug = this.debug;
+            return handler;
+        }
+
+        private void RefreshRemoteTools()
+        {
+            var remoteToolsDir = GetRemoteToolsDir();
+            var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+            var cliVersionPath = Path.Combine(remoteToolsDir, "cli_version");
+
+            if (File.Exists(toolsJsonPath))
+            {
+                File.Delete(toolsJsonPath);
+                if (this.debug) Console.WriteLine($"DEBUG: deleted {toolsJsonPath}");
+            }
+            if (File.Exists(cliVersionPath))
+            {
+                File.Delete(cliVersionPath);
+                if (this.debug) Console.WriteLine($"DEBUG: deleted {cliVersionPath}");
+            }
+
+            _hasRunRemoteToolsUpdate = false;
+
+            Console.WriteLine("Refreshing remote tools index...");
+            // Trigger a fresh fetch by calling TryGetUrlFromRemoteTools with a dummy name.
+            // The real result doesn't matter — we just want the refresh side-effect.
+            TryGetUrlFromRemoteTools("__refresh__");
+            Console.WriteLine("Remote tools index refreshed.");
+        }
+
+        private void EnsureRemoteToolsInitialized()
+        {
+            var remoteToolsDir = GetRemoteToolsDir();
+            var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+            if (File.Exists(toolsJsonPath))
+            {
+                if (this.debug) Console.WriteLine($"DEBUG: remote_tools ssotme-tools.json found at {toolsJsonPath}");
+                return;
+            }
+
+            if (this.debug) Console.WriteLine($"DEBUG: ssotme-tools.json not found, bootstrapping remote_tools at {remoteToolsDir}");
+            if (!Directory.Exists(remoteToolsDir))
+            {
+                Directory.CreateDirectory(remoteToolsDir);
+                if (this.debug) Console.WriteLine($"DEBUG: Created remote_tools directory: {remoteToolsDir}");
+            }
+
+            // Write placeholder first — prevents any re-entrant call from re-bootstrapping
+            File.WriteAllText(toolsJsonPath, "{\"transpilers\":{}}");
+            Console.WriteLine("Initializing CLI tool URL index...");
+
+            // Write tool_urls.json with the effective transpilers URL
+            var effectiveUrl = TryGetUrlFromFileUrls(this.TRANSPILERS_LISTER_TOOL_NAME) ?? this.LATEST_TRANSPILERS_LISTER_URL;
+            this.SetToolUrl(this.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
+            if (this.debug) Console.WriteLine($"DEBUG: wrote {this.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
+        }
+
+        private string TryGetUrlFromRemoteToolsJson(string transpilerName, string remoteToolsDir)
+        {
+            var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+            if (!File.Exists(toolsJsonPath)) return null;
+
+            var jsonContent = File.ReadAllText(toolsJsonPath);
+            var root = Newtonsoft.Json.Linq.JObject.Parse(jsonContent);
+            var transpilers = root["transpilers"] as Newtonsoft.Json.Linq.JObject;
+            if (transpilers == null) return null;
+
+            // Detect optional version suffix: tool-name/vX.Y.Z — last segment starts with 'v' + digit
+            string toolPart = transpilerName, versionPart = null;
+            var lastSlash = transpilerName.LastIndexOf('/');
+            if (lastSlash >= 0)
+            {
+                var lastSegment = transpilerName.Substring(lastSlash + 1);
+                if (lastSegment.Length > 1 && lastSegment[0] == 'v' && Char.IsDigit(lastSegment[1]))
+                {
+                    toolPart = transpilerName.Substring(0, lastSlash);
+                    versionPart = lastSegment;
+                }
+            }
+
+            var suffix = "/" + toolPart;
+            var candidates = transpilers.Properties()
+                .Where(p => p.Name == toolPart || p.Name.EndsWith(suffix))
+                .Select(p => p.Name)
+                .ToList();
+
+            if (this.debug) Console.WriteLine($"DEBUG: remote_tools lookup for '{toolPart}'{(versionPart != null ? $"/{versionPart}" : "")}: {candidates.Count} candidate(s) found{(candidates.Any() ? ": " + String.Join(", ", candidates) : "")}");
+
+            if (candidates.Count == 0) return null;
+
+            if (candidates.Count > 1)
+            {
+                var best = SelectBestCandidate(candidates);
+                Console.WriteLine($"Warning: '{toolPart}' matched multiple tools: {String.Join(", ", candidates)}. Using '{best}'. Provide a fully-qualified name to suppress this warning.");
+                candidates = new List<string> { best };
+            }
+
+            var versions = transpilers[candidates[0]] as Newtonsoft.Json.Linq.JObject;
+            if (versions == null) return null;
+
+            Newtonsoft.Json.Linq.JToken selectedVersion;
+            if (versionPart != null)
+            {
+                // User specified an explicit version — find it by key
+                selectedVersion = versions.Properties()
+                    .Where(p => String.Equals(p.Name, versionPart, StringComparison.OrdinalIgnoreCase))
+                    .Select(p => p.Value)
+                    .FirstOrDefault();
+                if (selectedVersion == null)
+                {
+                    var available = String.Join(", ", versions.Properties().Select(p => p.Name));
+                    Console.WriteLine($"Error: version '{versionPart}' not found for tool '{candidates[0]}'. Available versions: {available}");
+                    return null;
+                }
+            }
+            else
+            {
+                selectedVersion = versions.Properties()
+                    .Select(p => p.Value)
+                    .FirstOrDefault(v => v["metaData"]?["isHeadVersion"]?.Value<bool>() == true);
+
+                if (selectedVersion == null)
+                {
+                    var available = String.Join(", ", versions.Properties().Select(p => p.Name));
+                    Console.WriteLine($"Error: this tool has no head versions; please specify a version to run via ssotme {toolPart}/version. use ssotme {toolPart} -list to view all available versions");
+                    return null;
+                }
+            }
+
+            var url = selectedVersion["urls"]?["post"]?.Value<string>();
+            if (this.debug) Console.WriteLine($"DEBUG: remote_tools resolved '{transpilerName}' -> '{candidates[0]}' -> {url ?? "(no url)"}");
+            return url;
+        }
+
+        private bool IsManagementCommand =>
+            this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.install ||
+            this.authenticate || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide ||
+            !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) ||
+            !String.IsNullOrEmpty(this.removeUrl);
+
+        private bool ListTranspilerVersions(string transpilerName)
+        {
+            EnsureRemoteToolsInitialized();
+            var remoteToolsDir = GetRemoteToolsDir();
+            var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+            if (!File.Exists(toolsJsonPath))
+            {
+                Console.WriteLine("No remote tools index found. Run 'ssotme -refreshTools' to download it.");
+                return false;
+            }
+
+            var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
+            var transpilers = root["transpilers"] as Newtonsoft.Json.Linq.JObject;
+            if (transpilers == null)
+            {
+                Console.WriteLine("Remote tools index has no 'transpilers' section.");
+                return false;
+            }
+
+            var suffix = "/" + transpilerName;
+            var candidates = transpilers.Properties()
+                .Where(p => p.Name == transpilerName || p.Name.EndsWith(suffix))
+                .Select(p => p.Name)
+                .ToList();
+
+            if (candidates.Count == 0)
+            {
+                // Not in remote tools index — fall back to RabbitMQ
+                return false;
+            }
+
+            if (candidates.Count > 1)
+            {
+                var best = SelectBestCandidate(candidates);
+                Console.WriteLine($"Warning: '{transpilerName}' matched multiple tools: {String.Join(", ", candidates)}. Using '{best}'. Provide a fully-qualified name to suppress this warning.");
+                candidates = new List<string> { best };
+            }
+
+            var versions = transpilers[candidates[0]] as Newtonsoft.Json.Linq.JObject;
+            if (versions == null)
+            {
+                Console.WriteLine($"No versions found for '{candidates[0]}'.");
+                return true;
+            }
+
+            var versionEntries = versions.Properties()
+                .Select(p => new { Key = p.Name, Value = p.Value })
+                .OrderByDescending(v => ParseVersionKey(v.Key))
+                .ToList();
+
+            var overrideUrl = TryGetUrlFromFileUrls(transpilerName);
+
+            Console.WriteLine($"Available versions for {candidates[0]}:");
+            Console.WriteLine();
+            bool hasHead = false;
+            foreach (var entry in versionEntries)
+            {
+                bool isHead = entry.Value["metaData"]?["isHeadVersion"]?.Value<bool>() == true;
+                if (isHead) hasHead = true;
+                var mark = isHead ? " (latest)" : "";
+                var postUrl = entry.Value["urls"]?["post"]?.Value<string>() ?? "(no url)";
+                Console.WriteLine($"  {entry.Key}{mark}");
+                Console.WriteLine($"    url: {postUrl}");
+            }
+            Console.WriteLine();
+            if (!String.IsNullOrEmpty(overrideUrl))
+            {
+                Console.WriteLine($"  * globally overridden via ssotme -setUrl {transpilerName}={overrideUrl}");
+                Console.WriteLine($"    run 'ssotme -removeUrl {transpilerName}' to reset");
+                Console.WriteLine();
+            }
+            Console.WriteLine($"Run with: ssotme {transpilerName}/<versionKey>");
+            if (hasHead) Console.WriteLine($"Run latest: ssotme {transpilerName}");
+            return true;
+        }
+
+        private string TryGetUrlFromRemoteTools(string transpilerName)
+        {
+            // Prevent recursive calls from internal handlers, and skip for non-transpile commands
+            if (skipRemoteToolsLookup || IsManagementCommand) return null;
+
+            try
+            {
+                if (this.debug)
+                {
+                    var effectiveTranspilersUrl = TryGetUrlFromFileUrls(this.TRANSPILERS_LISTER_TOOL_NAME) ?? this.LATEST_TRANSPILERS_LISTER_URL;
+                    Console.WriteLine($"DEBUG: Checking remote_tools for '{transpilerName}' (transpilers url: {effectiveTranspilersUrl})");
+                }
+                EnsureRemoteToolsInitialized();
+                var remoteToolsDir = GetRemoteToolsDir();
+
+                // If the CLI version has changed since the last refresh, bust the cache
+                var cliVersionPath = Path.Combine(remoteToolsDir, "cli_version");
+                var cachedCliVersion = File.Exists(cliVersionPath) ? File.ReadAllText(cliVersionPath).Trim() : null;
+                if (cachedCliVersion != this.CLI_VERSION)
+                {
+                    if (this.debug) Console.WriteLine($"DEBUG: CLI version changed ({cachedCliVersion ?? "none"} → {this.CLI_VERSION}), forcing remote tools refresh");
+                    _hasRunRemoteToolsUpdate = false;
+                }
+                else
+                {
+                    // Index is current — no refresh needed regardless of whether this tool is in it
+                    _hasRunRemoteToolsUpdate = true;
+                }
+
+                var url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir);
+                if (url != null && cachedCliVersion == this.CLI_VERSION)
+                {
+                    if (this.debug) Console.WriteLine($"DEBUG: matched '{transpilerName}' to remote tool (cached index) → {url}");
+                    return url;
+                }
+
+                if (!_hasRunRemoteToolsUpdate)
+                {
+                    if (this.debug) Console.WriteLine($"DEBUG: no match in cached index for '{transpilerName}', refreshing remote tools...");
+                    Console.WriteLine("Refreshing CLI tool URL index...");
+                    _hasRunRemoteToolsUpdate = true;
+                    File.WriteAllText(cliVersionPath, this.CLI_VERSION);
+                    if (this.debug) Console.WriteLine($"DEBUG: wrote cli_version {this.CLI_VERSION} to {cliVersionPath}");
+
+                    var savedDir = Environment.CurrentDirectory;
+                    try
+                    {
+                        Environment.CurrentDirectory = remoteToolsDir;
+
+                        // Determine the effective transpilers URL: on version change use the built-in default,
+                        // otherwise prefer whatever is in tool_urls.json.
+                        string effectiveUrl;
+                        if (cachedCliVersion != this.CLI_VERSION)
+                        {
+                            effectiveUrl = this.LATEST_TRANSPILERS_LISTER_URL;
+                            if (this.debug) Console.WriteLine($"DEBUG: CLI version changed — using built-in transpilers url: {effectiveUrl}");
+                        }
+                        else
+                        {
+                            effectiveUrl = TryGetUrlFromFileUrls(this.TRANSPILERS_LISTER_TOOL_NAME) ?? this.LATEST_TRANSPILERS_LISTER_URL;
+                            if (this.debug) Console.WriteLine($"DEBUG: using transpilers url from tool_urls.json: {effectiveUrl}");
+                        }
+
+                        // Write the URL to tool_urls.json so the transpiler handler can resolve it.
+                        this.SetToolUrl(this.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
+                        if (this.debug) Console.WriteLine($"DEBUG: wrote {this.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
+
+                        // Invoke the transpilers tool directly — no project file needed.
+                        // CreateInternalHandler sets skipRemoteToolsLookup=true; ParseCommand will
+                        // find the URL via TryGetUrlFromFileUrls (tool_urls.json) instead.
+                        try
+                        {
+                            var transpilerHandler = CreateInternalHandler();
+                            transpilerHandler.commandLine = this.TRANSPILERS_LISTER_TOOL_NAME;
+                            transpilerHandler.ParseCommand();
+                            transpilerHandler.TranspileProject();
+                        }
+                        catch (Exception refreshEx)
+                        {
+                            Console.WriteLine($"Warning: Could not refresh remote tool list ({refreshEx.Message}). Falling back to RabbitMQ proxy.");
+                            if (this.debug) Console.WriteLine($"DEBUG: refresh exception: {refreshEx}");
+                        }
+                    }
+                    finally
+                    {
+                        Environment.CurrentDirectory = savedDir;
+                    }
+
+                    if (this.debug) Console.WriteLine($"DEBUG: refresh complete, rechecking for '{transpilerName}'");
+                    url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir);
+                    if (this.debug)
+                    {
+                        if (url != null) Console.WriteLine($"DEBUG: matched '{transpilerName}' to remote tool (after refresh) → {url}");
+                        else Console.WriteLine($"DEBUG: no remote tool match for '{transpilerName}', falling back to RabbitMQ");
+                    }
+                }
+                else if (this.debug)
+                {
+                    Console.WriteLine($"DEBUG: remote_tools already refreshed this session, skipping");
+                    if (url == null) Console.WriteLine($"DEBUG: no remote tool match for '{transpilerName}', falling back to RabbitMQ");
+                }
+
+                return url;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Error resolving transpiler from remote tools: {ex.Message}");
+                return null;
+            }
         }
 
         private void ProcessCommandLine(string commandLine)
@@ -2423,7 +2878,7 @@ Seed Url: ");
                     using var client = new HttpClient();
                     payload.TranspileRequest = new TranspileRequest();
                     payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
-               
+                    if (this.debug) Console.WriteLine($"DEBUG: POST {this.targetUrl}");
                     var response = await client.PostAsJsonAsync($"{this.targetUrl}", payload);
                     if (response != null)
                     {
@@ -2499,6 +2954,9 @@ Seed Url: ");
             payload.TranspileRequest = new TranspileRequest();
             payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
             payload.CLIInputFileContents = string.Empty;
+            if (this.debug) Console.WriteLine(String.IsNullOrEmpty(this.targetUrl)
+                ? "DEBUG: POST https://proxy.effortlessapi.com/ (via RabbitMQ proxy)"
+                : $"DEBUG: POST {this.targetUrl}");
             var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}", payload);
             if (response != null)
             {
