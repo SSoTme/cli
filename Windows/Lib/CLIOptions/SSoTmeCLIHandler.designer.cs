@@ -177,8 +177,14 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Check the user's configured URLs for updates, if they match an online transpiller name.", MinOccurs = 0, Aliases = "ut")]
         public bool updateToolUrls { get; set; }
         
-        [CommandLineOption(Description = "Ignore errors sent by this transpiler (continue build if it fails)", MinOccurs = 0, Aliases = "ignoreErrors")]
-        public bool ignoreError { get; set; }
+        [CommandLineOption(Description = "Ignore errors sent by this transpiler (continue build if it fails)", MinOccurs = 0, Aliases = "ignoreError")]
+        public bool ignoreErrors { get; set; }
+        
+        [CommandLineOption(Description = "When used with updateToolUrls, automatically apply updates without prompting when match confidence is >= 70%.", MinOccurs = 0, Aliases = "np")]
+        public bool noPrompt { get; set; }
+        
+        [CommandLineOption(Description = "List all available versions of the tool", MinOccurs = 0, Aliases = "l")]
+        public bool list { get; set; }
         
     }
 }

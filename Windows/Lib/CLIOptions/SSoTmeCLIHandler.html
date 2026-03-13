@@ -1,5 +1,5 @@
 <html><head><title>Command Line Arguments - summary</title></head><body><h1>Command Line Arguments</h1><p>
-    There are 55 command line arguments defined at this time.  They are:
+    There are 57 command line arguments defined at this time.  They are:
       
       <div style=""><h3>
         -help  or -h    [bool]
@@ -218,9 +218,17 @@
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Check the user's configured URLs for updates, if they match an online transpiller name.
       </div></div><div style=""><h3>
-        -ignoreError  [bool]
+        -ignoreErrors  or -ignoreError    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Ignore errors sent by this transpiler (continue build if it fails)
+      </div></div><div style=""><h3>
+        -noPrompt  or -np    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      When used with updateToolUrls, automatically apply updates without prompting when match confidence is >= 70%.
+      </div></div><div style=""><h3>
+        -list  or -l    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      List all available versions of the tool
       </div></div><div></div></p><div>
             Extracted from: //CommandLineArg
         </div></body></html>
