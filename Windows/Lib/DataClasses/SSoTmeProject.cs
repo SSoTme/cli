@@ -1045,8 +1045,10 @@ namespace SSoTme.OST.Lib.DataClasses
                 {
                     psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -buildLocal -tg ssot\"") { WorkingDirectory = ".." };
                 }
+                Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
                 var p = Process.Start(psi);
                 p.WaitForExit(300000);
+                Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", null);
             }
         }
 

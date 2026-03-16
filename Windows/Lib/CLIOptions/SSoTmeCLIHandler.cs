@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.16.1054";
+        public string CLI_VERSION = "2026.03.16.1550";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-13-1534-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-16-1507-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
@@ -108,12 +108,12 @@ namespace SSoTme.OST.Lib.CLIOptions
             return cliHandler;
         }
 
-
         public static SSoTmeCLIHandler CreateHandler(string[] args)
         {
             var cliOptions = new SSoTmeCLIHandler();
             cliOptions.args = args;
             cliOptions.ParseCommand();
+            cliOptions.CheckForUpdateNotice();
             return cliOptions;
         }
 
@@ -2156,6 +2156,31 @@ Seed Url: ");
             return Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "remote_tools");
         }
 
+        private void CheckForUpdateNotice()
+        {
+            if (Environment.GetEnvironmentVariable("SSOTME_CHILD_PROCESS") == "1") return;
+            try
+            {
+                var updateAvailablePath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "update_available.json");
+                if (!File.Exists(updateAvailablePath)) return;
+                var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(updateAvailablePath));
+                var versionName = root["name"]?.Value<string>();
+                var links = root["installLinks"];
+                var installLink = RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+                    ? (RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                        ? links?["macArm"]?.Value<string>()
+                        : links?["mac"]?.Value<string>())
+                    : (RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                        ? links?["windowsArm"]?.Value<string>()
+                        : links?["windows"]?.Value<string>());
+                if (String.Equals(versionName?.TrimStart('v'), this.CLI_VERSION, StringComparison.OrdinalIgnoreCase))
+                    File.Delete(updateAvailablePath);
+                else if (!String.IsNullOrEmpty(installLink))
+                    CliLog.LogLine($"A new version of ssotme is available: {versionName}  Download: {installLink}");
+            }
+            catch { /* best-effort */ }
+        }
+
         private SSoTmeCLIHandler CreateInternalHandler()
         {
             var handler = new SSoTmeCLIHandler();
@@ -2225,7 +2250,7 @@ Seed Url: ");
 
             var jsonContent = File.ReadAllText(toolsJsonPath);
             var root = Newtonsoft.Json.Linq.JObject.Parse(jsonContent);
-            var transpilers = root["transpilers"] as Newtonsoft.Json.Linq.JObject;
+            var transpilers = (root["transpilerVersions"] ?? root["transpilers"]) as Newtonsoft.Json.Linq.JObject;
             if (transpilers == null) return null;
 
             // Detect optional version suffix: tool-name/vX.Y.Z — last segment starts with 'v' + digit
@@ -2304,8 +2329,7 @@ Seed Url: ");
         private bool IsManagementCommand =>
             this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.uninstall ||
             this.authenticate || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide ||
-            !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) ||
-            !String.IsNullOrEmpty(this.removeUrl);
+            !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || !String.IsNullOrEmpty(this.removeUrl);
 
         private bool ListTranspilerVersions(string transpilerName)
         {
@@ -2319,7 +2343,7 @@ Seed Url: ");
             }
 
             var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
-            var transpilers = root["transpilers"] as Newtonsoft.Json.Linq.JObject;
+            var transpilers = (root["transpilerVersions"] ?? root["transpilers"]) as Newtonsoft.Json.Linq.JObject;
             if (transpilers == null)
             {
                 Console.WriteLine("Remote tools index has no 'transpilers' section.");
@@ -2385,8 +2409,8 @@ Seed Url: ");
 
         private string TryGetUrlFromRemoteTools(string transpilerName)
         {
-            // Prevent recursive calls from internal handlers, and skip for non-transpile commands
-            if (skipRemoteToolsLookup || IsManagementCommand) return null;
+            // Prevent recursive calls from internal handlers, skip for non-transpile commands, and skip empty names
+            if (skipRemoteToolsLookup || IsManagementCommand || String.IsNullOrEmpty(transpilerName)) return null;
 
             try
             {
@@ -2476,12 +2500,47 @@ Seed Url: ");
                         // Invoke the transpilers tool directly.
                         // CreateInternalHandler sets skipRemoteToolsLookup=true; ParseCommand will
                         // find the URL via TryGetUrlFromFileUrls (tool_urls.json) instead.
-                        try
+                        bool RunRefresh()
                         {
                             var transpilerHandler = CreateInternalHandler();
-                            transpilerHandler.commandLine = SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME;
+                            transpilerHandler.commandLine = $"{SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME} -p cli_version={this.CLI_VERSION}";
                             transpilerHandler.ParseCommand();
                             transpilerHandler.TranspileProject();
+
+                            // Check if the server flagged a CLI update and persist it
+                            var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+                            var updateAvailablePath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "update_available.json");
+                            if (File.Exists(toolsJsonPath))
+                            {
+                                try
+                                {
+                                    var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
+                                    var updateAvailable = root["cliUpdateAvailable"];
+                                    if (updateAvailable != null && !String.IsNullOrEmpty(updateAvailable["name"]?.Value<string>()))
+                                        File.WriteAllText(updateAvailablePath, updateAvailable.ToString());
+                                    else if (File.Exists(updateAvailablePath))
+                                        File.Delete(updateAvailablePath);
+                                }
+                                catch { /* best-effort */ }
+                            }
+                            return true;
+                        }
+
+                        try
+                        {
+                            RunRefresh();
+                        }
+                        catch (Exception refreshEx) when (refreshEx.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
+                                                       || refreshEx.Message.Contains("No such host"))
+                        {
+                            CliLog.LogLine("Host not found. Retrying in 6 seconds...");
+                            System.Threading.Thread.Sleep(6000);
+                            try { RunRefresh(); }
+                            catch (Exception retryEx)
+                            {
+                                Console.WriteLine($"Warning: Could not refresh remote tool list ({retryEx.Message}). Falling back to RabbitMQ proxy.");
+                                if (this.debug) Console.WriteLine($"DEBUG: refresh retry exception: {retryEx}");
+                            }
                         }
                         catch (Exception refreshEx)
                         {
@@ -2495,27 +2554,6 @@ Seed Url: ");
                     }
 
                     if (this.debug) Console.WriteLine($"DEBUG: refresh complete, rechecking for '{transpilerName}'");
-
-                    // Check if a newer CLI version is available from the freshly-written index
-                    try
-                    {
-                        var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
-                        if (File.Exists(toolsJsonPath))
-                        {
-                            var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
-                            var latestName = root["latestCliVersion"]?["name"]?.Value<string>();
-                            if (!String.IsNullOrEmpty(latestName))
-                            {
-                                var latestVersion = latestName.TrimStart('v');
-                                if (!String.Equals(latestVersion, this.CLI_VERSION, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    CliLog.LogLine($"A new version of ssotme is available: {latestName} (current: v{this.CLI_VERSION})");
-                                    CliLog.LogLine($"Download: https://github.com/SSoTme/cli/releases/tag/{latestName}");
-                                }
-                            }
-                        }
-                    }
-                    catch { /* version check is best-effort */ }
 
                     url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir);
                     if (this.debug)
