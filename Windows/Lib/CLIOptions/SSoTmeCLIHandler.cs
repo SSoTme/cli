@@ -5,6 +5,7 @@
  License:    Mozilla Public License 2.0
  *******************************************/
 using CLI;
+using SSoTme.OST.Lib.Extensions;
 using Plossum.CommandLine;
 using SassyMQ.Lib.RabbitMQ;
 using SassyMQ.SSOTME.Lib.RabbitMQ;
@@ -48,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.13.1651";
+        public string CLI_VERSION = "2026.03.16.1054";
 
         // url to the latest version of the transpiler-lister service
         public string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-13-1534-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -58,6 +59,8 @@ namespace SSoTme.OST.Lib.CLIOptions
         private bool _hasRunRemoteToolsUpdate = false;
         internal bool skipRemoteToolsLookup = false;
         private string _rawTranspilerArg = null;
+        public string ResolvedVersionLabel { get; private set; } // e.g. "effortless/common/airtable-to-rulebook v2026.03.13.1534 [latest]"
+        public string ResolvedVersionUrl { get; private set; }
 
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -202,7 +205,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     return;
                 }
 
-                Console.WriteLine("Configured tool URLs:");
+                Console.WriteLine("Configured tool URL Overrides:");
                 Console.WriteLine();
                 foreach (var kvp in urlMappings.OrderBy(x => x.Key))
                 {
@@ -465,6 +468,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                         }
 
                         if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
+                        this.ResolvedVersionLabel = $"{this._rawTranspilerArg ?? this.transpiler} [user-set]";
+                        this.ResolvedVersionUrl = urlFromFile;
                         this.targetUrl = urlFromFile;
                         this.transpiler = urlFromFile.SanitizeUrlForFilename();
                     }
@@ -530,6 +535,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                             }
 
                             if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
+                            this.ResolvedVersionLabel = $"{this._rawTranspilerArg ?? this.transpiler} [user-set]";
+                        this.ResolvedVersionUrl = urlFromFile;
                             this.targetUrl = urlFromFile;
                             this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
@@ -1814,6 +1821,15 @@ Seed Url: ");
                 }
                 else
                 {
+                    if (!isBuildOperation && !String.IsNullOrEmpty(this.ResolvedVersionLabel))
+                    {
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        Console.Write("cli:> ");
+                        Console.ResetColor();
+                        Console.WriteLine(this.ResolvedVersionLabel);
+                        if (this.debug && !String.IsNullOrEmpty(this.ResolvedVersionUrl))
+                            Console.WriteLine($"POST {this.ResolvedVersionUrl}");
+                    }
                     StartTranspile();
 
                     if (!ReferenceEquals(result.Exception, null))
@@ -2156,11 +2172,11 @@ Seed Url: ");
 
             _hasRunRemoteToolsUpdate = false;
 
-            Console.WriteLine("Refreshing remote tools index...");
+            CliLog.LogLine("Refreshing remote tools index...");
             // Trigger a fresh fetch by calling TryGetUrlFromRemoteTools with a dummy name.
             // The real result doesn't matter — we just want the refresh side-effect.
             TryGetUrlFromRemoteTools("__refresh__");
-            Console.WriteLine("Remote tools index refreshed.");
+            CliLog.LogLine("Remote tools index refreshed.");
         }
 
         private void EnsureRemoteToolsInitialized()
@@ -2182,7 +2198,7 @@ Seed Url: ");
 
             // Write placeholder first — prevents any re-entrant call from re-bootstrapping
             File.WriteAllText(toolsJsonPath, "{\"transpilers\":{}}");
-            Console.WriteLine("Initializing CLI tool URL index...");
+            CliLog.LogLine("Initializing CLI tool URL index...");
 
             // Write tool_urls.json with the effective transpilers URL
             var effectiveUrl = TryGetUrlFromFileUrls(this.TRANSPILERS_LISTER_TOOL_NAME) ?? this.LATEST_TRANSPILERS_LISTER_URL;
@@ -2263,6 +2279,12 @@ Seed Url: ");
             }
 
             var url = selectedVersion["urls"]?["post"]?.Value<string>();
+            var versionKey = versions.Properties()
+                .FirstOrDefault(p => p.Value == selectedVersion)?.Name ?? (versionPart ?? "");
+            var isHead = selectedVersion["metaData"]?["isHeadVersion"]?.Value<bool>() == true;
+            var versionSuffix = isHead ? " [latest]" : "";
+            this.ResolvedVersionLabel = $"{candidates[0]} {versionKey}{versionSuffix}";
+            this.ResolvedVersionUrl = url;
             if (this.debug) Console.WriteLine($"DEBUG: remote_tools resolved '{transpilerName}' -> '{candidates[0]}' -> {url ?? "(no url)"}");
             return url;
         }
@@ -2388,7 +2410,7 @@ Seed Url: ");
                 if (!_hasRunRemoteToolsUpdate)
                 {
                     if (this.debug) Console.WriteLine($"DEBUG: no match in cached index for '{transpilerName}', refreshing remote tools...");
-                    Console.WriteLine("Refreshing CLI tool URL index...");
+                    CliLog.LogLine("Refreshing CLI tool URL index...");
                     _hasRunRemoteToolsUpdate = true;
                     File.WriteAllText(cliVersionPath, this.CLI_VERSION);
                     if (this.debug) Console.WriteLine($"DEBUG: wrote cli_version {this.CLI_VERSION} to {cliVersionPath}");

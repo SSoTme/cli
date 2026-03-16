@@ -160,6 +160,15 @@ namespace SSoTme.OST.Lib.DataClasses
                 cliHandler.AICaptureProject = project;
                 cliHandler.commandLine = commandLineToRun;  // Use the modified command line, not this.CommandLine
                 cliHandler.ParseCommand();
+                if (!String.IsNullOrEmpty(cliHandler.ResolvedVersionLabel))
+                {
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine($"cli:> {cliHandler.ResolvedVersionLabel}");
+                    if (cliHandler.debug && !String.IsNullOrEmpty(cliHandler.ResolvedVersionUrl)) {
+                        Console.WriteLine($"POST {cliHandler.ResolvedVersionUrl}");
+                    }
+                    Console.ResetColor();
+                }
 
                 var cliResult = cliHandler.TranspileProject(this, isBuildOperation: true);
                 if (cliResult != 0)
@@ -182,8 +191,10 @@ namespace SSoTme.OST.Lib.DataClasses
 
         internal void Clean(SSoTmeProject project, bool preserveZFS, bool debug = false)
         {
-            Console.WriteLine("CLEANING: " + this.RelativePath + ": " + this.Name);
-            Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
+            if (debug) {
+                Console.WriteLine("CLEANING: " + this.RelativePath + ": " + this.Name);
+            }
+            //Console.WriteLine("CommandLine:> ssotme {0}", this.CommandLine);
             var di = new DirectoryInfo(Path.Combine(project.RootPath, this.RelativePath.Trim("\\/".ToCharArray())));
             if (!di.Exists) di.Create();
             Environment.CurrentDirectory = di.FullName;
