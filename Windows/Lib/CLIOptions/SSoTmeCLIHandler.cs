@@ -58,6 +58,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
         private bool _hasRunRemoteToolsUpdate = false;
         internal bool skipRemoteToolsLookup = false;
+        internal bool skipProjectLoad = false;
         private string _rawTranspilerArg = null;
         public string ResolvedVersionLabel { get; private set; } // e.g. "effortless/common/airtable-to-rulebook v2026.03.13.1534 [latest]"
         public string ResolvedVersionUrl { get; private set; }
@@ -652,7 +653,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 // Check for api keys
                 if (continueToLoad)
                 {
-                    if (String.IsNullOrEmpty(this.setAccountAPIKey) && !this.help && !this.authenticate && !this.listSeeds && !this.cloneSeed && !this.updateUrls)
+                    if (!this.skipProjectLoad && String.IsNullOrEmpty(this.setAccountAPIKey) && !this.help && !this.authenticate && !this.listSeeds && !this.cloneSeed && !this.updateUrls)
                     {
                         // Only load the project if it hasn't been set externally (e.g., by ProjectTranspiler.Rebuild)
                         if (this.AICaptureProject == null)
@@ -2149,6 +2150,7 @@ Seed Url: ");
         {
             var handler = new SSoTmeCLIHandler();
             handler.skipRemoteToolsLookup = true;
+            handler.skipProjectLoad = true;
             handler.debug = this.debug;
             return handler;
         }
