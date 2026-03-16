@@ -716,7 +716,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void Install(SSOTMEPayload result, string transpilerGroup, bool dryRun)
+        public void Install(SSOTMEPayload result, string transpilerGroup, bool dryRun, string pinnedVersion = null)
         {
             string currentDir;
             try
@@ -731,7 +731,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
             string relativePath = this.GetProjectRelativePath(currentDir);
 
-            var projectTranspiler = new ProjectTranspiler(relativePath, result);
+            var projectTranspiler = new ProjectTranspiler(relativePath, result, pinnedVersion);
             projectTranspiler.TranspilerGroup = transpilerGroup;
 
             this.IntegrateNewTranspiler(projectTranspiler, dryRun);
@@ -772,7 +772,8 @@ namespace SSoTme.OST.Lib.DataClasses
             // Find and remove matching transpilers
             var transpilersToRemove = this.ProjectTranspilers
                 .Where(pt =>
-                    String.Equals(pt.Name, transpilerName, StringComparison.OrdinalIgnoreCase) &&
+                    (String.Equals(pt.Name, transpilerName, StringComparison.OrdinalIgnoreCase) ||
+                     String.Equals(pt.CommandLine?.Split(' ').FirstOrDefault(), transpilerName, StringComparison.OrdinalIgnoreCase)) &&
                     String.Equals(pt.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase) &&
                     (String.IsNullOrEmpty(transpilerGroup) || String.Equals(pt.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase)))
                 .ToList(); // Materialize to avoid collection modification issues
@@ -1044,8 +1045,10 @@ namespace SSoTme.OST.Lib.DataClasses
                 {
                     psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -buildLocal -tg ssot\"") { WorkingDirectory = ".." };
                 }
+                Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
                 var p = Process.Start(psi);
                 p.WaitForExit(300000);
+                Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", null);
             }
         }
 

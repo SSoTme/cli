@@ -52,5 +52,8 @@ namespace SSoTme.OST.Lib.DataClasses
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "TranspilerGroup")]
         public String TranspilerGroup { get; set; }
 
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "PinnedVersion")]
+        public String PinnedVersion { get; set; }
+
     }
 }

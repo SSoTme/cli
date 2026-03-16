@@ -79,11 +79,12 @@ namespace SSoTme.OST.Lib.DataClasses
             return String.Format("{0} :: {1}", files, this.CommandLine);
         }
 
-        public ProjectTranspiler(string relativePath, SSOTMEPayload result)
+        public ProjectTranspiler(string relativePath, SSOTMEPayload result, string pinnedVersion = null)
         : this()
         {
             bool localCommand = (ReferenceEquals(result, null));
             this.Name = localCommand ? "LocalCommand" : result.Transpiler.Name;
+            this.PinnedVersion = pinnedVersion;
 
             this.RelativePath = relativePath.SafeToString().Replace("\\", "/");
             var lowerCLI = Environment.CommandLine.ToLower().Replace("\\", "/");

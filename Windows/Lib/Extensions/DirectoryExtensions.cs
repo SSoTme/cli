@@ -93,8 +93,10 @@ public static class DirectoryExtensions
         {
             psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -buildLocal\"") { WorkingDirectory = di.FullName };
         }
+        Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
         var p = Process.Start(psi);
         p.WaitForExit(300000);
+        Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", null);
     }
 
     public static void CheckSSoTmeCache(this DirectoryInfo seedDI, string fullSeedName)
@@ -195,8 +197,10 @@ public static class DirectoryExtensions
         {
             psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -clean\"") { WorkingDirectory = di.FullName };
         }
+        Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
         var p = Process.Start(psi);
         p.WaitForExit(300000);
+        Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", null);
     }
 
 
