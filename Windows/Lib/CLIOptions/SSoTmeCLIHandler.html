@@ -1,5 +1,5 @@
 <html><head><title>Command Line Arguments - summary</title></head><body><h1>Command Line Arguments</h1><p>
-    There are 58 command line arguments defined at this time.  They are:
+    There are 60 command line arguments defined at this time.  They are:
       
       <div style=""><h3>
         -help  or -h    [bool]
@@ -230,9 +230,17 @@
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Purge and re-fetch the remote tools index
       </div></div><div style=""><h3>
-        -legacy  [bool]
+        -legacy  or -lc    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Mark the tool being run as legacy. It will query the legacy RabbitMQ server instead of the v2 system
+      </div></div><div style=""><h3>
+        -upgrade  or -up    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Update the pinned version of this tool in ssotme.json to the current head version (does not run the tool)
+      </div></div><div style=""><h3>
+        -latest  or -lat    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Run this tool using the current head version and update the pinned version in ssotme.json
       </div></div><div></div></p><div>
             Extracted from: //CommandLineArg
         </div></body></html>

@@ -19,6 +19,15 @@ namespace SSoTme.OST.Lib.Extensions
             Console.WriteLine($"{message}");
         }
 
+        public static void LogLine(string message, ConsoleColor actionColor)
+        {
+            Console.ForegroundColor = CliLogIdColor;
+            Console.Write("[cli] ");
+            Console.ForegroundColor = actionColor;
+            Console.WriteLine($"{message}");
+            Console.ResetColor();
+        }
+
         public static void LogLine(string message)
         {
             Console.ForegroundColor = CliLogIdColor;

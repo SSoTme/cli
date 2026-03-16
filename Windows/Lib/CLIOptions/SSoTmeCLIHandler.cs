@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.16.1550";
+        public string CLI_VERSION = "2026.03.16.1734";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-16-1507-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -62,6 +62,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         private string _rawTranspilerArg = null;
         public string ResolvedVersionLabel { get; private set; } // e.g. "effortless/common/airtable-to-rulebook v2026.03.13.1534 [latest]"
         public string ResolvedVersionUrl { get; private set; }
+        public string ResolvedVersionKey { get; private set; }  // e.g. "v2026.03.12.1934"
+        public string ResolvedToolName { get; private set; }    // e.g. "effortless/effortless/rulebook-to-xlsx"
+        private bool _suppressGenericToolNotFoundError = false;
 
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -481,6 +484,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     else
                     {
                         var urlFromRemote = !this.legacy ? this.TryGetUrlFromRemoteTools(this.transpiler) : null;
+                        if (this._suppressGenericToolNotFoundError) { this.SuppressTranspile = true; return; }
                         if (!String.IsNullOrEmpty(urlFromRemote))
                         {
                             if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from remote_tools: {urlFromRemote}");
@@ -548,6 +552,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         else
                         {
                             var urlFromRemote = !this.legacy ? this.TryGetUrlFromRemoteTools(this.transpiler) : null;
+                            if (this._suppressGenericToolNotFoundError) { this.SuppressTranspile = true; return; }
                             if (!String.IsNullOrEmpty(urlFromRemote))
                             {
                                 if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from remote_tools: {urlFromRemote}");
@@ -648,7 +653,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.listVersions || this.refreshTools || this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
+                else if (this.listVersions || this.refreshTools || this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
                 {
                     continueToLoad = false;
                 }
@@ -771,7 +776,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 var isTranspilerNotFound = exceptionMessage.Contains("Could not find transpiler") || exceptionMessage.Contains("transpiler status message");
 
                 // For "transpiler not found" errors, show a simpler message without the warning box
-                if (isTranspilerNotFound)
+                if (isTranspilerNotFound && !this._suppressGenericToolNotFoundError)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("\nERROR: Tool '{0}' does not exist.", this.transpiler);
@@ -781,6 +786,11 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.WriteLine("\nTo add a new tool URL mapping, run:");
                     Console.WriteLine("  ssotme -set-tool-url <tool-name>=<url>");
                     Console.ForegroundColor = curColor;
+                    this.SuppressTranspile = true;
+                    return;
+                }
+                else if (isTranspilerNotFound && this._suppressGenericToolNotFoundError)
+                {
                     this.SuppressTranspile = true;
                     return;
                 }
@@ -1651,6 +1661,11 @@ Seed Url: ");
                     this.RefreshRemoteTools();
                     this.SuppressTranspile = true;
                 }
+                else if (this.upgrade)
+                {
+                    this.HandleUpgradeCommand();
+                    this.SuppressTranspile = true;
+                }
                 else if (this.listVersions)
                 {
                     if (this.ListTranspilerVersions(this._rawTranspilerArg ?? this.transpiler))
@@ -1708,7 +1723,7 @@ Seed Url: ");
                             Name = this.transpiler,
                         }
                     };
-                    this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
+                    this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun, this.ResolvedVersionKey);
                 }
                 else if (!String.IsNullOrEmpty(this.execute))
                 {
@@ -1722,7 +1737,7 @@ Seed Url: ");
                                 Name = "-execute"
                             }
                         };
-                        this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
+                        this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun, this.ResolvedVersionKey);
                     }
                 }
                 else if (this.build || this.buildLocal)
@@ -1850,7 +1865,7 @@ Seed Url: ");
                                                   exceptionMessage.Contains("transpiler status message");
 
                         // For "transpiler not found" errors, show a simpler message without the warning box
-                        if (isTranspilerNotFound)
+                        if (isTranspilerNotFound && !this._suppressGenericToolNotFoundError)
                         {
                             ShowError("\nERROR: Tool '" + this.transpiler + "' does not exist.");
                             ShowError("\nThe tool was not found locally or on the SSoTme server.");
@@ -1858,6 +1873,10 @@ Seed Url: ");
                             ShowError("  ssotme -list-tool-urls");
                             ShowError("\nTo add a new tool URL mapping, run:");
                             ShowError("  ssotme -set-tool-url <tool-name>=<url>");
+                            return -1;
+                        }
+                        else if (isTranspilerNotFound && this._suppressGenericToolNotFoundError)
+                        {
                             return -1;
                         }
 
@@ -1922,14 +1941,43 @@ Seed Url: ");
                     {
                         // Update runtime-only properties without saving during build operations
                         GetProjectOrThrow().UpdateRuntimeOnly(projectTranspiler, result);
+
+                        // Auto-pin on first successful build if not yet pinned
+                        if (String.IsNullOrEmpty(projectTranspiler.PinnedVersion) && !String.IsNullOrEmpty(this.ResolvedVersionKey))
+                        {
+                            projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
+                            GetProjectOrThrow().Save();
+                            CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
+                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to prevent this behavior.", ConsoleColor.Blue);
+                        }
                     }
                     else
                     {
                         // Full update with save for non-build operations
-                        if (this.install) this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun);
+                        if (this.install) this.AICaptureProject.Install(result, this.transpilerGroup, this.dryRun, this.ResolvedVersionKey);
                         else if (!ReferenceEquals(projectTranspiler, null))
                         {
                             GetProjectOrThrow().Update(projectTranspiler, result);
+                        }
+
+                        // Auto-pin on first run if not yet pinned
+                        if (!this.install && !ReferenceEquals(projectTranspiler, null)
+                            && String.IsNullOrEmpty(projectTranspiler.PinnedVersion) && !String.IsNullOrEmpty(this.ResolvedVersionKey))
+                        {
+                            projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
+                            GetProjectOrThrow().Save();
+                            CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
+                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to prevent this behavior.", ConsoleColor.Blue);
+                        }
+
+                        // -latest: update the pinned version to the resolved head version
+                        if (this.latest && !String.IsNullOrEmpty(this.ResolvedVersionKey) && !ReferenceEquals(projectTranspiler, null))
+                        {
+                            var oldPin = projectTranspiler.PinnedVersion ?? "(unpinned)";
+                            projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
+                            GetProjectOrThrow().Save();
+                            if (!String.Equals(oldPin, this.ResolvedVersionKey))
+                                CliLog.LogLine($"Pinned {this.ResolvedToolName ?? this.transpiler} to {this.ResolvedVersionKey}");
                         }
                     }
                 }
@@ -2243,7 +2291,7 @@ Seed Url: ");
             if (this.debug) Console.WriteLine($"DEBUG: wrote {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
         }
 
-        private string TryGetUrlFromRemoteToolsJson(string transpilerName, string remoteToolsDir)
+        private string TryGetUrlFromRemoteToolsJson(string transpilerName, string remoteToolsDir, string pinnedVersion = null)
         {
             var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
             if (!File.Exists(toolsJsonPath)) return null;
@@ -2266,6 +2314,11 @@ Seed Url: ");
                 }
             }
 
+            // pinnedVersion from ssotme.json takes precedence over auto-selecting head,
+            // but an explicit version in the CLI arg (toolname/vX.Y.Z) takes precedence over the pin.
+            if (versionPart == null && !String.IsNullOrEmpty(pinnedVersion))
+                versionPart = pinnedVersion;
+
             var suffix = "/" + toolPart;
             var candidates = transpilers.Properties()
                 .Where(p => p.Name == toolPart || p.Name.EndsWith(suffix))
@@ -2286,49 +2339,66 @@ Seed Url: ");
             var versions = transpilers[candidates[0]] as Newtonsoft.Json.Linq.JObject;
             if (versions == null) return null;
 
+            // Always find the head version for upgrade-notice comparison
+            var headVersionKey = versions.Properties()
+                .FirstOrDefault(p => p.Value["metaData"]?["isHeadVersion"]?.Value<bool>() == true)?.Name;
+
             Newtonsoft.Json.Linq.JToken selectedVersion;
+            string resolvedVersionPart;
             if (versionPart != null)
             {
-                // User specified an explicit version — find it by key
-                selectedVersion = versions.Properties()
-                    .Where(p => String.Equals(p.Name, versionPart, StringComparison.OrdinalIgnoreCase))
-                    .Select(p => p.Value)
-                    .FirstOrDefault();
-                if (selectedVersion == null)
+                // Pinned or explicit version
+                var match = versions.Properties()
+                    .FirstOrDefault(p => String.Equals(p.Name, versionPart, StringComparison.OrdinalIgnoreCase));
+                if (match == null)
                 {
                     var available = String.Join(", ", versions.Properties().Select(p => p.Name));
+                    this._suppressGenericToolNotFoundError = true;
                     Console.WriteLine($"Error: version '{versionPart}' not found for tool '{candidates[0]}'. Available versions: {available}");
                     return null;
                 }
+                selectedVersion = match.Value;
+                resolvedVersionPart = match.Name;
             }
             else
             {
-                selectedVersion = versions.Properties()
-                    .Select(p => p.Value)
-                    .FirstOrDefault(v => v["metaData"]?["isHeadVersion"]?.Value<bool>() == true);
-
-                if (selectedVersion == null)
+                var headMatch = versions.Properties()
+                    .FirstOrDefault(p => p.Value["metaData"]?["isHeadVersion"]?.Value<bool>() == true);
+                if (headMatch == null)
                 {
                     var available = String.Join(", ", versions.Properties().Select(p => p.Name));
                     Console.WriteLine($"Error: this tool has no head versions; please specify a version to run via ssotme {toolPart}/version. use ssotme {toolPart} -list to view all available versions");
                     return null;
                 }
+                selectedVersion = headMatch.Value;
+                resolvedVersionPart = headMatch.Name;
             }
 
             var url = selectedVersion["urls"]?["post"]?.Value<string>();
-            var versionKey = versions.Properties()
-                .FirstOrDefault(p => p.Value == selectedVersion)?.Name ?? (versionPart ?? "");
-            var isHead = selectedVersion["metaData"]?["isHeadVersion"]?.Value<bool>() == true;
-            var versionSuffix = isHead ? " [latest]" : "";
-            this.ResolvedVersionLabel = $"{candidates[0]} {versionKey}{versionSuffix}";
+            string versionSuffix;
+            if (!String.IsNullOrEmpty(pinnedVersion))
+            {
+                var isPinnedAtHead = String.Equals(pinnedVersion, headVersionKey, StringComparison.OrdinalIgnoreCase);
+                var shortToolName = candidates[0].Contains("/") ? candidates[0].Substring(candidates[0].LastIndexOf('/') + 1) : candidates[0];
+                versionSuffix = isPinnedAtHead ? " [pinned, latest]" : $" [pinned, out-of-date (use `ssotme {shortToolName} -upgrade`)]";
+            }
+            else
+            {
+                var isHead = selectedVersion["metaData"]?["isHeadVersion"]?.Value<bool>() == true;
+                versionSuffix = isHead ? " [latest]" : "";
+            }
+            this.ResolvedVersionLabel = $"{candidates[0]} {resolvedVersionPart}{versionSuffix}";
             this.ResolvedVersionUrl = url;
+            this.ResolvedVersionKey = resolvedVersionPart;
+            this.ResolvedToolName = candidates[0];
+
             if (this.debug) Console.WriteLine($"DEBUG: remote_tools resolved '{transpilerName}' -> '{candidates[0]}' -> {url ?? "(no url)"}");
             return url;
         }
 
         private bool IsManagementCommand =>
             this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.uninstall ||
-            this.authenticate || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide ||
+            this.authenticate || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade ||
             !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || !String.IsNullOrEmpty(this.removeUrl);
 
         private bool ListTranspilerVersions(string transpilerName)
@@ -2407,6 +2477,70 @@ Seed Url: ");
             return true;
         }
 
+        /// <summary>
+        /// Returns the PinnedVersion for the tool whose CommandLine starts with <paramref name="toolName"/> (short or qualified),
+        /// or null if not found / not pinned.
+        /// </summary>
+        private string GetPinnedVersionForTool(string toolName)
+        {
+            var transpilers = this.AICaptureProject?.ProjectTranspilers;
+            if (transpilers == null || String.IsNullOrEmpty(toolName)) return null;
+            var shortName = toolName.Contains('/') ? toolName.Substring(toolName.LastIndexOf('/') + 1) : toolName;
+            foreach (var pt in transpilers)
+            {
+                var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
+                if (String.Equals(cmdTool, shortName, StringComparison.OrdinalIgnoreCase)
+                    || String.Equals(cmdTool, toolName, StringComparison.OrdinalIgnoreCase))
+                    return pt.PinnedVersion; // may be null if not yet pinned
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Handles `ssotme {toolName} -upgrade`: resolves head version, updates PinnedVersion in ssotme.json.
+        /// </summary>
+        private void HandleUpgradeCommand()
+        {
+            var toolName = this._rawTranspilerArg ?? this.transpiler;
+            if (String.IsNullOrEmpty(toolName))
+            {
+                ShowError("Usage: ssotme <toolName> -upgrade");
+                return;
+            }
+            EnsureRemoteToolsInitialized();
+            var remoteToolsDir = GetRemoteToolsDir();
+            // Force head version lookup (no pin)
+            var url = TryGetUrlFromRemoteToolsJson(toolName, remoteToolsDir, pinnedVersion: null);
+            if (url == null)
+            {
+                ShowError($"Could not resolve tool '{toolName}' from the remote tools index.");
+                return;
+            }
+            var newVersion = this.ResolvedVersionKey;
+            var project = this.AICaptureProject ?? SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
+            if (project == null)
+            {
+                ShowError("No ssotme.json project found in this directory.");
+                return;
+            }
+            var shortName = toolName.Contains('/') ? toolName.Substring(toolName.LastIndexOf('/') + 1) : toolName;
+            var matched = project.ProjectTranspilers?
+                .FirstOrDefault(pt => {
+                    var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
+                    return String.Equals(cmdTool, shortName, StringComparison.OrdinalIgnoreCase)
+                        || String.Equals(cmdTool, toolName, StringComparison.OrdinalIgnoreCase);
+                });
+            if (matched == null)
+            {
+                ShowError($"No installed transpiler matching '{toolName}' found in ssotme.json.");
+                return;
+            }
+            var oldVersion = matched.PinnedVersion ?? "(unpinned)";
+            matched.PinnedVersion = newVersion;
+            project.Save();
+            Console.WriteLine($"Updated {toolName}: {oldVersion} → {newVersion}");
+        }
+
         private string TryGetUrlFromRemoteTools(string transpilerName)
         {
             // Prevent recursive calls from internal handlers, skip for non-transpile commands, and skip empty names
@@ -2436,7 +2570,11 @@ Seed Url: ");
                     _hasRunRemoteToolsUpdate = true;
                 }
 
-                var url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir);
+                // Look up the pinned version for this tool from the current project (skip when -latest forces head)
+                var pinnedVersion = this.latest ? null : GetPinnedVersionForTool(transpilerName);
+
+                var url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir, pinnedVersion);
+                if (this._suppressGenericToolNotFoundError) return null;  // specific error already printed
                 if (url != null && cachedCliVersion == this.CLI_VERSION)
                 {
                     if (this.debug) Console.WriteLine($"DEBUG: matched '{transpilerName}' to remote tool (cached index) → {url}");
@@ -2555,7 +2693,8 @@ Seed Url: ");
 
                     if (this.debug) Console.WriteLine($"DEBUG: refresh complete, rechecking for '{transpilerName}'");
 
-                    url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir);
+                    url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir, pinnedVersion);
+                    if (this._suppressGenericToolNotFoundError) return null;  // specific error already printed
                     if (this.debug)
                     {
                         if (url != null) Console.WriteLine($"DEBUG: matched '{transpilerName}' to remote tool (after refresh) → {url}");
@@ -3074,7 +3213,20 @@ Seed Url: ");
             if (this.debug) Console.WriteLine(String.IsNullOrEmpty(this.targetUrl)
                 ? "DEBUG: POST https://proxy.effortlessapi.com/ (via RabbitMQ proxy)"
                 : $"DEBUG: POST {this.targetUrl}");
-            var response = await client.PostAsJsonAsync($"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}", payload);
+            var postUrl = $"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}";
+            System.Net.Http.HttpResponseMessage response;
+            try
+            {
+                response = await client.PostAsJsonAsync(postUrl, payload);
+            }
+            catch (System.Net.Http.HttpRequestException ex) when (
+                ex.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
+                || ex.Message.Contains("No such host"))
+            {
+                CliLog.LogLine("Host not found. Retrying in 6 seconds...");
+                await System.Threading.Tasks.Task.Delay(6000);
+                response = await client.PostAsJsonAsync(postUrl, payload);
+            }
             if (response != null)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();

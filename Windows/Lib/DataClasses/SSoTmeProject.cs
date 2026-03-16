@@ -716,7 +716,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
         }
 
-        public void Install(SSOTMEPayload result, string transpilerGroup, bool dryRun)
+        public void Install(SSOTMEPayload result, string transpilerGroup, bool dryRun, string pinnedVersion = null)
         {
             string currentDir;
             try
@@ -731,7 +731,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
             string relativePath = this.GetProjectRelativePath(currentDir);
 
-            var projectTranspiler = new ProjectTranspiler(relativePath, result);
+            var projectTranspiler = new ProjectTranspiler(relativePath, result, pinnedVersion);
             projectTranspiler.TranspilerGroup = transpilerGroup;
 
             this.IntegrateNewTranspiler(projectTranspiler, dryRun);
