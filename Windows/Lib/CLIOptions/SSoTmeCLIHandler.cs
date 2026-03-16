@@ -58,6 +58,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
         private bool _hasRunRemoteToolsUpdate = false;
         internal bool skipRemoteToolsLookup = false;
+        internal bool suppressVersionLabel = false;
         private string _rawTranspilerArg = null;
         public string ResolvedVersionLabel { get; private set; } // e.g. "effortless/common/airtable-to-rulebook v2026.03.13.1534 [latest]"
         public string ResolvedVersionUrl { get; private set; }
@@ -130,7 +131,11 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     runas += ".key";
                 }
+                if (this.AICaptureProject == null)
+                    this.AICaptureProject = SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
+                var projectName = this.AICaptureProject?.Name ?? "<null>";
                 Console.WriteLine($"\nSSoTme CLI Version {this.CLI_VERSION}\n\nConfiguration for `{runas}`:");
+                Console.WriteLine($"Project: {projectName}");
                 Console.WriteLine($"Email Address: {key.EmailAddress}");
                 Console.WriteLine($"Secret: {key.Secret}");
 
@@ -1821,7 +1826,7 @@ Seed Url: ");
                 }
                 else
                 {
-                    if (!isBuildOperation && !String.IsNullOrEmpty(this.ResolvedVersionLabel))
+                    if (!isBuildOperation && !this.suppressVersionLabel && !String.IsNullOrEmpty(this.ResolvedVersionLabel))
                     {
                         Console.ForegroundColor = ConsoleColor.Blue;
                         Console.Write("cli:> ");
@@ -2149,6 +2154,7 @@ Seed Url: ");
         {
             var handler = new SSoTmeCLIHandler();
             handler.skipRemoteToolsLookup = true;
+            handler.suppressVersionLabel = true;
             handler.debug = this.debug;
             return handler;
         }
@@ -2438,7 +2444,30 @@ Seed Url: ");
                         this.SetToolUrl(this.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
                         if (this.debug) Console.WriteLine($"DEBUG: wrote {this.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
 
-                        // Invoke the transpilers tool directly — no project file needed.
+                        // Ensure a minimal ssotme.json exists in remoteToolsDir so the internal
+                        // handler has a valid project to load (avoids NullReferenceException).
+                        var remoteToolsSsotmeJson = Path.Combine(remoteToolsDir, "ssotme.json");
+                        if (!File.Exists(remoteToolsSsotmeJson))
+                        {
+                            var guid = Guid.NewGuid().ToString();
+                            File.WriteAllText(remoteToolsSsotmeJson, $@"{{
+  ""ShowHidden"": false,
+  ""ShowAllFiles"": false,
+  ""CurrentPath"": null,
+  ""SSoTmeProjectFiles"": null,
+  ""Name"": ""remote_tools"",
+  ""ProjectSettings"": [
+    {{
+      ""ProjectSettingId"": ""{guid}"",
+      ""Name"": ""project-name"",
+      ""Value"": ""remote_tools""
+    }}
+  ],
+  ""ProjectTranspilers"": []
+}}");
+                        }
+
+                        // Invoke the transpilers tool directly.
                         // CreateInternalHandler sets skipRemoteToolsLookup=true; ParseCommand will
                         // find the URL via TryGetUrlFromFileUrls (tool_urls.json) instead.
                         try
