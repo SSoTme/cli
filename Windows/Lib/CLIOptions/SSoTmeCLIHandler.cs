@@ -1948,7 +1948,7 @@ Seed Url: ");
                             projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
                             GetProjectOrThrow().Save();
                             CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
-                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to prevent this behavior.", ConsoleColor.Blue);
+                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
                         }
                     }
                     else
@@ -1967,7 +1967,7 @@ Seed Url: ");
                             projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
                             GetProjectOrThrow().Save();
                             CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
-                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to prevent this behavior.", ConsoleColor.Blue);
+                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
                         }
 
                         // -latest: update the pinned version to the resolved head version
@@ -2545,6 +2545,8 @@ Seed Url: ");
         {
             // Prevent recursive calls from internal handlers, skip for non-transpile commands, and skip empty names
             if (skipRemoteToolsLookup || IsManagementCommand || String.IsNullOrEmpty(transpilerName)) return null;
+
+            _suppressGenericToolNotFoundError = false;
 
             try
             {
@@ -3225,7 +3227,15 @@ Seed Url: ");
             {
                 CliLog.LogLine("Host not found. Retrying in 6 seconds...");
                 await System.Threading.Tasks.Task.Delay(6000);
-                response = await client.PostAsJsonAsync(postUrl, payload);
+                try
+                {
+                    response = await client.PostAsJsonAsync(postUrl, payload);
+                }
+                catch
+                {
+                    CliLog.LogLine("Tool URL could not be resolved after retrying.");
+                    return;
+                }
             }
             if (response != null)
             {
