@@ -564,7 +564,7 @@ namespace SSoTme.OST.Lib.Extensions
                     // Clean logic: Delete if AlwaysOverwrite (neverOverwrite=false) OR if content matches
                     if (!neverOverwrite || contentMatches)
                     {
-                        Console.WriteLine("SSoTme Cleaning {0}", fiToClean.FullName);
+                        CliLog.Cleaning(fiToClean.FullName);
                         if (debug)
                         {
                             if (!neverOverwrite && contentMatches)
@@ -1273,6 +1273,7 @@ namespace SSoTme.OST.Lib.Extensions
         public static event EventHandler FileWritten;
         private static void OnFileWritten(String fileName)
         {
+            CliLog.Writing(fileName);
             if (!ReferenceEquals(FileWritten, null)) FileWritten(fileName, EventArgs.Empty);
         }
 
@@ -1445,7 +1446,7 @@ namespace SSoTme.OST.Lib.Extensions
 
                                     if (!ReferenceEquals(zippedBinaryContentsNode, null))
                                     {
-                                        File.WriteAllBytes(fileInfo.FullName, data.Unzip());
+                                        WriteAllBytes(fileInfo.FullName, data.Unzip());
                                     }
                                     else if (!ReferenceEquals(zippedTextContentsNode, null))
                                     {
@@ -1454,13 +1455,14 @@ namespace SSoTme.OST.Lib.Extensions
                                         {
                                             sw.WriteLine(data.UnzipToString());
                                         }
+                                        OnFileWritten(fileInfo.FullName);
                                     }
                                     else
                                     {
                                         if (!fileInfo.Directory.Exists) fileInfo.Directory.Create();
                                         var di = new DirectoryInfo(fileInfo.FullName);
                                         if (di.Exists) throw new Exception(String.Format("Invalid filename for result file - {0} is a directory", fileInfo.FullName));
-                                        else File.WriteAllBytes(fileInfo.FullName, data);
+                                        else WriteAllBytes(fileInfo.FullName, data);
                                     }
 
                                 }
