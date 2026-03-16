@@ -131,6 +131,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     runas += ".key";
                 }
+                if (this.AICaptureProject == null)
+                    this.AICaptureProject = SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
                 var projectName = this.AICaptureProject?.Name ?? "<null>";
                 Console.WriteLine($"\nSSoTme CLI Version {this.CLI_VERSION}\n\nConfiguration for `{runas}`:");
                 Console.WriteLine($"Project: {projectName}");
