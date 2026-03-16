@@ -180,7 +180,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
 
             // Use the stored relative path to determine where files should be extracted
             string extractToDir = this.SSoTmeProject?.RootPath ?? workingDir;
-            if (!string.IsNullOrEmpty(_cleanFileSetRelativePath) && this.SSoTmeProject != null)
+            if (!string.IsNullOrEmpty(_cleanFileSetRelativePath))
             {
                 extractToDir = Path.Combine(this.SSoTmeProject.RootPath, _cleanFileSetRelativePath);
             }
