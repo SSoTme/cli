@@ -52,9 +52,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string CLI_VERSION = "2026.03.16.1054";
 
         // url to the latest version of the transpiler-lister service
-        public string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-13-1534-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-13-1534-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL
-        public string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
+        public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
         private bool _hasRunRemoteToolsUpdate = false;
         internal bool skipRemoteToolsLookup = false;
@@ -316,10 +316,10 @@ namespace SSoTme.OST.Lib.CLIOptions
                     return;
                 }
 
-                if (String.Equals(toolName, this.TRANSPILERS_LISTER_TOOL_NAME, StringComparison.OrdinalIgnoreCase))
+                if (String.Equals(toolName, SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"Warning: '{this.TRANSPILERS_LISTER_TOOL_NAME}' is an internal ssotme-managed tool. Overriding it may break remote tool resolution.");
-                    Console.WriteLine($"To restore default functionality, run: ssotme -removeUrl {this.TRANSPILERS_LISTER_TOOL_NAME}");
+                    Console.WriteLine($"Warning: '{SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}' is an internal ssotme-managed tool. Overriding it may break remote tool resolution.");
+                    Console.WriteLine($"To restore default functionality, run: ssotme -removeUrl {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}");
                 }
 
                 // Add https:// if no protocol is specified
@@ -388,10 +388,10 @@ namespace SSoTme.OST.Lib.CLIOptions
                     return;
                 }
 
-                if (String.Equals(toolName, this.TRANSPILERS_LISTER_TOOL_NAME, StringComparison.OrdinalIgnoreCase))
+                if (String.Equals(toolName, SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, StringComparison.OrdinalIgnoreCase))
                 {
-                    this.SetToolUrl(toolName, this.LATEST_TRANSPILERS_LISTER_URL);
-                    Console.WriteLine($"Tool '{toolName}' URL restored to built-in default: {this.LATEST_TRANSPILERS_LISTER_URL}");
+                    this.SetToolUrl(toolName, SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL);
+                    Console.WriteLine($"Tool '{toolName}' URL restored to built-in default: {SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL}");
                     return;
                 }
 
@@ -1060,7 +1060,7 @@ Seed Url: ");
         }
 
         // Matches the format produced by ExtractVersionFromUrl.
-        private (int, int, int, int) ParseVersionKey(string key)
+        private (int, int, int, int) ParseVersionKey(string key, bool debug)
         {
             try
             {
@@ -1075,7 +1075,13 @@ Seed Url: ");
                     return (y, mo, d, t);
                 }
             }
-            catch { }
+            catch {
+                if (debug) {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"Could not parse version: {key}");
+                    Console.ResetColor();
+                }
+            }
             return (0, 0, 0, 0);
         }
 
@@ -2207,9 +2213,9 @@ Seed Url: ");
             CliLog.LogLine("Initializing CLI tool URL index...");
 
             // Write tool_urls.json with the effective transpilers URL
-            var effectiveUrl = TryGetUrlFromFileUrls(this.TRANSPILERS_LISTER_TOOL_NAME) ?? this.LATEST_TRANSPILERS_LISTER_URL;
-            this.SetToolUrl(this.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
-            if (this.debug) Console.WriteLine($"DEBUG: wrote {this.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
+            var effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
+            this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
+            if (this.debug) Console.WriteLine($"DEBUG: wrote {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
         }
 
         private string TryGetUrlFromRemoteToolsJson(string transpilerName, string remoteToolsDir)
@@ -2296,7 +2302,7 @@ Seed Url: ");
         }
 
         private bool IsManagementCommand =>
-            this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.install ||
+            this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.uninstall ||
             this.authenticate || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide ||
             !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) ||
             !String.IsNullOrEmpty(this.removeUrl);
@@ -2348,7 +2354,7 @@ Seed Url: ");
 
             var versionEntries = versions.Properties()
                 .Select(p => new { Key = p.Name, Value = p.Value })
-                .OrderByDescending(v => ParseVersionKey(v.Key))
+                .OrderByDescending(v => ParseVersionKey(v.Key, this.debug))
                 .ToList();
 
             var overrideUrl = TryGetUrlFromFileUrls(transpilerName);
@@ -2386,7 +2392,7 @@ Seed Url: ");
             {
                 if (this.debug)
                 {
-                    var effectiveTranspilersUrl = TryGetUrlFromFileUrls(this.TRANSPILERS_LISTER_TOOL_NAME) ?? this.LATEST_TRANSPILERS_LISTER_URL;
+                    var effectiveTranspilersUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
                     Console.WriteLine($"DEBUG: Checking remote_tools for '{transpilerName}' (transpilers url: {effectiveTranspilersUrl})");
                 }
                 EnsureRemoteToolsInitialized();
@@ -2431,18 +2437,18 @@ Seed Url: ");
                         string effectiveUrl;
                         if (cachedCliVersion != this.CLI_VERSION)
                         {
-                            effectiveUrl = this.LATEST_TRANSPILERS_LISTER_URL;
+                            effectiveUrl = SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
                             if (this.debug) Console.WriteLine($"DEBUG: CLI version changed — using built-in transpilers url: {effectiveUrl}");
                         }
                         else
                         {
-                            effectiveUrl = TryGetUrlFromFileUrls(this.TRANSPILERS_LISTER_TOOL_NAME) ?? this.LATEST_TRANSPILERS_LISTER_URL;
+                            effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
                             if (this.debug) Console.WriteLine($"DEBUG: using transpilers url from tool_urls.json: {effectiveUrl}");
                         }
 
                         // Write the URL to tool_urls.json so the transpiler handler can resolve it.
-                        this.SetToolUrl(this.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
-                        if (this.debug) Console.WriteLine($"DEBUG: wrote {this.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
+                        this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
+                        if (this.debug) Console.WriteLine($"DEBUG: wrote {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
 
                         // Ensure a minimal ssotme.json exists in remoteToolsDir so the internal
                         // handler has a valid project to load (avoids NullReferenceException).
@@ -2473,7 +2479,7 @@ Seed Url: ");
                         try
                         {
                             var transpilerHandler = CreateInternalHandler();
-                            transpilerHandler.commandLine = this.TRANSPILERS_LISTER_TOOL_NAME;
+                            transpilerHandler.commandLine = SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME;
                             transpilerHandler.ParseCommand();
                             transpilerHandler.TranspileProject();
                         }
@@ -2489,6 +2495,28 @@ Seed Url: ");
                     }
 
                     if (this.debug) Console.WriteLine($"DEBUG: refresh complete, rechecking for '{transpilerName}'");
+
+                    // Check if a newer CLI version is available from the freshly-written index
+                    try
+                    {
+                        var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+                        if (File.Exists(toolsJsonPath))
+                        {
+                            var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
+                            var latestName = root["latestCliVersion"]?["name"]?.Value<string>();
+                            if (!String.IsNullOrEmpty(latestName))
+                            {
+                                var latestVersion = latestName.TrimStart('v');
+                                if (!String.Equals(latestVersion, this.CLI_VERSION, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    CliLog.LogLine($"A new version of ssotme is available: {latestName} (current: v{this.CLI_VERSION})");
+                                    CliLog.LogLine($"Download: https://github.com/SSoTme/cli/releases/tag/{latestName}");
+                                }
+                            }
+                        }
+                    }
+                    catch { /* version check is best-effort */ }
+
                     url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir);
                     if (this.debug)
                     {

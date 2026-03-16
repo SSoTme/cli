@@ -772,7 +772,8 @@ namespace SSoTme.OST.Lib.DataClasses
             // Find and remove matching transpilers
             var transpilersToRemove = this.ProjectTranspilers
                 .Where(pt =>
-                    String.Equals(pt.Name, transpilerName, StringComparison.OrdinalIgnoreCase) &&
+                    (String.Equals(pt.Name, transpilerName, StringComparison.OrdinalIgnoreCase) ||
+                     String.Equals(pt.CommandLine?.Split(' ').FirstOrDefault(), transpilerName, StringComparison.OrdinalIgnoreCase)) &&
                     String.Equals(pt.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase) &&
                     (String.IsNullOrEmpty(transpilerGroup) || String.Equals(pt.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase)))
                 .ToList(); // Materialize to avoid collection modification issues
