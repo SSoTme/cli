@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.16.1734";
+        public string CLI_VERSION = "2026.03.17.1426";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-16-1507-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-17-1422-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
@@ -2204,11 +2204,138 @@ Seed Url: ");
             return Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "remote_tools");
         }
 
+        /// <summary>
+        /// Runs the remote tools refresh: fetches the latest tool index from the server,
+        /// persists update_available.json, and writes the cli_version marker.
+        /// Called from CheckForUpdateNotice (on CLI version change) and TryGetUrlFromRemoteTools
+        /// (when a tool is not found in the cached index).
+        /// </summary>
+        private void RunRemoteToolsRefresh(string remoteToolsDir, string cliVersionPath, string cachedCliVersion)
+        {
+            if (this.debug) Console.WriteLine($"DEBUG: running remote tools refresh (cached={cachedCliVersion ?? "none"}, current={this.CLI_VERSION})");
+            _hasRunRemoteToolsUpdate = true;
+            File.WriteAllText(cliVersionPath, this.CLI_VERSION);
+            if (this.debug) Console.WriteLine($"DEBUG: wrote cli_version {this.CLI_VERSION} to {cliVersionPath}");
+
+            var savedDir = Environment.CurrentDirectory;
+            try
+            {
+                Environment.CurrentDirectory = remoteToolsDir;
+
+                // Determine the effective transpilers URL: on version change use the built-in default,
+                // otherwise prefer whatever is in tool_urls.json.
+                string effectiveUrl;
+                if (cachedCliVersion != this.CLI_VERSION)
+                {
+                    effectiveUrl = SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
+                    if (this.debug) Console.WriteLine($"DEBUG: CLI version changed — using built-in transpilers url: {effectiveUrl}");
+                }
+                else
+                {
+                    effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
+                    if (this.debug) Console.WriteLine($"DEBUG: using transpilers url from tool_urls.json: {effectiveUrl}");
+                }
+
+                // Write the URL to tool_urls.json so the transpiler handler can resolve it.
+                this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
+                if (this.debug) Console.WriteLine($"DEBUG: wrote {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
+
+                // Ensure a minimal ssotme.json exists in remoteToolsDir so the internal
+                // handler has a valid project to load (avoids NullReferenceException).
+                var remoteToolsSsotmeJson = Path.Combine(remoteToolsDir, "ssotme.json");
+                if (!File.Exists(remoteToolsSsotmeJson))
+                {
+                    var guid = Guid.NewGuid().ToString();
+                    File.WriteAllText(remoteToolsSsotmeJson, $@"{{
+  ""ShowHidden"": false,
+  ""ShowAllFiles"": false,
+  ""CurrentPath"": null,
+  ""SSoTmeProjectFiles"": null,
+  ""Name"": ""remote_tools"",
+  ""ProjectSettings"": [
+    {{
+      ""ProjectSettingId"": ""{guid}"",
+      ""Name"": ""project-name"",
+      ""Value"": ""remote_tools""
+    }}
+  ],
+  ""ProjectTranspilers"": []
+}}");
+                }
+
+                // Invoke the transpilers tool directly.
+                // CreateInternalHandler sets skipRemoteToolsLookup=true; ParseCommand will
+                // find the URL via TryGetUrlFromFileUrls (tool_urls.json) instead.
+                bool RunRefresh()
+                {
+                    var transpilerHandler = CreateInternalHandler();
+                    transpilerHandler.commandLine = $"{SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME} -p cli_version={this.CLI_VERSION}";
+                    transpilerHandler.ParseCommand();
+                    transpilerHandler.TranspileProject();
+
+                    // Check if the server flagged a CLI update and persist it
+                    var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+                    var updateAvailablePath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "update_available.json");
+                    if (File.Exists(toolsJsonPath))
+                    {
+                        try
+                        {
+                            var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
+                            var updateAvailable = root["cliUpdateAvailable"];
+                            if (updateAvailable != null && !String.IsNullOrEmpty(updateAvailable["name"]?.Value<string>()))
+                                File.WriteAllText(updateAvailablePath, updateAvailable.ToString());
+                            else if (File.Exists(updateAvailablePath))
+                                File.Delete(updateAvailablePath);
+                        }
+                        catch { /* best-effort */ }
+                    }
+                    return true;
+                }
+
+                try
+                {
+                    RunRefresh();
+                }
+                catch (Exception refreshEx) when (refreshEx.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
+                                                   || refreshEx.Message.Contains("No such host"))
+                {
+                    CliLog.LogLine("Host not found. Retrying in 6 seconds...");
+                    System.Threading.Thread.Sleep(6000);
+                    try { RunRefresh(); }
+                    catch (Exception retryEx)
+                    {
+                        Console.WriteLine($"Warning: Could not refresh remote tool list ({retryEx.Message}). Falling back to RabbitMQ proxy.");
+                        if (this.debug) Console.WriteLine($"DEBUG: refresh retry exception: {retryEx}");
+                    }
+                }
+                catch (Exception refreshEx)
+                {
+                    Console.WriteLine($"Warning: Could not refresh remote tool list ({refreshEx.Message}). Falling back to RabbitMQ proxy.");
+                    if (this.debug) Console.WriteLine($"DEBUG: refresh exception: {refreshEx}");
+                }
+            }
+            finally
+            {
+                Environment.CurrentDirectory = savedDir;
+            }
+        }
+
         private void CheckForUpdateNotice()
         {
             if (Environment.GetEnvironmentVariable("SSOTME_CHILD_PROCESS") == "1") return;
             try
             {
+                // If the CLI version has changed since the last remote tools refresh,
+                // force a refresh so that update_available.json reflects the current state.
+                var remoteToolsDir = GetRemoteToolsDir();
+                var cliVersionPath = Path.Combine(remoteToolsDir, "cli_version");
+                var cachedCliVersion = File.Exists(cliVersionPath) ? File.ReadAllText(cliVersionPath).Trim() : null;
+                if (cachedCliVersion != this.CLI_VERSION && Directory.Exists(remoteToolsDir))
+                {
+                    EnsureRemoteToolsInitialized();
+                    RunRemoteToolsRefresh(remoteToolsDir, cliVersionPath, cachedCliVersion);
+                }
+
                 var updateAvailablePath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "update_available.json");
                 if (!File.Exists(updateAvailablePath)) return;
                 var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(updateAvailablePath));
@@ -2587,111 +2714,7 @@ Seed Url: ");
                 {
                     if (this.debug) Console.WriteLine($"DEBUG: no match in cached index for '{transpilerName}', refreshing remote tools...");
                     CliLog.LogLine("Refreshing CLI tool URL index...");
-                    _hasRunRemoteToolsUpdate = true;
-                    File.WriteAllText(cliVersionPath, this.CLI_VERSION);
-                    if (this.debug) Console.WriteLine($"DEBUG: wrote cli_version {this.CLI_VERSION} to {cliVersionPath}");
-
-                    var savedDir = Environment.CurrentDirectory;
-                    try
-                    {
-                        Environment.CurrentDirectory = remoteToolsDir;
-
-                        // Determine the effective transpilers URL: on version change use the built-in default,
-                        // otherwise prefer whatever is in tool_urls.json.
-                        string effectiveUrl;
-                        if (cachedCliVersion != this.CLI_VERSION)
-                        {
-                            effectiveUrl = SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
-                            if (this.debug) Console.WriteLine($"DEBUG: CLI version changed — using built-in transpilers url: {effectiveUrl}");
-                        }
-                        else
-                        {
-                            effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
-                            if (this.debug) Console.WriteLine($"DEBUG: using transpilers url from tool_urls.json: {effectiveUrl}");
-                        }
-
-                        // Write the URL to tool_urls.json so the transpiler handler can resolve it.
-                        this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
-                        if (this.debug) Console.WriteLine($"DEBUG: wrote {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
-
-                        // Ensure a minimal ssotme.json exists in remoteToolsDir so the internal
-                        // handler has a valid project to load (avoids NullReferenceException).
-                        var remoteToolsSsotmeJson = Path.Combine(remoteToolsDir, "ssotme.json");
-                        if (!File.Exists(remoteToolsSsotmeJson))
-                        {
-                            var guid = Guid.NewGuid().ToString();
-                            File.WriteAllText(remoteToolsSsotmeJson, $@"{{
-  ""ShowHidden"": false,
-  ""ShowAllFiles"": false,
-  ""CurrentPath"": null,
-  ""SSoTmeProjectFiles"": null,
-  ""Name"": ""remote_tools"",
-  ""ProjectSettings"": [
-    {{
-      ""ProjectSettingId"": ""{guid}"",
-      ""Name"": ""project-name"",
-      ""Value"": ""remote_tools""
-    }}
-  ],
-  ""ProjectTranspilers"": []
-}}");
-                        }
-
-                        // Invoke the transpilers tool directly.
-                        // CreateInternalHandler sets skipRemoteToolsLookup=true; ParseCommand will
-                        // find the URL via TryGetUrlFromFileUrls (tool_urls.json) instead.
-                        bool RunRefresh()
-                        {
-                            var transpilerHandler = CreateInternalHandler();
-                            transpilerHandler.commandLine = $"{SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME} -p cli_version={this.CLI_VERSION}";
-                            transpilerHandler.ParseCommand();
-                            transpilerHandler.TranspileProject();
-
-                            // Check if the server flagged a CLI update and persist it
-                            var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
-                            var updateAvailablePath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "update_available.json");
-                            if (File.Exists(toolsJsonPath))
-                            {
-                                try
-                                {
-                                    var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
-                                    var updateAvailable = root["cliUpdateAvailable"];
-                                    if (updateAvailable != null && !String.IsNullOrEmpty(updateAvailable["name"]?.Value<string>()))
-                                        File.WriteAllText(updateAvailablePath, updateAvailable.ToString());
-                                    else if (File.Exists(updateAvailablePath))
-                                        File.Delete(updateAvailablePath);
-                                }
-                                catch { /* best-effort */ }
-                            }
-                            return true;
-                        }
-
-                        try
-                        {
-                            RunRefresh();
-                        }
-                        catch (Exception refreshEx) when (refreshEx.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
-                                                       || refreshEx.Message.Contains("No such host"))
-                        {
-                            CliLog.LogLine("Host not found. Retrying in 6 seconds...");
-                            System.Threading.Thread.Sleep(6000);
-                            try { RunRefresh(); }
-                            catch (Exception retryEx)
-                            {
-                                Console.WriteLine($"Warning: Could not refresh remote tool list ({retryEx.Message}). Falling back to RabbitMQ proxy.");
-                                if (this.debug) Console.WriteLine($"DEBUG: refresh retry exception: {retryEx}");
-                            }
-                        }
-                        catch (Exception refreshEx)
-                        {
-                            Console.WriteLine($"Warning: Could not refresh remote tool list ({refreshEx.Message}). Falling back to RabbitMQ proxy.");
-                            if (this.debug) Console.WriteLine($"DEBUG: refresh exception: {refreshEx}");
-                        }
-                    }
-                    finally
-                    {
-                        Environment.CurrentDirectory = savedDir;
-                    }
+                    RunRemoteToolsRefresh(remoteToolsDir, cliVersionPath, cachedCliVersion);
 
                     if (this.debug) Console.WriteLine($"DEBUG: refresh complete, rechecking for '{transpilerName}'");
 
