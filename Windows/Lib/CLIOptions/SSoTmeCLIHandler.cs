@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.17.1426";
+        public string CLI_VERSION = "2026.03.18.1250";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-17-1422-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-18-1249-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
@@ -857,7 +857,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     // Formatting for ROOT seeds
                     Console.ForegroundColor = ConsoleColor.Green; // Header in green
                     Console.WriteLine(@"Public ssot.me ROOT starter seeds.
-These seeds are designed to connect to a specific data source, 
+These seeds are designed to connect to a specific data source,
 such as Airtable, MySQL, Postgress, GSheets, etc...
 
 They typically include the schema, role based permissions,
@@ -876,7 +876,7 @@ roles, etc (if appropriate).
                 Console.WriteLine(@"
 Go to https://github.com/ssotme for a current list of public Seeds available.
 
-Syntax: 
+Syntax:
      > ssotme -cloneseed https://github.com/ssotme/root-seed-mysql [seed-directory]\n\n\n");
                 Console.ResetColor();
             }
@@ -1283,7 +1283,7 @@ Seed Url: ");
                 {
                     confidenceString = " POTENTIAL ";
                 }
-  
+
                 // Always show matched transpiler info
                 if (string.IsNullOrEmpty(latestVersionInfo.TranspilerName))
                 {
@@ -1293,7 +1293,7 @@ Seed Url: ");
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"  FOUND{confidenceString}MATCH: {latestVersionInfo.TranspilerName}/{latestVersionInfo.Version} (URL {latestVersionInfo.POSTUrl})");
                 Console.ForegroundColor = ConsoleColor.Gray;
-                
+
                 // Step 4: Compare versions and URLs
                 bool versionMatches = extractedVersion == latestVersionInfo.Version;
                 bool urlMatches = currentUrl.Equals(latestVersionInfo.POSTUrl, StringComparison.OrdinalIgnoreCase);
@@ -1466,7 +1466,7 @@ Seed Url: ");
                 case "clone":
                     this.cloneSeed = true;
                     break;
-                
+
                 case "dryRun":
                     this.dryRun = true;
                     break;
@@ -1586,7 +1586,7 @@ Seed Url: ");
                 else if (this.localGuide)
                 {
                     var effortlessAPIService = new MyEffortlessAPIService();
-                    
+
                     // Get project name from transpiler argument or current directory
                     string projectName = this.transpiler;
                     if (string.IsNullOrEmpty(projectName))
@@ -1595,7 +1595,7 @@ Seed Url: ");
                         projectName = Path.GetFileName(Environment.CurrentDirectory);
                         Console.WriteLine($"No project name specified, using current directory: {projectName}");
                     }
-                    
+
                     effortlessAPIService.HandleLocalGuide(projectName).Wait();
                     this.SuppressTranspile = true;
                     return 0;
@@ -2282,7 +2282,7 @@ Seed Url: ");
                         {
                             var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
                             var updateAvailable = root["cliUpdateAvailable"];
-                            if (updateAvailable != null && !String.IsNullOrEmpty(updateAvailable["name"]?.Value<string>()))
+                            if (updateAvailable != null && updateAvailable.Type != Newtonsoft.Json.Linq.JTokenType.Null && !String.IsNullOrEmpty(updateAvailable["name"]?.Value<string>()))
                                 File.WriteAllText(updateAvailablePath, updateAvailable.ToString());
                             else if (File.Exists(updateAvailablePath))
                                 File.Delete(updateAvailablePath);
@@ -2348,10 +2348,12 @@ Seed Url: ");
                     : (RuntimeInformation.ProcessArchitecture == Architecture.Arm64
                         ? links?["windowsArm"]?.Value<string>()
                         : links?["windows"]?.Value<string>());
-                if (String.Equals(versionName?.TrimStart('v'), this.CLI_VERSION, StringComparison.OrdinalIgnoreCase))
-                    File.Delete(updateAvailablePath);
-                else if (!String.IsNullOrEmpty(installLink))
+                var advertisedVersion = ParseVersionKey(versionName ?? "", false);
+                var currentVersion = ParseVersionKey(this.CLI_VERSION, false);
+                if (advertisedVersion.CompareTo(currentVersion) > 0 && !String.IsNullOrEmpty(installLink))
                     CliLog.LogLine($"A new version of ssotme is available: {versionName}  Download: {installLink}");
+                else
+                    File.Delete(updateAvailablePath);
             }
             catch { /* best-effort */ }
         }
@@ -3111,7 +3113,7 @@ Seed Url: ");
             if (payload.Transpiler == null)
             {
                 payload.Transpiler = new Transpiler();
-                
+
                 // Set a name based on the transpiler string if available
                 if (!string.IsNullOrEmpty(this.transpiler))
                 {
@@ -3127,11 +3129,11 @@ Seed Url: ");
 
         private async void AccountHolder_ReplyTo(object sender, SassyMQ.Lib.RabbitMQ.PayloadEventArgs<SSOTMEPayload> e)
         {
-            // Console.WriteLine("DirectMessageQueue: {0},  Exchange: {1}, LexiconTerm: {2}, RoutingKey: {3}, SenderId: {4}", 
+            // Console.WriteLine("DirectMessageQueue: {0},  Exchange: {1}, LexiconTerm: {2}, RoutingKey: {3}, SenderId: {4}",
             //     e.Payload.DirectMessageQueue, e.Payload.Exchange, e.Payload.LexiconTerm, e.Payload.RoutingKey, e.Payload.SenderId);
             var payload = AccountHolder.CreatePayload();
             payload.SaveCLIOptions(this);
-            
+
             if (e.Payload.IsLexiconTerm(LexiconTermEnum.accountholder_ping_ssotmecoordinator))
             {
                 if (!String.IsNullOrEmpty(this.targetUrl) )
