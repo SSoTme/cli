@@ -35,16 +35,28 @@ namespace SSoTme.OST.Core.Lib.External
 
         public void InitFromHomeFile(string runAs = "")
         {
+            _baseUrl = "https://api.baserow.io/api";
+
+            // Priority 1: Check ssotme.env (project-level)
+            var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
+            var envUsername = envFile?.GetValue("BASEROW_USERNAME");
+            var envPassword = envFile?.GetValue("BASEROW_PASSWORD");
+            if (!string.IsNullOrEmpty(envUsername) && !string.IsNullOrEmpty(envPassword))
+            {
+                _username = envUsername;
+                _password = envPassword;
+                return;
+            }
+
+            // Priority 2: Fall back to ~/.ssotme/ssotme.key
             var key = SSOTMEKey.GetSSoTmeKey(runAs);
             if (!key.APIKeys.ContainsKey("baserow"))
             {
-                throw new NoStackException("Baserow credentials not found. Run: ssotme -setAccountAPIKey=baserow/username/password");
+                throw new NoStackException("Baserow credentials not found. Add BASEROW_USERNAME/BASEROW_PASSWORD to ssotme.env or run: ssotme -setAccountAPIKey=baserow/username/password");
             }
 
             var baserowConfigJson = key.APIKeys["baserow"];
             var baserowConfig = JsonConvert.DeserializeObject<dynamic>(baserowConfigJson);
-            
-            _baseUrl = "https://api.baserow.io/api";
             _username = baserowConfig.username;
             _password = baserowConfig.password;
         }
