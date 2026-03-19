@@ -95,6 +95,21 @@ class Installer:
         print(f"Package version is '{version}'")
         return version
 
+    def get_transpiler_lister_url(self):
+        print("Fetching transpiler lister URL from package.json")
+        try:
+            with open("package.json") as f:
+                j = json.loads(f.read())
+                url = j.get("transpiler_lister_url")
+                if url:
+                    print(f"Transpiler lister URL is '{url}'")
+                    return url
+                else:
+                    print("No transpiler_lister_url found in package.json")
+        except Exception as e:
+            print(f"Error reading transpiler_lister_url: {type(e).__name__}: {str(e)}")
+        return None
+
     def get_supported_dotnet_version(self):
         print("Fetching supported dotnet version from package.json")
         version = self.BASE_SUPPORTED_DOTNET
@@ -341,8 +356,8 @@ class Installer:
             # save dotnet info json
             self.save_dotnet_info(supported_version)
 
-            # change cli version in cs file so `ssotme -version` works
-            print("Updating CLI version in the CLI handler...")
+            # change cli version and transpiler lister url in cs file
+            print("Updating CLI version and transpiler lister URL in the CLI handler...")
             try:
                 fp = self.get_cli_handler_path()
                 with open(fp, "r") as f:
@@ -350,13 +365,19 @@ class Installer:
 
                 pattern = r'public string CLI_VERSION = ".*?";'
                 replacement = f'public string CLI_VERSION = "{self.get_package_version()}";'
-
                 new_contents = re.sub(pattern, replacement, contents)
+
+                transpiler_lister_url = self.get_transpiler_lister_url()
+                if transpiler_lister_url:
+                    pattern = r'public static readonly string LATEST_TRANSPILERS_LISTER_URL = ".*?";'
+                    replacement = f'public static readonly string LATEST_TRANSPILERS_LISTER_URL = "{transpiler_lister_url}";'
+                    new_contents = re.sub(pattern, replacement, new_contents)
+                    print(f"Transpiler lister URL set to '{transpiler_lister_url}'")
 
                 with open(fp, "w") as f:
                     f.write(new_contents)
 
-                print("CLI version updated successfully.")
+                print("CLI handler updated successfully.")
             except Exception:
                 print("WARNING: Failed to get CLI handler path to update version - CLI may print incorrect version")
 
