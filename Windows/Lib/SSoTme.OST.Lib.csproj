@@ -439,6 +439,7 @@
     <Compile Include="SassySDK\SSOTMEPayload.cs" />
     <Compile Include="Transpilers\IHandlerFactory.cs" />
     <Compile Include="Auth\SSOTMEKey.cs" />
+    <Compile Include="Auth\SsotmeEnvFile.cs" />
     <Compile Include="Transpilers\BaseHandler.cs" />
     <Compile Include="Transpilers\SimpleHtmlPage.cs" />
   </ItemGroup>

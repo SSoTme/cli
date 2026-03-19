@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.19.1514";
+        public string CLI_VERSION = "2026.03.19.1557";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -730,7 +730,22 @@ namespace SSoTme.OST.Lib.CLIOptions
                             Console.WriteLine($"DEBUG: Account is set to '{this.account}', looking up API key...");
                         }
 
-                        if (key.APIKeys.ContainsKey(this.account))
+                        // Priority 1: Check ssotme.env (project-level)
+                        var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
+                        var envApiKey = envFile?.GetAccountKey(this.account);
+
+                        if (!String.IsNullOrEmpty(envApiKey))
+                        {
+                            if (this.debug)
+                            {
+                                Console.WriteLine($"DEBUG: Adding apiKey parameter from ssotme.env for account '{this.account}'");
+                            }
+                            // Remove any apiKey already set by ProjectSettings so env file takes priority
+                            this.parameters.RemoveAll(p => p.StartsWith("apiKey=", StringComparison.OrdinalIgnoreCase) || p.StartsWith("apikey=", StringComparison.OrdinalIgnoreCase));
+                            this.parameters.Add(String.Format("apiKey={0}", envApiKey));
+                        }
+                        // Priority 2: Fall back to ~/.ssotme/ssotme.key
+                        else if (key.APIKeys.ContainsKey(this.account))
                         {
                             var apiKeyValue = key.APIKeys[this.account];
 
@@ -746,6 +761,8 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 Console.WriteLine($"DEBUG: Adding apiKey parameter from account '{this.account}'");
                             }
 
+                            // Remove any apiKey already set by ProjectSettings so account key takes priority
+                            this.parameters.RemoveAll(p => p.StartsWith("apiKey=", StringComparison.OrdinalIgnoreCase) || p.StartsWith("apikey=", StringComparison.OrdinalIgnoreCase));
                             this.parameters.Add(String.Format("apiKey={0}", apiKeyValue));
                         }
                         else

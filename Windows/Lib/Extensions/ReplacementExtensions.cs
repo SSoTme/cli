@@ -481,12 +481,20 @@ namespace SSoTme.OST.Core.Lib.Extensions
 
         private static async Task<JObject> GetAirtableSchemaFromBaseId(string baseId)
         {
-            // Retrieve the API key for Airtable
-            var keyValuePair = SSOTMEKey.CurrentKey?.APIKeys.FirstOrDefault(fod => fod.Key == "airtable");
-            var pat = keyValuePair?.Value;
+            // Priority 1: Check ssotme.env (project-level)
+            var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
+            var pat = envFile?.GetAirtableKey();
+
+            // Priority 2: Fall back to ~/.ssotme/ssotme.key
             if (string.IsNullOrEmpty(pat))
             {
-                Console.WriteLine("Airtable API key is missing.");
+                var keyValuePair = SSOTMEKey.CurrentKey?.APIKeys.FirstOrDefault(fod => fod.Key == "airtable");
+                pat = keyValuePair?.Value;
+            }
+
+            if (string.IsNullOrEmpty(pat))
+            {
+                Console.WriteLine("Airtable API key is missing. Add AIRTABLE_PAT to ssotme.env or run: ssotme -setAccountAPIKey=airtable/YOUR_PAT");
                 return null;
             }
 

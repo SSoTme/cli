@@ -197,6 +197,27 @@ namespace SSoTme.OST.Lib.DataClasses
                 newProject.Save();
             }
 
+            // Create ssotme.env template for project-level credentials
+            var envFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "ssotme.env"));
+            if (!envFI.Exists)
+            {
+                var envTemplate = @"# Add this file to your .gitignore and use it to store any credentials ssotme needs to connect to external services
+# You can use the -account xxx parameter when running a tool to inject that
+# service's credentials into the command; for example
+#
+# AIRTABLE_PAT=xyz
+# ssotme airtable-to-rulebook -account airtable
+#
+# or, for services that need a username and password:
+#
+# BASEROW_USERNAME=...
+# BASEROW_PASSWORD=...
+#
+# ssotme baserow-to-rulebook -account baserow
+";
+                File.WriteAllText(envFI.FullName, envTemplate);
+            }
+
             var ssotFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "SSoT", "single-source-of-truth.json"));
             if (!ssotFI.Directory.Exists) ssotFI.Directory.Create();
             if (!ssotFI.Exists) File.WriteAllText(ssotFI.FullName, $"{{\"project\":\n  {{\n    \"name\":\"{projectName}\"\n  }}\n}}");
@@ -214,9 +235,18 @@ namespace SSoTme.OST.Lib.DataClasses
 /SSoT/__patch.json
 /**/.vs/**/*
 /**/node_modules/**/*
-/**/.vscode/**/*";
+/**/.vscode/**/*
+ssotme.env";
 
                 File.WriteAllText(fi.FullName, gitIgnore);
+            }
+            else
+            {
+                var content = File.ReadAllText(fi.FullName);
+                if (!content.Contains("ssotme.env"))
+                {
+                    File.AppendAllText(fi.FullName, "\nssotme.env\n");
+                }
             }
         }
 
