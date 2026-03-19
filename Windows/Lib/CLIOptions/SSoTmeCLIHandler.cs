@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.18.1250";
+        public string CLI_VERSION = "2026.03.19.1346";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-transpilers-v2026-03-18-1249-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1347-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
@@ -2690,14 +2690,33 @@ Seed Url: ");
                 // If the CLI version has changed since the last refresh, bust the cache
                 var cliVersionPath = Path.Combine(remoteToolsDir, "cli_version");
                 var cachedCliVersion = File.Exists(cliVersionPath) ? File.ReadAllText(cliVersionPath).Trim() : null;
+                // Check if the cached tools index is empty (e.g. from a failed prior refresh)
+                var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
+                bool indexIsEmpty = false;
+                if (File.Exists(toolsJsonPath))
+                {
+                    try
+                    {
+                        var root = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(toolsJsonPath));
+                        var transpilers = (root["transpilerVersions"] ?? root["transpilers"]) as Newtonsoft.Json.Linq.JObject;
+                        indexIsEmpty = transpilers == null || !transpilers.HasValues;
+                    }
+                    catch { indexIsEmpty = true; }
+                }
+
                 if (cachedCliVersion != this.CLI_VERSION)
                 {
                     if (this.debug) Console.WriteLine($"DEBUG: CLI version changed ({cachedCliVersion ?? "none"} → {this.CLI_VERSION}), forcing remote tools refresh");
                     _hasRunRemoteToolsUpdate = false;
                 }
+                else if (indexIsEmpty)
+                {
+                    if (this.debug) Console.WriteLine($"DEBUG: ssotme-tools.json is empty, forcing remote tools refresh");
+                    _hasRunRemoteToolsUpdate = false;
+                }
                 else
                 {
-                    // Index is current — no refresh needed regardless of whether this tool is in it
+                    // Index is current and non-empty — no refresh needed regardless of whether this tool is in it
                     _hasRunRemoteToolsUpdate = true;
                 }
 
