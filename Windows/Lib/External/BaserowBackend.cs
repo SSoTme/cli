@@ -39,11 +39,12 @@ namespace SSoTme.OST.Core.Lib.External
 
             // Priority 1: Check ssotme.env (project-level)
             var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
-            var creds = envFile?.GetBaserowCredentials();
-            if (creds != null)
+            var envUsername = envFile?.GetValue("BASEROW_USERNAME");
+            var envPassword = envFile?.GetValue("BASEROW_PASSWORD");
+            if (!string.IsNullOrEmpty(envUsername) && !string.IsNullOrEmpty(envPassword))
             {
-                _username = creds.Item1;
-                _password = creds.Item2;
+                _username = envUsername;
+                _password = envPassword;
                 return;
             }
 

@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.19.1557";
+        public string CLI_VERSION = "2026.03.19.1629";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -731,21 +731,23 @@ namespace SSoTme.OST.Lib.CLIOptions
                         }
 
                         // Priority 1: Check ssotme.env (project-level)
-                        var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
-                        var envApiKey = envFile?.GetAccountKey(this.account);
+                        var envFile = SsotmeEnvFile.TryLoadFromNearestProject(this.debug);
+                        var envParams = envFile?.ResolveAccountParams(this.account) ?? new Dictionary<string, string>();
 
-                        if (!String.IsNullOrEmpty(envApiKey))
+                        foreach (var envParam in envParams)
                         {
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: Adding apiKey parameter from ssotme.env for account '{this.account}'");
+                                Console.WriteLine($"DEBUG: Adding {envParam.Key} parameter from ssotme.env for account '{this.account}'");
                             }
-                            // Remove any apiKey already set by ProjectSettings so env file takes priority
-                            this.parameters.RemoveAll(p => p.StartsWith("apiKey=", StringComparison.OrdinalIgnoreCase) || p.StartsWith("apikey=", StringComparison.OrdinalIgnoreCase));
-                            this.parameters.Add(String.Format("apiKey={0}", envApiKey));
+                            // Remove any matching param already set by ProjectSettings so env file takes priority
+                            var paramPrefix = envParam.Key + "=";
+                            this.parameters.RemoveAll(p => p.StartsWith(paramPrefix, StringComparison.OrdinalIgnoreCase));
+                            this.parameters.Add(String.Format("{0}={1}", envParam.Key, envParam.Value));
                         }
-                        // Priority 2: Fall back to ~/.ssotme/ssotme.key
-                        else if (key.APIKeys.ContainsKey(this.account))
+
+                        // Priority 2: Fall back to ~/.ssotme/ssotme.key for apiKey if not already resolved from env
+                        if (!envParams.ContainsKey("apiKey") && key.APIKeys.ContainsKey(this.account))
                         {
                             var apiKeyValue = key.APIKeys[this.account];
 
@@ -758,18 +760,18 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: Adding apiKey parameter from account '{this.account}'");
+                                Console.WriteLine($"DEBUG: Adding apiKey parameter from ~/.ssotme/ssotme.key for account '{this.account}'");
                             }
 
                             // Remove any apiKey already set by ProjectSettings so account key takes priority
-                            this.parameters.RemoveAll(p => p.StartsWith("apiKey=", StringComparison.OrdinalIgnoreCase) || p.StartsWith("apikey=", StringComparison.OrdinalIgnoreCase));
+                            this.parameters.RemoveAll(p => p.StartsWith("apiKey=", StringComparison.OrdinalIgnoreCase));
                             this.parameters.Add(String.Format("apiKey={0}", apiKeyValue));
                         }
-                        else
+                        else if (!envParams.ContainsKey("apiKey"))
                         {
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: No API key found for account '{this.account}'");
+                                Console.WriteLine($"DEBUG: No apiKey found for account '{this.account}' in ssotme.env or ssotme.key");
                             }
                         }
                     }

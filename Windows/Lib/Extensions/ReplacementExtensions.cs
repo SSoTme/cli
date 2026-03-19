@@ -483,7 +483,7 @@ namespace SSoTme.OST.Core.Lib.Extensions
         {
             // Priority 1: Check ssotme.env (project-level)
             var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
-            var pat = envFile?.GetAirtableKey();
+            var pat = envFile?.GetValue("AIRTABLE_PAT") ?? envFile?.GetValue("AIRTABLE_API_KEY");
 
             // Priority 2: Fall back to ~/.ssotme/ssotme.key
             if (string.IsNullOrEmpty(pat))

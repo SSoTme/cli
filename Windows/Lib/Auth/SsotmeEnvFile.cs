@@ -9,15 +9,33 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
     {
         private Dictionary<string, string> _values;
 
-        private SsotmeEnvFile(Dictionary<string, string> values)
+        // Maps a case-exact parameter name to case-insensitive env suffixes.
+        // When -account xxx is used, looks for {ACCOUNT}_{suffix} in the env file
+        // and injects as {paramName}={value} into the CLI parameters.
+        private static readonly Dictionary<string, string[]> ParamSuffixMap = new Dictionary<string, string[]>
+        {
+            { "apiKey",   new[] { "pat", "api_key", "apikey", "key" } },
+            { "baseId",   new[] { "baseid", "base_id" } },
+        };
+
+        private bool _debug;
+
+        private SsotmeEnvFile(Dictionary<string, string> values, bool debug = false)
         {
             _values = values;
+            _debug = debug;
         }
 
-        public static SsotmeEnvFile LoadFrom(string projectRootPath)
+        public static SsotmeEnvFile LoadFrom(string projectRootPath, bool debug = false)
         {
             var envPath = Path.Combine(projectRootPath, "ssotme.env");
-            if (!File.Exists(envPath)) return null;
+            if (!File.Exists(envPath))
+            {
+                if (debug) Console.WriteLine($"DEBUG: No ssotme.env found at {envPath}");
+                return null;
+            }
+
+            if (debug) Console.WriteLine($"DEBUG: Loading ssotme.env from {envPath}");
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var line in File.ReadAllLines(envPath))
@@ -39,13 +57,15 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
                     value = value.Substring(1, value.Length - 2);
                 }
 
+                if (debug) Console.WriteLine($"DEBUG: ssotme.env entry: {key}=<{value.Length} chars>");
                 values[key] = value;
             }
 
-            return new SsotmeEnvFile(values);
+            if (debug) Console.WriteLine($"DEBUG: Loaded {values.Count} entries from ssotme.env");
+            return new SsotmeEnvFile(values, debug);
         }
 
-        public static SsotmeEnvFile TryLoadFromNearestProject()
+        public static SsotmeEnvFile TryLoadFromNearestProject(bool debug = false)
         {
             try
             {
@@ -55,7 +75,7 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
                     if (File.Exists(Path.Combine(dir.FullName, "ssotme.json")) ||
                         File.Exists(Path.Combine(dir.FullName, "aicapture.json")))
                     {
-                        return LoadFrom(dir.FullName);
+                        return LoadFrom(dir.FullName, debug);
                     }
                     dir = dir.Parent;
                 }
@@ -64,6 +84,7 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
             {
                 // If current directory is invalid or inaccessible, return null
             }
+            if (debug) Console.WriteLine("DEBUG: No ssotme project found when searching for ssotme.env");
             return null;
         }
 
@@ -78,25 +99,41 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
             return _values.ContainsKey(key);
         }
 
-        public string GetAirtableKey()
+        /// <summary>
+        /// Resolves all matching env entries for a given account name using ParamSuffixMap.
+        /// For each mapping {paramName -> [suffixes]}, looks for {account}_{suffix} in the env file.
+        /// Returns a dictionary of paramName -> value for all matches found.
+        /// </summary>
+        public Dictionary<string, string> ResolveAccountParams(string accountName)
         {
-            return GetValue("AIRTABLE_PAT") ?? GetValue("AIRTABLE_API_KEY");
-        }
+            var result = new Dictionary<string, string>();
+            if (string.IsNullOrEmpty(accountName)) return result;
 
-        public Tuple<string, string> GetBaserowCredentials()
-        {
-            var username = GetValue("BASEROW_USERNAME");
-            var password = GetValue("BASEROW_PASSWORD");
-            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
-                return Tuple.Create(username, password);
-            return null;
-        }
+            if (_debug) Console.WriteLine($"DEBUG: Resolving env params for account '{accountName}'");
 
-        public string GetAccountKey(string accountName)
-        {
-            if (string.IsNullOrEmpty(accountName)) return null;
-            var name = accountName.ToUpperInvariant();
-            return GetValue(name + "_PAT") ?? GetValue(name + "_API_KEY");
+            foreach (var mapping in ParamSuffixMap)
+            {
+                var paramName = mapping.Key;
+                foreach (var suffix in mapping.Value)
+                {
+                    // Build the env key: {ACCOUNT}_{SUFFIX} — lookup is case-insensitive
+                    var envKey = accountName + "_" + suffix;
+                    var value = GetValue(envKey);
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        if (_debug) Console.WriteLine($"DEBUG: Matched env key '{envKey}' -> param '{paramName}'");
+                        result[paramName] = value;
+                        break; // first matching suffix wins for this param
+                    }
+                    else if (_debug)
+                    {
+                        Console.WriteLine($"DEBUG: No match for env key '{envKey}'");
+                    }
+                }
+            }
+
+            if (_debug) Console.WriteLine($"DEBUG: Resolved {result.Count} params from ssotme.env for account '{accountName}'");
+            return result;
         }
     }
 }
