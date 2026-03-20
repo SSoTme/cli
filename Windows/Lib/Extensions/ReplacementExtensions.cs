@@ -481,7 +481,7 @@ namespace SSoTme.OST.Core.Lib.Extensions
 
         private static async Task<JObject> GetAirtableSchemaFromBaseId(string baseId)
         {
-            // Priority 1: Check ssotme.env (project-level)
+            // Priority 1: Check effortless.env (project-level)
             var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
             var pat = envFile?.GetValue("AIRTABLE_PAT") ?? envFile?.GetValue("AIRTABLE_API_KEY");
 
@@ -494,7 +494,7 @@ namespace SSoTme.OST.Core.Lib.Extensions
 
             if (string.IsNullOrEmpty(pat))
             {
-                Console.WriteLine("Airtable API key is missing. Add AIRTABLE_PAT to ssotme.env or run: ssotme -setAccountAPIKey=airtable/YOUR_PAT");
+                Console.WriteLine("Airtable API key is missing. Add AIRTABLE_PAT to effortless.env or run: ssotme -setAccountAPIKey=airtable/YOUR_PAT");
                 return null;
             }
 

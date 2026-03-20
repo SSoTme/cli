@@ -35,5 +35,17 @@ namespace SSoTme.OST.Lib.Extensions
             Console.ResetColor();
             Console.WriteLine($"{message}");
         }
+
+        public static void LogTranspiler(string action, ConsoleColor actionColor, string commandLine, string relativePath, string transpilerGroup)
+        {
+            Console.ForegroundColor = CliLogIdColor;
+            Console.Write("[cli] ");
+            Console.ForegroundColor = actionColor;
+            Console.WriteLine(action);
+            Console.ResetColor();
+            Console.WriteLine($"      CommandLine: {commandLine}");
+            Console.WriteLine($"      TranspilerGroup: {transpilerGroup ?? "(none)"}");
+            Console.WriteLine($"      RelativePath: {(String.IsNullOrEmpty(relativePath) ? "(project root)" : relativePath)}");
+        }
     }
 }

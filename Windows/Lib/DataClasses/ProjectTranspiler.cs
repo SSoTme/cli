@@ -90,6 +90,9 @@ namespace SSoTme.OST.Lib.DataClasses
             var lowerCLI = Environment.CommandLine.ToLower().Replace("\\", "/");
             var cmd0 = Environment.CommandLine;
             if (lowerCLI.Contains("/ssotme.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.exe") + "/ssotme.exe".Length);
+            else if (lowerCLI.Contains("/effortless.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/effortless.exe") + "/effortless.exe".Length);
+            else if (lowerCLI.Contains("/aicapture.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture.exe") + "/aicapture.exe".Length);
+            else if (lowerCLI.Contains("/aic.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic.exe") + "/aic.exe".Length);
             else if (lowerCLI.Contains("/ssotme.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.ost.cli.dll") + "/ssotme.ost.cli.dll".Length);
             else if (lowerCLI.Contains("/aicapture.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture.ost.cli.dll") + "/aicapture.ost.cli.dll".Length);            
             else if (lowerCLI.Contains("/ssotme")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme") + "/ssotme".Length);
@@ -129,6 +132,9 @@ namespace SSoTme.OST.Lib.DataClasses
             if (cmd0.StartsWith("effortless ")) {
                 cmd0 = cmd0.Substring("effortless ".Length);
             }
+            if (cmd0.StartsWith("effortless.exe ")) {
+                cmd0 = cmd0.Substring("effortless.exe ".Length);
+            }
             cmd0 = cmd0.Trim(" '\"".ToCharArray());
             Console.WriteLine($"COMMAND LINE: {cmd0}");
             this.CommandLine = cmd0;
@@ -145,7 +151,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
 
             Console.WriteLine("\n\n **** " + this.RelativePath + ": " + this.Name + " ****");
-            Console.WriteLine("CommandLine:> ssotme {0}", commandLineToRun);
+            Console.WriteLine("CommandLine:> effortless {0}", commandLineToRun);
             var transpileRootDI = new DirectoryInfo(Path.Combine(project.RootPath, $"{this.RelativePath}".Trim("\\/".ToCharArray())));
             if (!transpileRootDI.Exists) transpileRootDI.Create();
 
@@ -264,7 +270,7 @@ namespace SSoTme.OST.Lib.DataClasses
             Console.WriteLine("---- {0}{1}", this.Name, this.IsDisabled ? "    **** DISABLED ****" : "");
             Console.WriteLine("---- .{0}/", $"{this.RelativePath}".Replace("\\", "/"));
             Console.WriteLine("-----------------------------------");
-            Console.WriteLine("\nCommand Line:> ssotme {0}\n", this.CommandLine);
+            Console.WriteLine("\nCommand Line:> effortless {0}\n", this.CommandLine);
         }
 
         public bool IsAtPath(string relativePath, bool exactMatch = false)

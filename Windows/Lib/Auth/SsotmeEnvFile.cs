@@ -28,14 +28,19 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
 
         public static SsotmeEnvFile LoadFrom(string projectRootPath, bool debug = false)
         {
-            var envPath = Path.Combine(projectRootPath, "ssotme.env");
+            // Prefer effortless.env, fall back to ssotme.env
+            var envPath = Path.Combine(projectRootPath, "effortless.env");
             if (!File.Exists(envPath))
             {
-                if (debug) Console.WriteLine($"DEBUG: No ssotme.env found at {envPath}");
+                envPath = Path.Combine(projectRootPath, "ssotme.env");
+            }
+            if (!File.Exists(envPath))
+            {
+                if (debug) Console.WriteLine($"DEBUG: No effortless.env or ssotme.env found at {projectRootPath}");
                 return null;
             }
 
-            if (debug) Console.WriteLine($"DEBUG: Loading ssotme.env from {envPath}");
+            if (debug) Console.WriteLine($"DEBUG: Loading env file from {envPath}");
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (var line in File.ReadAllLines(envPath))
@@ -57,11 +62,11 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
                     value = value.Substring(1, value.Length - 2);
                 }
 
-                if (debug) Console.WriteLine($"DEBUG: ssotme.env entry: {key}=<{value.Length} chars>");
+                if (debug) Console.WriteLine($"DEBUG: env entry: {key}=<{value.Length} chars>");
                 values[key] = value;
             }
 
-            if (debug) Console.WriteLine($"DEBUG: Loaded {values.Count} entries from ssotme.env");
+            if (debug) Console.WriteLine($"DEBUG: Loaded {values.Count} entries from env file");
             return new SsotmeEnvFile(values, debug);
         }
 
@@ -72,7 +77,8 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
                 var dir = new DirectoryInfo(Environment.CurrentDirectory);
                 while (dir != null)
                 {
-                    if (File.Exists(Path.Combine(dir.FullName, "ssotme.json")) ||
+                    if (File.Exists(Path.Combine(dir.FullName, "effortless.json")) ||
+                        File.Exists(Path.Combine(dir.FullName, "ssotme.json")) ||
                         File.Exists(Path.Combine(dir.FullName, "aicapture.json")))
                     {
                         return LoadFrom(dir.FullName, debug);
@@ -84,7 +90,7 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
             {
                 // If current directory is invalid or inaccessible, return null
             }
-            if (debug) Console.WriteLine("DEBUG: No ssotme project found when searching for ssotme.env");
+            if (debug) Console.WriteLine("DEBUG: No project found when searching for env file");
             return null;
         }
 
@@ -132,7 +138,7 @@ namespace SSoTme.OST.Lib.SassySDK.Derived
                 }
             }
 
-            if (_debug) Console.WriteLine($"DEBUG: Resolved {result.Count} params from ssotme.env for account '{accountName}'");
+            if (_debug) Console.WriteLine($"DEBUG: Resolved {result.Count} params from env file for account '{accountName}'");
             return result;
         }
     }

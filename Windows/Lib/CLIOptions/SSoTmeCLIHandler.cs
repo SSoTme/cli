@@ -37,7 +37,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public class ProjectNotConfiguredException : Exception
     {
         public ProjectNotConfiguredException()
-            : base("No ssotme project is configured in this directory.") { }
+            : base("No effortless project is configured in this directory.") { }
     }
 
     public class NoStackException : Exception
@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.19.1629";
+        public string CLI_VERSION = "2026.03.20.1158";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -77,7 +77,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         internal SSoTmeCLIHandler()
         {
             this.account = "";
-            this.waitTimeout = 30000;
+            this.waitTimeout = 180000;
             this.input = new List<string>();
             this.OptionalInputCLIInputs = new List<string>();
             this.parameters = new List<string>();
@@ -168,8 +168,8 @@ namespace SSoTme.OST.Lib.CLIOptions
             {
                 if (String.IsNullOrEmpty(this.viewUrl))
                 {
-                    Console.WriteLine("Error: Tool name is required. Usage: ssotme viewUrl <toolname>");
-                    Console.WriteLine("To list all configured tools, use: ssotme listUrls");
+                    Console.WriteLine("Error: Tool name is required. Usage: effortless viewUrl <toolname>");
+                    Console.WriteLine("To list all configured tools, use: effortless listUrls");
                     return;
                 }
 
@@ -199,7 +199,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (!File.Exists(toolUrlsPath))
                 {
                     Console.WriteLine("No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.");
-                    Console.WriteLine($"Use 'ssotme setUrl toolname=url' to configure tool URLs.");
+                    Console.WriteLine($"Use 'effortless setUrl toolname=url' to configure tool URLs.");
                     return;
                 }
 
@@ -209,7 +209,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 if (urlMappings == null || !urlMappings.Any())
                 {
                     Console.WriteLine("No tool URLs configured in ~/.ssotme/tool_urls.json.");
-                    Console.WriteLine($"Use 'ssotme setUrl toolname=url' to configure tool URLs.");
+                    Console.WriteLine($"Use 'effortless setUrl toolname=url' to configure tool URLs.");
                     return;
                 }
 
@@ -242,7 +242,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
                 while (currentDir != null)
                 {
-                    var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
+                    var projectFiles = new[] { "effortless.json", "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
                     if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
                     {
                         return currentDir.FullName;
@@ -298,7 +298,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             {
                 if (String.IsNullOrEmpty(this.setUrl))
                 {
-                    Console.WriteLine("Error: Tool name and URL are required. Usage: ssotme -setUrl toolname=url");
+                    Console.WriteLine("Error: Tool name and URL are required. Usage: effortless -setUrl toolname=url");
                     return;
                 }
 
@@ -306,7 +306,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 var parts = this.setUrl.Split('=');
                 if (parts.Length != 2)
                 {
-                    Console.WriteLine("Error: Invalid format. Usage: ssotme -setUrl toolname=url");
+                    Console.WriteLine("Error: Invalid format. Usage: effortless -setUrl toolname=url");
                     return;
                 }
 
@@ -315,14 +315,14 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (String.IsNullOrEmpty(toolName) || String.IsNullOrEmpty(url))
                 {
-                    Console.WriteLine("Error: Both tool name and URL must be specified. Usage: ssotme -setUrl toolname=url");
+                    Console.WriteLine("Error: Both tool name and URL must be specified. Usage: effortless -setUrl toolname=url");
                     return;
                 }
 
                 if (String.Equals(toolName, SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, StringComparison.OrdinalIgnoreCase))
                 {
                     Console.WriteLine($"Warning: '{SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}' is an internal ssotme-managed tool. Overriding it may break remote tool resolution.");
-                    Console.WriteLine($"To restore default functionality, run: ssotme -removeUrl {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}");
+                    Console.WriteLine($"To restore default functionality, run: effortless -removeUrl {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}");
                 }
 
                 // Add https:// if no protocol is specified
@@ -379,7 +379,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             {
                 if (String.IsNullOrEmpty(this.removeUrl))
                 {
-                    Console.WriteLine("Error: Tool name is required. Usage: ssotme removeUrl <toolname>");
+                    Console.WriteLine("Error: Tool name is required. Usage: effortless removeUrl <toolname>");
                     return;
                 }
 
@@ -387,7 +387,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
                 if (String.IsNullOrEmpty(toolName))
                 {
-                    Console.WriteLine("Error: Tool name must be specified. Usage: ssotme removeUrl <toolname>");
+                    Console.WriteLine("Error: Tool name must be specified. Usage: effortless removeUrl <toolname>");
                     return;
                 }
 
@@ -597,7 +597,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     var helpWidth = GetSafeHelpWidth();
                     Console.WriteLine(parser.UsageInfo.GetHeaderAsString(helpWidth));
-                    Console.WriteLine("\n\nSyntax: ssotme [account/]transpiler [Options]\n\n");
+                    Console.WriteLine("\n\nSyntax: effortless [account/]transpiler [Options]\n\n");
                     Console.WriteLine(parser.UsageInfo.GetOptionsAsString(helpWidth));
                     if (!Console.IsInputRedirected && !Console.IsOutputRedirected)
                     {
@@ -669,17 +669,29 @@ namespace SSoTme.OST.Lib.CLIOptions
                         {
                             try
                             {
-                                this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
+                                var currentDirInfo = new DirectoryInfo(Environment.CurrentDirectory);
+                                if (!currentDirInfo.Exists)
+                                {
+                                    ShowError($"ERROR: Current directory no longer exists: {Environment.CurrentDirectory}", ConsoleColor.Red);
+                                    ShowError($"\nThis can happen when a previous clean or build deleted an empty directory.", ConsoleColor.Red);
+                                    this.ParseResult = -1;
+                                    this.SuppressTranspile = true;
+                                    return;
+                                }
+                                this.AICaptureProject = SSoTmeProject.LoadOrFail(currentDirInfo, false, this.clean || this.cleanAll);
                                 if (this.AICaptureProject is null) {
-                                    // warn user for clarity
-                                    ShowError("WARN: SSoTme project is null. Run `ssotme -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                                    ShowError($"ERROR: No project found in this directory or any parent directory.", ConsoleColor.Red);
+                                    ShowError($"\nRun `effortless -init` to create a new project in this directory.", ConsoleColor.Red);
+                                    this.ParseResult = -1;
+                                    this.SuppressTranspile = true;
+                                    return;
                                 }
                             }
                             catch (Exception ex)
                             {
                                 // Show clear error when project doesn't exist
-                                ShowError($"ERROR: No SSoTme project found in this directory.", ConsoleColor.Red);
-                                ShowError($"\nRun `ssotme -init` to create a new project in this directory.", ConsoleColor.Red);
+                                ShowError($"ERROR: No Project found in this directory.", ConsoleColor.Red);
+                                ShowError($"\nRun `effortless -init` to create a new project in this directory.", ConsoleColor.Red);
                                 if (this.debug)
                                 {
                                     ShowError($"\nDetails: {ex.Message}", ConsoleColor.Yellow);
@@ -730,7 +742,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                             Console.WriteLine($"DEBUG: Account is set to '{this.account}', looking up API key...");
                         }
 
-                        // Priority 1: Check ssotme.env (project-level)
+                        // Priority 1: Check effortless.env (project-level)
                         var envFile = SsotmeEnvFile.TryLoadFromNearestProject(this.debug);
                         var envParams = envFile?.ResolveAccountParams(this.account) ?? new Dictionary<string, string>();
 
@@ -738,7 +750,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         {
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: Adding {envParam.Key} parameter from ssotme.env for account '{this.account}'");
+                                Console.WriteLine($"DEBUG: Adding {envParam.Key} parameter from env file for account '{this.account}'");
                             }
                             // Remove any matching param already set by ProjectSettings so env file takes priority
                             var paramPrefix = envParam.Key + "=";
@@ -755,7 +767,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                             if (apiKeyValue.TrimStart().StartsWith("{") || apiKeyValue.TrimStart().StartsWith("["))
                             {
                                 // JSON format detected
-                                throw new Exception($"The API key for account '{this.account}' is in JSON format and cannot be used directly as apiKey parameter. Please store simple string API keys in the format: ssotme -setAccountAPIKey={this.account}/YOUR_API_KEY");
+                                throw new Exception($"The API key for account '{this.account}' is in JSON format and cannot be used directly as apiKey parameter. Please store simple string API keys in the format: effortless -setAccountAPIKey={this.account}/YOUR_API_KEY");
                             }
 
                             if (this.debug)
@@ -771,7 +783,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         {
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: No apiKey found for account '{this.account}' in ssotme.env or ssotme.key");
+                                Console.WriteLine($"DEBUG: No apiKey found for account '{this.account}' in env file or ssotme.key");
                             }
                         }
                     }
@@ -799,11 +811,11 @@ namespace SSoTme.OST.Lib.CLIOptions
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("\nERROR: Tool '{0}' does not exist.", this.transpiler);
-                    Console.WriteLine("\nThe tool was not found locally or on the SSoTme server.");
+                    Console.WriteLine("\nThe tool was not found locally or on the tools server.");
                     Console.WriteLine("\nTo see available tools, run:");
-                    Console.WriteLine("  ssotme -list-tool-urls");
+                    Console.WriteLine("  effortless -list-tool-urls");
                     Console.WriteLine("\nTo add a new tool URL mapping, run:");
-                    Console.WriteLine("  ssotme -set-tool-url <tool-name>=<url>");
+                    Console.WriteLine("  effortless -set-tool-url <tool-name>=<url>");
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                     return;
@@ -912,7 +924,7 @@ Syntax:
                 seedName = seedName.Replace("seed-", "");
                 Console.ForegroundColor = ConsoleColor.Cyan; // Root seeds in cyan
                 var seedSyntax1 = $"\n{seedNumber++} - {WrapText(seedName, maxLineWidth)}";
-                seedSyntax1 += $"{"".PadLeft(Math.Max(0, 25 - seedSyntax1.Length))} > ssotme -cloneseed";
+                seedSyntax1 += $"{"".PadLeft(Math.Max(0, 25 - seedSyntax1.Length))} > effortless -cloneseed";
                 var seedSyntax2 = $" {seedName} ";
                 var seedSyntax3 = $"my-{seedName}";
                 var lines = $"{WrapText(seed.Description, maxLineWidth)}".Split(Environment.NewLine).ToList();
@@ -942,14 +954,15 @@ Syntax:
 
         private bool IsCurrentSeedRoot()
         {
-            var ssotmeFile = new FileInfo("ssotme.json");
+            var ssotmeFile = new FileInfo("effortless.json");
+            if (!ssotmeFile.Exists) ssotmeFile = new FileInfo("ssotme.json");
 
-            // Check if the ssotme.json file exists in the current directory
+            // Check if the project file exists in the current directory
             if (!ssotmeFile.Exists) return false;
 
             try
             {
-                // Parse the JSON content of the ssotme.json file
+                // Parse the JSON content of the project file
                 var jsonContent = File.ReadAllText(ssotmeFile.FullName);
                 var project = JObject.Parse(jsonContent);
 
@@ -963,7 +976,7 @@ Syntax:
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing ssotme.json: {ex.Message}");
+                Console.WriteLine($"Error parsing project file: {ex.Message}");
             }
             return false;
         }
@@ -1887,11 +1900,11 @@ Seed Url: ");
                         if (isTranspilerNotFound && !this._suppressGenericToolNotFoundError)
                         {
                             ShowError("\nERROR: Tool '" + this.transpiler + "' does not exist.");
-                            ShowError("\nThe tool was not found locally or on the SSoTme server.");
+                            ShowError("\nThe tool was not found locally or on the tools server.");
                             ShowError("\nTo see available tools, run:");
-                            ShowError("  ssotme -list-tool-urls");
+                            ShowError("  effortless -list-tool-urls");
                             ShowError("\nTo add a new tool URL mapping, run:");
-                            ShowError("  ssotme -set-tool-url <tool-name>=<url>");
+                            ShowError("  effortless -set-tool-url <tool-name>=<url>");
                             return -1;
                         }
                         else if (isTranspilerNotFound && this._suppressGenericToolNotFoundError)
@@ -1938,7 +1951,7 @@ Seed Url: ");
                             //Console.WriteLine("\n\nTRANSPILER MATCHED: {0}\n\n", result.Transpiler.Name);
                         }
 
-                        if (this.clean) result.CleanFileSet();
+                        if (this.clean) result.CleanFileSet(deleteEmptyDirs: false);
                         else
                         {
                             finalResult = result.SaveFileSet(this.skipClean);
@@ -1967,7 +1980,7 @@ Seed Url: ");
                             projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
                             GetProjectOrThrow().Save();
                             CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
-                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
+                            CliLog.LogLine($"Use `effortless {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
                         }
                     }
                     else
@@ -1986,7 +1999,7 @@ Seed Url: ");
                             projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
                             GetProjectOrThrow().Save();
                             CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
-                            CliLog.LogLine($"Use `ssotme {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
+                            CliLog.LogLine($"Use `effortless {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
                         }
 
                         // -latest: update the pinned version to the resolved head version
@@ -1999,6 +2012,12 @@ Seed Url: ");
                                 CliLog.LogLine($"Pinned {this.ResolvedToolName ?? this.transpiler} to {this.ResolvedVersionKey}");
                         }
                     }
+                }
+
+                // Clean up empty directories after tool run completes
+                if (!ReferenceEquals(this.AICaptureProject, null))
+                {
+                    this.AICaptureProject.CleanEmptyDirectories(Environment.CurrentDirectory);
                 }
             }
         }
@@ -2068,7 +2087,7 @@ Seed Url: ");
             }
             else
             {
-                ShowError("Syntax: ssotme unable to authenticate within the specified timeout period.");
+                ShowError("The cli unable to authenticate within the specified timeout period.");
                 return false;
             }
         }
@@ -2528,7 +2547,7 @@ Seed Url: ");
             {
                 var isPinnedAtHead = String.Equals(pinnedVersion, headVersionKey, StringComparison.OrdinalIgnoreCase);
                 var shortToolName = candidates[0].Contains("/") ? candidates[0].Substring(candidates[0].LastIndexOf('/') + 1) : candidates[0];
-                versionSuffix = isPinnedAtHead ? " [pinned, latest]" : $" [pinned, out-of-date (use `ssotme {shortToolName} -upgrade`)]";
+                versionSuffix = isPinnedAtHead ? " [pinned, latest]" : $" [pinned, out-of-date (use `effortless {shortToolName} -upgrade`)]";
             }
             else
             {
@@ -2616,12 +2635,12 @@ Seed Url: ");
             Console.WriteLine();
             if (!String.IsNullOrEmpty(overrideUrl))
             {
-                Console.WriteLine($"  * globally overridden via ssotme -setUrl {transpilerName}={overrideUrl}");
-                Console.WriteLine($"    run 'ssotme -removeUrl {transpilerName}' to reset");
+                Console.WriteLine($"  * globally overridden via effortless -setUrl {transpilerName}={overrideUrl}");
+                Console.WriteLine($"    run 'effortless -removeUrl {transpilerName}' to reset");
                 Console.WriteLine();
             }
-            Console.WriteLine($"Run with: ssotme {transpilerName}/<versionKey>");
-            if (hasHead) Console.WriteLine($"Run latest: ssotme {transpilerName}");
+            Console.WriteLine($"Run with: effortless {transpilerName}/<versionKey>");
+            if (hasHead) Console.WriteLine($"Run latest: effortless {transpilerName}");
             return true;
         }
 
@@ -2668,7 +2687,7 @@ Seed Url: ");
             var project = this.AICaptureProject ?? SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
             if (project == null)
             {
-                ShowError("No ssotme.json project found in this directory.");
+                ShowError("No effortless.json project found in this directory.");
                 return;
             }
             var shortName = toolName.Contains('/') ? toolName.Substring(toolName.LastIndexOf('/') + 1) : toolName;
@@ -2680,7 +2699,7 @@ Seed Url: ");
                 });
             if (matched == null)
             {
-                ShowError($"No installed transpiler matching '{toolName}' found in ssotme.json.");
+                ShowError($"No installed transpiler matching '{toolName}' found in effortless.json.");
                 return;
             }
             var oldVersion = matched.PinnedVersion ?? "(unpinned)";
@@ -2844,7 +2863,37 @@ Seed Url: ");
 
             var waitForCook = Task.Factory.StartNew(() =>
             {
-                while (ReferenceEquals(result, null)) Thread.Sleep(100);
+                if (!useRabbitMQ)
+                {
+                    var dots = new[] { "   ", ".  ", ".. ", "..." };
+                    int elapsed = 0;
+                    bool showedBootMessage = false;
+                    int dotIndex = 0;
+                    while (ReferenceEquals(result, null))
+                    {
+                        Thread.Sleep(500);
+                        elapsed += 500;
+                        if (elapsed >= 15000)
+                        {
+                            if (!showedBootMessage)
+                            {
+                                Console.Write("Waiting for the remote transpiler to boot up    ");
+                                showedBootMessage = true;
+                            }
+                            Console.Write("\b\b\b" + dots[dotIndex % 4]);
+                            dotIndex++;
+                        }
+                    }
+                    if (showedBootMessage)
+                    {
+                        var clearLine = "\r" + new string(' ', "Waiting for the remote transpiler to boot up ...".Length) + "\r";
+                        Console.Write(clearLine);
+                    }
+                }
+                else
+                {
+                    while (ReferenceEquals(result, null)) Thread.Sleep(100);
+                }
             });
 
             waitForCook.Wait(this.waitTimeout);
@@ -2951,8 +3000,8 @@ Seed Url: ");
         }
 
         /// <summary>
-        /// Walks up the directory tree from startPath looking for a directory with ssotme.json.
-        /// Returns the directory path containing ssotme.json, or null if not found.
+        /// Walks up the directory tree from startPath looking for a directory with effortless.json or ssotme.json.
+        /// Returns the directory path containing the project file, or null if not found.
         /// </summary>
         private static string TryFindNearestProjectRootFrom(string startPath)
         {
@@ -2962,8 +3011,8 @@ Seed Url: ");
                 var di = new DirectoryInfo(Path.GetFullPath(startPath));
                 while (di != null)
                 {
-                    var ssotme = Path.Combine(di.FullName, "ssotme.json");
-                    if (File.Exists(ssotme))
+                    if (File.Exists(Path.Combine(di.FullName, "effortless.json")) ||
+                        File.Exists(Path.Combine(di.FullName, "ssotme.json")))
                         return di.FullName;
                     di = di.Parent;
                 }
@@ -3067,28 +3116,28 @@ Seed Url: ");
             {
                 // Get the effective project root. When building (ProjectTranspiler.Rebuild),
                 // AICaptureProject is set before parsing, so we use that. Otherwise, walk up
-                // from current directory to find ssotme.json (for direct CLI usage).
+                // from current directory to find effortless.json/ssotme.json (for direct CLI usage).
                 var effectiveProjectRoot = this.AICaptureProject?.RootPath
                                           ?? TryFindNearestProjectRootFrom(Environment.CurrentDirectory);
 
                 if (string.IsNullOrEmpty(effectiveProjectRoot))
                 {
-                    throw new InvalidOperationException($"No parent 'ssotme.json' found from {Environment.CurrentDirectory}");
+                    throw new InvalidOperationException($"No parent 'effortless.json' found from {Environment.CurrentDirectory}");
                 }
 
                 var name = this.AICaptureProject?.Name
                            ?? new DirectoryInfo(effectiveProjectRoot).Name;
 
-                // Parent-project allowance: Check if parent directory also has a ssotme.json file
+                // Parent-project allowance: Check if parent directory also has a project file
                 List<string> allowedFolders = null;
                 var rootDI = new DirectoryInfo(effectiveProjectRoot);
                 var parentDI = rootDI.Parent;
                 if (parentDI != null)
                 {
-                    var parentSsotme = Path.Combine(parentDI.FullName, "ssotme.json");
-                    if (File.Exists(parentSsotme))
+                    if (File.Exists(Path.Combine(parentDI.FullName, "effortless.json")) ||
+                        File.Exists(Path.Combine(parentDI.FullName, "ssotme.json")))
                     {
-                        // Parent has ssotme.json, so allow reading from parent directory
+                        // Parent has project file, so allow reading from parent directory
                         allowedFolders = new List<string> { parentDI.FullName };
                     }
                 }
@@ -3223,7 +3272,7 @@ Seed Url: ");
                         if (result != null)
                         {
                             result.SSoTmeProject = this.AICaptureProject;
-                            if (this.clean) result.CleanFileSet();
+                            if (this.clean) result.CleanFileSet(deleteEmptyDirs: false);
                             else
                             {
                                 var finalResult = result.SaveFileSet(this.skipClean);
@@ -3272,6 +3321,7 @@ Seed Url: ");
             }
 
             using var client = new HttpClient();
+            client.Timeout = TimeSpan.FromMilliseconds(this.waitTimeout);
             payload.TranspileRequest = new TranspileRequest();
             payload.TranspileRequest.ZippedInputFileSet = this.inputFileSetXml.Zip();
             payload.CLIInputFileContents = string.Empty;
@@ -3279,27 +3329,49 @@ Seed Url: ");
                 ? "DEBUG: POST https://proxy.effortlessapi.com/ (via RabbitMQ proxy)"
                 : $"DEBUG: POST {this.targetUrl}");
             var postUrl = $"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}";
-            System.Net.Http.HttpResponseMessage response;
-            try
+            System.Net.Http.HttpResponseMessage response = null;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+            while (stopwatch.ElapsedMilliseconds < this.waitTimeout)
             {
-                response = await client.PostAsJsonAsync(postUrl, payload);
-            }
-            catch (System.Net.Http.HttpRequestException ex) when (
-                ex.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
-                || ex.Message.Contains("No such host"))
-            {
-                CliLog.LogLine("Host not found. Retrying in 6 seconds...");
-                await System.Threading.Tasks.Task.Delay(6000);
                 try
                 {
                     response = await client.PostAsJsonAsync(postUrl, payload);
                 }
-                catch
+                catch (TaskCanceledException)
                 {
-                    CliLog.LogLine("Tool URL could not be resolved after retrying.");
+                    // HttpClient.Timeout elapsed — let the waitForCook timeout handler deal with it
                     return;
                 }
+                catch (System.Net.Http.HttpRequestException ex) when (
+                    ex.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
+                    || ex.Message.Contains("No such host"))
+                {
+                    CliLog.LogLine("Host not found. Retrying in 6 seconds...");
+                    await System.Threading.Tasks.Task.Delay(6000);
+                    continue;
+                }
+
+                // Retry on gateway timeout (remote transpiler still cold-booting)
+                if (response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout ||
+                    response.StatusCode == System.Net.HttpStatusCode.BadGateway ||
+                    response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+                {
+                    var retryContent = await response.Content.ReadAsStringAsync();
+                    CliLog.LogLine($"Remote transpiler not ready ({response.StatusCode}). Retrying...", ConsoleColor.Yellow);
+                    if (this.debug) Console.WriteLine($"DEBUG: Response body: {retryContent}");
+                    await System.Threading.Tasks.Task.Delay(5000);
+                    continue;
+                }
+
+                break; // Got a non-retryable response
             }
+
+            if (response == null)
+            {
+                return;
+            }
+
             if (response != null)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();

@@ -90,7 +90,9 @@ namespace SSoTme.OST.Lib.DataClasses
 
         private void ProjectMonitor_Changed(object sender, FileSystemEventArgs e)
         {
-            if (String.Equals(Path.GetFileName(e.FullPath), "ssotme.json", StringComparison.OrdinalIgnoreCase))
+            var changedFileName = Path.GetFileName(e.FullPath);
+            if (String.Equals(changedFileName, "effortless.json", StringComparison.OrdinalIgnoreCase) ||
+                String.Equals(changedFileName, "ssotme.json", StringComparison.OrdinalIgnoreCase))
             {
                 //var form = Application.OpenForms.OfType<Form>().FirstOrDefault();
                 //if (ReferenceEquals(form, null) || !form.InvokeRequired) this.OnProjectFileReloaded(this, e);
@@ -197,23 +199,23 @@ namespace SSoTme.OST.Lib.DataClasses
                 newProject.Save();
             }
 
-            // Create ssotme.env template for project-level credentials
-            var envFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "ssotme.env"));
+            // Create effortless.env template for project-level credentials
+            var envFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "effortless.env"));
             if (!envFI.Exists)
             {
-                var envTemplate = @"# Add this file to your .gitignore and use it to store any credentials ssotme needs to connect to external services
+                var envTemplate = @"# Add this file to your .gitignore and use it to store any credentials that the cli needs to connect to external services
 # You can use the -account xxx parameter when running a tool to inject that
 # service's credentials into the command; for example
 #
 # AIRTABLE_PAT=xyz
-# ssotme airtable-to-rulebook -account airtable
+# effortless airtable-to-rulebook -account airtable
 #
 # or, for services that need a username and password:
 #
 # BASEROW_USERNAME=...
 # BASEROW_PASSWORD=...
 #
-# ssotme baserow-to-rulebook -account baserow
+# effortless baserow-to-rulebook -account baserow
 ";
                 File.WriteAllText(envFI.FullName, envTemplate);
             }
@@ -236,16 +238,17 @@ namespace SSoTme.OST.Lib.DataClasses
 /**/.vs/**/*
 /**/node_modules/**/*
 /**/.vscode/**/*
-ssotme.env";
+ssotme.env
+effortless.env";
 
                 File.WriteAllText(fi.FullName, gitIgnore);
             }
             else
             {
                 var content = File.ReadAllText(fi.FullName);
-                if (!content.Contains("ssotme.env"))
+                if (!content.Contains("effortless.env"))
                 {
-                    File.AppendAllText(fi.FullName, "\nssotme.env\n");
+                    File.AppendAllText(fi.FullName, "\neffortless.env\n");
                 }
             }
         }
@@ -453,33 +456,66 @@ ssotme.env";
             return GetProjectFIAt(new DirectoryInfo(this.RootPath), reverseUpdate);
         }
 
+        private static bool IsValidProjectFile(FileInfo fi)
+        {
+            if (!fi.Exists) return false;
+            try
+            {
+                var content = File.ReadAllText(fi.FullName);
+                return content.Contains("\"ProjectTranspilers\"");
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         protected static FileInfo GetProjectFIAt(DirectoryInfo rootDI, bool reverseUpdate)
         {
-            var aiCaptureProjectFI = new FileInfo(Path.Combine(rootDI.FullName, "ssotme.json"));
-            var defaultFI = aiCaptureProjectFI;
+            var effortlessFI = new FileInfo(Path.Combine(rootDI.FullName, "effortless.json"));
+            var ssotmeFI = new FileInfo(Path.Combine(rootDI.FullName, "ssotme.json"));
 
-            if (!aiCaptureProjectFI.Exists)
+            // Auto-migrate: rename ssotme.json → effortless.json only if effortless.json doesn't exist at all
+            if (!effortlessFI.Exists && IsValidProjectFile(ssotmeFI))
             {
-                aiCaptureProjectFI = new FileInfo(Path.Combine(rootDI.FullName, "aicapture.json"));
-                if (!aiCaptureProjectFI.Exists)
-                {
-                    aiCaptureProjectFI = new FileInfo(Path.Combine(rootDI.FullName, "SSoTmeProject.json"));
-                }
+                File.Move(ssotmeFI.FullName, effortlessFI.FullName);
+                effortlessFI.Refresh();
             }
 
-            var ssotmeProjectFI = (aiCaptureProjectFI.Exists ? aiCaptureProjectFI : defaultFI);
-            if (!(ssotmeProjectFI is null))
+            // Also auto-migrate ssotme.env → effortless.env
+            var ssotmeEnvFI = new FileInfo(Path.Combine(rootDI.FullName, "ssotme.env"));
+            var effortlessEnvFI = new FileInfo(Path.Combine(rootDI.FullName, "effortless.env"));
+            if (!effortlessEnvFI.Exists && ssotmeEnvFI.Exists)
             {
-                var task = Task.Run(() => ssotmeProjectFI.Directory.ApplySeedReplacementsAsync(reverseUpdate));
-                try
-                {
-                    task.Wait();
-                    if (!(task.Exception is null)) throw task.Exception;
-                }
-                catch (Exception ex)
-                {
-                    throw new ThreadInterruptedException($"Error applying seed replacements....{ex.Message}", ex);
-                }
+                File.Move(ssotmeEnvFI.FullName, effortlessEnvFI.FullName);
+            }
+
+            // Check candidates in priority order, pick the first valid project file
+            var candidates = new[]
+            {
+                effortlessFI,
+                ssotmeFI,
+                new FileInfo(Path.Combine(rootDI.FullName, "aicapture.json")),
+                new FileInfo(Path.Combine(rootDI.FullName, "SSoTmeProject.json")),
+            };
+
+            var ssotmeProjectFI = candidates.FirstOrDefault(IsValidProjectFile);
+
+            // No valid project file found — return a non-existent FileInfo so TryToLoad walks up
+            if (ssotmeProjectFI is null)
+            {
+                return effortlessFI; // doesn't exist or isn't valid, TryToLoad will check .Exists
+            }
+
+            var task = Task.Run(() => ssotmeProjectFI.Directory.ApplySeedReplacementsAsync(reverseUpdate));
+            try
+            {
+                task.Wait();
+                if (!(task.Exception is null)) throw task.Exception;
+            }
+            catch (Exception ex)
+            {
+                throw new ThreadInterruptedException($"Error applying seed replacements....{ex.Message}", ex);
             }
 
             return ssotmeProjectFI;
@@ -692,13 +728,13 @@ ssotme.env";
                 psi.WorkingDirectory = di.FullName;
 
                 string c = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "/C " : "-c ";
-                psi.Arguments = c + "\"ssotme spxml-to-detailed-spxml -i ./SSoTmeProject.spxml\"";
+                psi.Arguments = c + "\"effortless spxml-to-detailed-spxml -i ./SSoTmeProject.spxml\"";
                 var p = Process.Start(psi);
                 p.WaitForExit(100000);
                 if (!p.HasExited) throw new Exception("Failed waiting for Detailed SP Xml to be created.");
                 else
                 {
-                    psi.Arguments = c + "\"ssotme detailed-spxml-to-html-docs -i ./SSoTmeProject.dspxml\"";
+                    psi.Arguments = c + "\"effortless detailed-spxml-to-html-docs -i ./SSoTmeProject.dspxml\"";
                     p = Process.Start(psi);
 
                     p.WaitForExit(100000);
@@ -799,27 +835,50 @@ ssotme.env";
             }
             string relativePath = this.GetProjectRelativePath(currentDir);
 
-            // Find and remove matching transpilers
-            var transpilersToRemove = this.ProjectTranspilers
-                .Where(pt =>
-                    (String.Equals(pt.Name, transpilerName, StringComparison.OrdinalIgnoreCase) ||
-                     String.Equals(pt.CommandLine?.Split(' ').FirstOrDefault(), transpilerName, StringComparison.OrdinalIgnoreCase)) &&
-                    String.Equals(pt.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase) &&
-                    (String.IsNullOrEmpty(transpilerGroup) || String.Equals(pt.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase)))
-                .ToList(); // Materialize to avoid collection modification issues
+            var transpilersToRemove = FindMatchingTranspilers(transpilerName, relativePath, transpilerGroup);
 
-            if (transpilersToRemove.Any())
+            if (transpilersToRemove.Count > 1)
             {
-                foreach (var transpiler in transpilersToRemove)
+                CliLog.LogLine($"Warning: '{transpilerName}' matched multiple tools. Provide a fully-qualified name to target a specific tool.", ConsoleColor.Yellow);
+                foreach (var t in transpilersToRemove)
+                    CliLog.LogLine($"  - {t.CommandLine}", ConsoleColor.Yellow);
+            }
+            else if (transpilersToRemove.Count == 1)
+            {
+                var transpiler = transpilersToRemove[0];
+
+                // Check if a .zfs file exists and offer to clean generated files
+                var zfsDI = this.GetZFSDI(transpiler.RelativePath);
+                var zfsName = SSoTmeProject.LowerHyphenName(transpiler.Name);
+                var zfsFI = new FileInfo(Path.Combine(zfsDI.FullName, zfsName + ".zfs"));
+                if (zfsFI.Exists)
                 {
-                    this.ProjectTranspilers.Remove(transpiler);
-                    this.LogMessage("Removed transpiler: {0} from {1}", transpiler.Name, transpiler.RelativePath);
+                    Console.Write("Would you like to delete all files generated by this tool? (y/n): ");
+                    var response = Console.ReadLine()?.Trim().ToLower();
+                    if (response == "y" || response == "yes")
+                    {
+                        var originalDir = Environment.CurrentDirectory;
+                        try
+                        {
+                            var toolDir = new DirectoryInfo(Path.Combine(this.RootPath, transpiler.RelativePath.Trim("\\/".ToCharArray())));
+                            if (toolDir.Exists) Environment.CurrentDirectory = toolDir.FullName;
+                            transpiler.Clean(this, false);
+                            CliLog.LogLine("Cleaned generated files.", ConsoleColor.Green);
+                        }
+                        finally
+                        {
+                            Environment.CurrentDirectory = originalDir;
+                        }
+                    }
                 }
+
+                this.ProjectTranspilers.Remove(transpiler);
+                CliLog.LogTranspiler("Uninstalled Transpiler", ConsoleColor.Red, transpiler.CommandLine, transpiler.RelativePath, transpiler.TranspilerGroup);
                 this.Save();
             }
             else
             {
-                this.LogMessage("No matching transpiler found with name '{0}' in path '{1}'", transpilerName, relativePath);
+                CliLog.LogLine($"No tools matching tool name '{transpilerName}' in path '{relativePath}'", ConsoleColor.Yellow);
             }
         }
 
@@ -991,6 +1050,9 @@ ssotme.env";
                     else this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
                 }
                 if (isBuildAll) this.BuildSubSSoTmeProjects();
+
+                // Clean up empty directories after all tools have finished
+                this.RemoveEmptyFolders(buildPath);
             }
             finally
             {
@@ -1040,8 +1102,9 @@ ssotme.env";
 
         private void CheckDirectory(DirectoryInfo di)
         {
-            var ssotmeJsonFile = di.GetFiles().FirstOrDefault(fi => fi.Name == "ssotme.json");
-            if (!(ssotmeJsonFile is null)) this.SSoTmeProjectFiles.Add(ssotmeJsonFile.FullName);
+            var projectFile = di.GetFiles().FirstOrDefault(fi => fi.Name == "effortless.json")
+                           ?? di.GetFiles().FirstOrDefault(fi => fi.Name == "ssotme.json");
+            if (!(projectFile is null)) this.SSoTmeProjectFiles.Add(projectFile.FullName);
         }
 
         private void FindSubSSoTmeJsonFiles(DirectoryInfo currentDir)
@@ -1064,16 +1127,16 @@ ssotme.env";
 
         private void CheckIfParentIsRootSeed()
         {
-            if (File.Exists("../ssotme.json"))
+            if (File.Exists("../effortless.json") || File.Exists("../ssotme.json"))
             {
                 ProcessStartInfo psi;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    psi = new ProcessStartInfo("cmd.exe", $"/c ssotme -buildLocal -tg ssot") { WorkingDirectory = ".." };
+                    psi = new ProcessStartInfo("cmd.exe", $"/c effortless -buildLocal -tg ssot") { WorkingDirectory = ".." };
                 }
                 else
                 {
-                    psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -buildLocal -tg ssot\"") { WorkingDirectory = ".." };
+                    psi = new ProcessStartInfo("/bin/bash", $"-c \"effortless -buildLocal -tg ssot\"") { WorkingDirectory = ".." };
                 }
                 Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
                 var p = Process.Start(psi);
@@ -1334,6 +1397,11 @@ ssotme.env";
             }
         }
 
+        public void CleanEmptyDirectories(string path)
+        {
+            this.RemoveEmptyFolders(path);
+        }
+
         private void RemoveEmptyFolders(string pathToClean)
         {
             var cleanDI = new DirectoryInfo(pathToClean);
@@ -1450,12 +1518,22 @@ ssotme.env";
 
         private void IntegrateTranspiler(ProjectTranspiler projectTranspiler, bool addIfMissing, bool dryRun)
         {
-            ProjectTranspiler matchingTranspiler = FindMatchingTranspiler(projectTranspiler);
+            var matches = FindMatchingTranspilers(GetToolName(projectTranspiler.CommandLine), projectTranspiler.RelativePath, projectTranspiler.TranspilerGroup);
+
+            if (matches.Count > 1)
+            {
+                CliLog.LogLine($"Warning: '{GetToolName(projectTranspiler.CommandLine)}' matched multiple installed tools. Provide a fully-qualified name to target a specific tool.", ConsoleColor.Yellow);
+                foreach (var t in matches)
+                    CliLog.LogLine($"  - {t.CommandLine}", ConsoleColor.Yellow);
+                return;
+            }
+
+            var matchingTranspiler = matches.FirstOrDefault();
 
             if (dryRun)
             {
                 Console.WriteLine($"DRY RUN: Installing {projectTranspiler.Name}");
-                
+
                 if (matchingTranspiler is null)
                 {
                     Console.WriteLine($"DRY RUN: The {projectTranspiler.Name} transpiler will be installed in path {projectTranspiler.RelativePath}");
@@ -1467,13 +1545,17 @@ ssotme.env";
 
                 return;
             }
-            
+
             int firstIndex = -1;
-            while (!ReferenceEquals(matchingTranspiler, null))
+            if (!ReferenceEquals(matchingTranspiler, null))
             {
-                if (firstIndex == -1) firstIndex = this.ProjectTranspilers.IndexOf(matchingTranspiler);
+                CliLog.LogTranspiler("Replaced Transpiler", ConsoleColor.Yellow, projectTranspiler.CommandLine, projectTranspiler.RelativePath, projectTranspiler.TranspilerGroup);
+                firstIndex = this.ProjectTranspilers.IndexOf(matchingTranspiler);
                 this.ProjectTranspilers.Remove(matchingTranspiler);
-                matchingTranspiler = FindMatchingTranspiler(projectTranspiler);
+            }
+            else
+            {
+                CliLog.LogTranspiler("Installed Transpiler", ConsoleColor.Green, projectTranspiler.CommandLine, projectTranspiler.RelativePath, projectTranspiler.TranspilerGroup);
             }
             firstIndex = Math.Min(firstIndex, this.ProjectTranspilers.Count);
             if (firstIndex >= 0) this.ProjectTranspilers.Insert(firstIndex, projectTranspiler);
@@ -1481,12 +1563,34 @@ ssotme.env";
             projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name.Replace("-", "") ?? "noTranspilerFound";
         }
 
-        private ProjectTranspiler FindMatchingTranspiler(ProjectTranspiler projectTranspiler)
+        private static string GetToolName(string commandLine)
         {
-            return this.ProjectTranspilers.FirstOrDefault(fodPT => (fodPT.Name == projectTranspiler.Name) &&
-                                                                                     (fodPT.RelativePath == projectTranspiler.RelativePath) &&
-                                                                                     (String.Equals(fodPT.TranspilerGroup, projectTranspiler.TranspilerGroup)));
+            return commandLine?.Split(' ').FirstOrDefault() ?? "";
         }
+
+        private static bool ToolNameMatches(string installedToolName, string providedName)
+        {
+            if (String.Equals(installedToolName, providedName, StringComparison.OrdinalIgnoreCase))
+                return true;
+            // "common/airtable-to-rulebook" or "effortless/common/airtable-to-rulebook" matches installed "airtable-to-rulebook"
+            if (providedName.EndsWith("/" + installedToolName, StringComparison.OrdinalIgnoreCase))
+                return true;
+            // installed "effortless/common/airtable-to-rulebook" matches provided "airtable-to-rulebook"
+            if (installedToolName.EndsWith("/" + providedName, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }
+
+        private List<ProjectTranspiler> FindMatchingTranspilers(string toolName, string relativePath, string transpilerGroup)
+        {
+            return this.ProjectTranspilers
+                .Where(pt => ToolNameMatches(GetToolName(pt.CommandLine), toolName) &&
+                             String.Equals(pt.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase) &&
+                             (String.IsNullOrEmpty(transpilerGroup) || String.Equals(pt.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+
 
         public void RemoveSetting(string setting)
         {

@@ -117,18 +117,18 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         public SSOTMEKey SSoTmeKey { get; set; }
         public bool ReturnJson { get; set; }
 
-        public void CleanFileSet()
+        public void CleanFileSet(bool deleteEmptyDirs = true)
         {
             // skip cleaning if no project
             if (this.SSoTmeProject is null) return;
-            
+
             FileInfo zfsFI = GetZFSFI();
             // Store the relative path from CleanFileSet for use in SavePreviousFileSet
             _cleanFileSetRelativePath = GetCurrentRelativePath();
             if (zfsFI.Exists)
             {
                 var previousFileSet = File.ReadAllBytes(zfsFI.FullName);
-                previousFileSet.CleanZippedFileSet();
+                previousFileSet.CleanZippedFileSet(deleteEmptyDirs: deleteEmptyDirs);
             }
 
         }
@@ -169,7 +169,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
 
         public int SaveFileSet(bool skipClean)
         {
-            if (!skipClean) this.CleanFileSet();
+            if (!skipClean) this.CleanFileSet(deleteEmptyDirs: false);
 
             // Save the file set to the disk
             var fileSetXml = this.TranspileRequest.ZippedOutputFileSet.UnzipToString();
