@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.19.1629";
+        public string CLI_VERSION = "2026.03.19.1632";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -242,7 +242,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                 var currentDir = new DirectoryInfo(Environment.CurrentDirectory);
                 while (currentDir != null)
                 {
-                    var projectFiles = new[] { "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
+                    var projectFiles = new[] { "effortless.json", "ssotme.json", "aicapture.json", "SSoTmeProject.json" };
                     if (projectFiles.Any(file => File.Exists(Path.Combine(currentDir.FullName, file))))
                     {
                         return currentDir.FullName;
@@ -730,7 +730,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                             Console.WriteLine($"DEBUG: Account is set to '{this.account}', looking up API key...");
                         }
 
-                        // Priority 1: Check ssotme.env (project-level)
+                        // Priority 1: Check effortless.env (project-level)
                         var envFile = SsotmeEnvFile.TryLoadFromNearestProject(this.debug);
                         var envParams = envFile?.ResolveAccountParams(this.account) ?? new Dictionary<string, string>();
 
@@ -738,7 +738,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         {
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: Adding {envParam.Key} parameter from ssotme.env for account '{this.account}'");
+                                Console.WriteLine($"DEBUG: Adding {envParam.Key} parameter from env file for account '{this.account}'");
                             }
                             // Remove any matching param already set by ProjectSettings so env file takes priority
                             var paramPrefix = envParam.Key + "=";
@@ -771,7 +771,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                         {
                             if (this.debug)
                             {
-                                Console.WriteLine($"DEBUG: No apiKey found for account '{this.account}' in ssotme.env or ssotme.key");
+                                Console.WriteLine($"DEBUG: No apiKey found for account '{this.account}' in env file or ssotme.key");
                             }
                         }
                     }
@@ -942,14 +942,15 @@ Syntax:
 
         private bool IsCurrentSeedRoot()
         {
-            var ssotmeFile = new FileInfo("ssotme.json");
+            var ssotmeFile = new FileInfo("effortless.json");
+            if (!ssotmeFile.Exists) ssotmeFile = new FileInfo("ssotme.json");
 
-            // Check if the ssotme.json file exists in the current directory
+            // Check if the project file exists in the current directory
             if (!ssotmeFile.Exists) return false;
 
             try
             {
-                // Parse the JSON content of the ssotme.json file
+                // Parse the JSON content of the project file
                 var jsonContent = File.ReadAllText(ssotmeFile.FullName);
                 var project = JObject.Parse(jsonContent);
 
@@ -963,7 +964,7 @@ Syntax:
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error parsing ssotme.json: {ex.Message}");
+                Console.WriteLine($"Error parsing project file: {ex.Message}");
             }
             return false;
         }
@@ -2668,7 +2669,7 @@ Seed Url: ");
             var project = this.AICaptureProject ?? SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
             if (project == null)
             {
-                ShowError("No ssotme.json project found in this directory.");
+                ShowError("No effortless.json project found in this directory.");
                 return;
             }
             var shortName = toolName.Contains('/') ? toolName.Substring(toolName.LastIndexOf('/') + 1) : toolName;
@@ -2680,7 +2681,7 @@ Seed Url: ");
                 });
             if (matched == null)
             {
-                ShowError($"No installed transpiler matching '{toolName}' found in ssotme.json.");
+                ShowError($"No installed transpiler matching '{toolName}' found in effortless.json.");
                 return;
             }
             var oldVersion = matched.PinnedVersion ?? "(unpinned)";
@@ -2951,8 +2952,8 @@ Seed Url: ");
         }
 
         /// <summary>
-        /// Walks up the directory tree from startPath looking for a directory with ssotme.json.
-        /// Returns the directory path containing ssotme.json, or null if not found.
+        /// Walks up the directory tree from startPath looking for a directory with effortless.json or ssotme.json.
+        /// Returns the directory path containing the project file, or null if not found.
         /// </summary>
         private static string TryFindNearestProjectRootFrom(string startPath)
         {
@@ -2962,8 +2963,8 @@ Seed Url: ");
                 var di = new DirectoryInfo(Path.GetFullPath(startPath));
                 while (di != null)
                 {
-                    var ssotme = Path.Combine(di.FullName, "ssotme.json");
-                    if (File.Exists(ssotme))
+                    if (File.Exists(Path.Combine(di.FullName, "effortless.json")) ||
+                        File.Exists(Path.Combine(di.FullName, "ssotme.json")))
                         return di.FullName;
                     di = di.Parent;
                 }
@@ -3067,28 +3068,28 @@ Seed Url: ");
             {
                 // Get the effective project root. When building (ProjectTranspiler.Rebuild),
                 // AICaptureProject is set before parsing, so we use that. Otherwise, walk up
-                // from current directory to find ssotme.json (for direct CLI usage).
+                // from current directory to find effortless.json/ssotme.json (for direct CLI usage).
                 var effectiveProjectRoot = this.AICaptureProject?.RootPath
                                           ?? TryFindNearestProjectRootFrom(Environment.CurrentDirectory);
 
                 if (string.IsNullOrEmpty(effectiveProjectRoot))
                 {
-                    throw new InvalidOperationException($"No parent 'ssotme.json' found from {Environment.CurrentDirectory}");
+                    throw new InvalidOperationException($"No parent 'effortless.json' found from {Environment.CurrentDirectory}");
                 }
 
                 var name = this.AICaptureProject?.Name
                            ?? new DirectoryInfo(effectiveProjectRoot).Name;
 
-                // Parent-project allowance: Check if parent directory also has a ssotme.json file
+                // Parent-project allowance: Check if parent directory also has a project file
                 List<string> allowedFolders = null;
                 var rootDI = new DirectoryInfo(effectiveProjectRoot);
                 var parentDI = rootDI.Parent;
                 if (parentDI != null)
                 {
-                    var parentSsotme = Path.Combine(parentDI.FullName, "ssotme.json");
-                    if (File.Exists(parentSsotme))
+                    if (File.Exists(Path.Combine(parentDI.FullName, "effortless.json")) ||
+                        File.Exists(Path.Combine(parentDI.FullName, "ssotme.json")))
                     {
-                        // Parent has ssotme.json, so allow reading from parent directory
+                        // Parent has project file, so allow reading from parent directory
                         allowedFolders = new List<string> { parentDI.FullName };
                     }
                 }

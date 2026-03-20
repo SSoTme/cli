@@ -90,6 +90,9 @@ namespace SSoTme.OST.Lib.DataClasses
             var lowerCLI = Environment.CommandLine.ToLower().Replace("\\", "/");
             var cmd0 = Environment.CommandLine;
             if (lowerCLI.Contains("/ssotme.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.exe") + "/ssotme.exe".Length);
+            else if (lowerCLI.Contains("/effortless.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/effortless.exe") + "/effortless.exe".Length);
+            else if (lowerCLI.Contains("/aicapture.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture.exe") + "/aicapture.exe".Length);
+            else if (lowerCLI.Contains("/aic.exe")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aic.exe") + "/aic.exe".Length);
             else if (lowerCLI.Contains("/ssotme.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme.ost.cli.dll") + "/ssotme.ost.cli.dll".Length);
             else if (lowerCLI.Contains("/aicapture.ost.cli.dll")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/aicapture.ost.cli.dll") + "/aicapture.ost.cli.dll".Length);            
             else if (lowerCLI.Contains("/ssotme")) cmd0 = cmd0.Substring(lowerCLI.IndexOf("/ssotme") + "/ssotme".Length);
@@ -128,6 +131,9 @@ namespace SSoTme.OST.Lib.DataClasses
             }
             if (cmd0.StartsWith("effortless ")) {
                 cmd0 = cmd0.Substring("effortless ".Length);
+            }
+            if (cmd0.StartsWith("effortless.exe ")) {
+                cmd0 = cmd0.Substring("effortless.exe ".Length);
             }
             cmd0 = cmd0.Trim(" '\"".ToCharArray());
             Console.WriteLine($"COMMAND LINE: {cmd0}");

@@ -90,7 +90,9 @@ namespace SSoTme.OST.Lib.DataClasses
 
         private void ProjectMonitor_Changed(object sender, FileSystemEventArgs e)
         {
-            if (String.Equals(Path.GetFileName(e.FullPath), "ssotme.json", StringComparison.OrdinalIgnoreCase))
+            var changedFileName = Path.GetFileName(e.FullPath);
+            if (String.Equals(changedFileName, "effortless.json", StringComparison.OrdinalIgnoreCase) ||
+                String.Equals(changedFileName, "ssotme.json", StringComparison.OrdinalIgnoreCase))
             {
                 //var form = Application.OpenForms.OfType<Form>().FirstOrDefault();
                 //if (ReferenceEquals(form, null) || !form.InvokeRequired) this.OnProjectFileReloaded(this, e);
@@ -197,8 +199,8 @@ namespace SSoTme.OST.Lib.DataClasses
                 newProject.Save();
             }
 
-            // Create ssotme.env template for project-level credentials
-            var envFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "ssotme.env"));
+            // Create effortless.env template for project-level credentials
+            var envFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "effortless.env"));
             if (!envFI.Exists)
             {
                 var envTemplate = @"# Add this file to your .gitignore and use it to store any credentials ssotme needs to connect to external services
@@ -236,16 +238,17 @@ namespace SSoTme.OST.Lib.DataClasses
 /**/.vs/**/*
 /**/node_modules/**/*
 /**/.vscode/**/*
-ssotme.env";
+ssotme.env
+effortless.env";
 
                 File.WriteAllText(fi.FullName, gitIgnore);
             }
             else
             {
                 var content = File.ReadAllText(fi.FullName);
-                if (!content.Contains("ssotme.env"))
+                if (!content.Contains("effortless.env"))
                 {
-                    File.AppendAllText(fi.FullName, "\nssotme.env\n");
+                    File.AppendAllText(fi.FullName, "\neffortless.env\n");
                 }
             }
         }
@@ -455,8 +458,26 @@ ssotme.env";
 
         protected static FileInfo GetProjectFIAt(DirectoryInfo rootDI, bool reverseUpdate)
         {
-            var aiCaptureProjectFI = new FileInfo(Path.Combine(rootDI.FullName, "ssotme.json"));
-            var defaultFI = aiCaptureProjectFI;
+            var effortlessFI = new FileInfo(Path.Combine(rootDI.FullName, "effortless.json"));
+            var ssotmeFI = new FileInfo(Path.Combine(rootDI.FullName, "ssotme.json"));
+
+            // Auto-migrate: rename ssotme.json → effortless.json
+            if (!effortlessFI.Exists && ssotmeFI.Exists)
+            {
+                File.Move(ssotmeFI.FullName, effortlessFI.FullName);
+                effortlessFI.Refresh();
+            }
+
+            // Also auto-migrate ssotme.env → effortless.env
+            var ssotmeEnvFI = new FileInfo(Path.Combine(rootDI.FullName, "ssotme.env"));
+            var effortlessEnvFI = new FileInfo(Path.Combine(rootDI.FullName, "effortless.env"));
+            if (!effortlessEnvFI.Exists && ssotmeEnvFI.Exists)
+            {
+                File.Move(ssotmeEnvFI.FullName, effortlessEnvFI.FullName);
+            }
+
+            var aiCaptureProjectFI = effortlessFI;
+            var defaultFI = effortlessFI;
 
             if (!aiCaptureProjectFI.Exists)
             {
@@ -1040,8 +1061,9 @@ ssotme.env";
 
         private void CheckDirectory(DirectoryInfo di)
         {
-            var ssotmeJsonFile = di.GetFiles().FirstOrDefault(fi => fi.Name == "ssotme.json");
-            if (!(ssotmeJsonFile is null)) this.SSoTmeProjectFiles.Add(ssotmeJsonFile.FullName);
+            var projectFile = di.GetFiles().FirstOrDefault(fi => fi.Name == "effortless.json")
+                           ?? di.GetFiles().FirstOrDefault(fi => fi.Name == "ssotme.json");
+            if (!(projectFile is null)) this.SSoTmeProjectFiles.Add(projectFile.FullName);
         }
 
         private void FindSubSSoTmeJsonFiles(DirectoryInfo currentDir)
@@ -1064,7 +1086,7 @@ ssotme.env";
 
         private void CheckIfParentIsRootSeed()
         {
-            if (File.Exists("../ssotme.json"))
+            if (File.Exists("../effortless.json") || File.Exists("../ssotme.json"))
             {
                 ProcessStartInfo psi;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

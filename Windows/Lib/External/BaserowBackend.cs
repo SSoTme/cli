@@ -37,7 +37,7 @@ namespace SSoTme.OST.Core.Lib.External
         {
             _baseUrl = "https://api.baserow.io/api";
 
-            // Priority 1: Check ssotme.env (project-level)
+            // Priority 1: Check effortless.env (project-level)
             var envFile = SsotmeEnvFile.TryLoadFromNearestProject();
             var envUsername = envFile?.GetValue("BASEROW_USERNAME");
             var envPassword = envFile?.GetValue("BASEROW_PASSWORD");
@@ -52,7 +52,7 @@ namespace SSoTme.OST.Core.Lib.External
             var key = SSOTMEKey.GetSSoTmeKey(runAs);
             if (!key.APIKeys.ContainsKey("baserow"))
             {
-                throw new NoStackException("Baserow credentials not found. Add BASEROW_USERNAME/BASEROW_PASSWORD to ssotme.env or run: ssotme -setAccountAPIKey=baserow/username/password");
+                throw new NoStackException("Baserow credentials not found. Add BASEROW_USERNAME/BASEROW_PASSWORD to effortless.env or run: ssotme -setAccountAPIKey=baserow/username/password");
             }
 
             var baserowConfigJson = key.APIKeys["baserow"];

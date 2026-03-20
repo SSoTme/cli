@@ -189,10 +189,10 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Mark the tool being run as legacy. It will query the legacy RabbitMQ server instead of the v2 system", MinOccurs = 0, Aliases = "lc")]
         public bool legacy { get; set; }
         
-        [CommandLineOption(Description = "Update the pinned version of this tool in ssotme.json to the current head version (does not run the tool)", MinOccurs = 0, Aliases = "up")]
+        [CommandLineOption(Description = "Update the pinned version of this tool in effortless.json to the current head version (does not run the tool)", MinOccurs = 0, Aliases = "up")]
         public bool upgrade { get; set; }
-        
-        [CommandLineOption(Description = "Run this tool using the current head version and update the pinned version in ssotme.json", MinOccurs = 0, Aliases = "lat")]
+
+        [CommandLineOption(Description = "Run this tool using the current head version and update the pinned version in effortless.json", MinOccurs = 0, Aliases = "lat")]
         public bool latest { get; set; }
         
     }
