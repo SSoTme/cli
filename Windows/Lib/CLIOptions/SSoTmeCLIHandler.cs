@@ -669,10 +669,22 @@ namespace SSoTme.OST.Lib.CLIOptions
                         {
                             try
                             {
-                                this.AICaptureProject = SSoTmeProject.LoadOrFail(new DirectoryInfo(Environment.CurrentDirectory), false, this.clean || this.cleanAll);
+                                var currentDirInfo = new DirectoryInfo(Environment.CurrentDirectory);
+                                if (!currentDirInfo.Exists)
+                                {
+                                    ShowError($"ERROR: Current directory no longer exists: {Environment.CurrentDirectory}", ConsoleColor.Red);
+                                    ShowError($"\nThis can happen when a previous clean or build deleted an empty directory.", ConsoleColor.Red);
+                                    this.ParseResult = -1;
+                                    this.SuppressTranspile = true;
+                                    return;
+                                }
+                                this.AICaptureProject = SSoTmeProject.LoadOrFail(currentDirInfo, false, this.clean || this.cleanAll);
                                 if (this.AICaptureProject is null) {
-                                    // warn user for clarity
-                                    ShowError("WARN: Project is null. Run `effortless -init` to create a new one in this directory.", ConsoleColor.Yellow);
+                                    ShowError($"ERROR: No project found in this directory or any parent directory.", ConsoleColor.Red);
+                                    ShowError($"\nRun `effortless -init` to create a new project in this directory.", ConsoleColor.Red);
+                                    this.ParseResult = -1;
+                                    this.SuppressTranspile = true;
+                                    return;
                                 }
                             }
                             catch (Exception ex)
@@ -2000,6 +2012,12 @@ Seed Url: ");
                                 CliLog.LogLine($"Pinned {this.ResolvedToolName ?? this.transpiler} to {this.ResolvedVersionKey}");
                         }
                     }
+                }
+
+                // Clean up empty directories after tool run completes
+                if (!ReferenceEquals(this.AICaptureProject, null))
+                {
+                    this.AICaptureProject.CleanEmptyDirectories(Environment.CurrentDirectory);
                 }
             }
         }

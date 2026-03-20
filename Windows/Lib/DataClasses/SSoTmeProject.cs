@@ -1009,6 +1009,9 @@ effortless.env";
                     else this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
                 }
                 if (isBuildAll) this.BuildSubSSoTmeProjects();
+
+                // Clean up empty directories after all tools have finished
+                this.RemoveEmptyFolders(buildPath);
             }
             finally
             {
@@ -1351,6 +1354,11 @@ effortless.env";
             {
                 this.RemoveEmptyFolders(pathFullName);
             }
+        }
+
+        public void CleanEmptyDirectories(string path)
+        {
+            this.RemoveEmptyFolders(path);
         }
 
         private void RemoveEmptyFolders(string pathToClean)
