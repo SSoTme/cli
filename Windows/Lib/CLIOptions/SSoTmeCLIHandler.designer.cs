@@ -11,7 +11,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
     [CommandLineManager(ApplicationName = "SSoTme CLI",
                         Copyright = "Copyright 2025, EffortlessAPI.com",
-                        Description = @"-p description=\n\nSYNTAX: effortless {command} [...{additional_args}] [options]\nOptions")]
+                        Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions")]
     public partial class SSoTmeCLIHandler
     {
         
@@ -126,7 +126,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Executes the given command as a ProcessInfo.Start", MinOccurs = 0, Aliases = "exec")]
         public string execute { get; set; }
         
-        [CommandLineOption(Description = "Include disabled tools in th ebuild", MinOccurs = 0, Aliases = "id")]
+        [CommandLineOption(Description = "Include disabled tools in the build", MinOccurs = 0, Aliases = "id")]
         public bool includeDisabled { get; set; }
         
         [CommandLineOption(Description = "Name of the project (optional parameter to the init command)", MinOccurs = 0, Aliases = "name")]
@@ -180,7 +180,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Ignore errors sent by this transpiler (continue build if it fails)", MinOccurs = 0, Aliases = "ignoreError")]
         public bool ignoreErrors { get; set; }
         
-        [CommandLineOption(Description = "List all available versions of the tool", MinOccurs = 0, Aliases = "lv")]
+        [CommandLineOption(Description = "List all available versions of the tool", MinOccurs = 0, Aliases = "lv,list,l")]
         public bool listVersions { get; set; }
         
         [CommandLineOption(Description = "Purge and re-fetch the remote tools index", MinOccurs = 0, Aliases = "rt")]
@@ -189,10 +189,10 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Mark the tool being run as legacy. It will query the legacy RabbitMQ server instead of the v2 system", MinOccurs = 0, Aliases = "lc")]
         public bool legacy { get; set; }
         
-        [CommandLineOption(Description = "Update the pinned version of this tool in effortless.json to the current head version (does not run the tool)", MinOccurs = 0, Aliases = "up")]
+        [CommandLineOption(Description = "Update the pinned version of this tool to the current head version (does not run the tool)", MinOccurs = 0, Aliases = "up")]
         public bool upgrade { get; set; }
-
-        [CommandLineOption(Description = "Run this tool using the current head version and update the pinned version in effortless.json", MinOccurs = 0, Aliases = "lat")]
+        
+        [CommandLineOption(Description = "Run this tool using the current head version and update its pinned version for this project", MinOccurs = 0, Aliases = "lat")]
         public bool latest { get; set; }
         
     }
