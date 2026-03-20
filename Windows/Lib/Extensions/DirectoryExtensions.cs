@@ -83,15 +83,15 @@ public static class DirectoryExtensions
             throw new NotImplementedException("The specified directory does not exist.");
         }
 
-        Console.WriteLine($"Executing 'ssotme -buildLocal' in {di.FullName}");
+        Console.WriteLine($"Executing 'effortless -buildLocal' in {di.FullName}");
         ProcessStartInfo psi;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            psi = new ProcessStartInfo("cmd.exe", $"/c ssotme -buildLocal") { WorkingDirectory = di.FullName };
+            psi = new ProcessStartInfo("cmd.exe", $"/c effortless -buildLocal") { WorkingDirectory = di.FullName };
         }
         else
         {
-            psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -buildLocal\"") { WorkingDirectory = di.FullName };
+            psi = new ProcessStartInfo("/bin/bash", $"-c \"effortless -buildLocal\"") { WorkingDirectory = di.FullName };
         }
         Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
         var p = Process.Start(psi);
@@ -187,15 +187,15 @@ public static class DirectoryExtensions
             throw new NotImplementedException("The specified directory does not exist.");
         }
 
-        Console.WriteLine($"Executing 'ssotme -clean' in {di.FullName}");
+        Console.WriteLine($"Executing 'effortless -clean' in {di.FullName}");
         ProcessStartInfo psi;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            psi = new ProcessStartInfo("cmd.exe", $"/c ssotme -clean") { WorkingDirectory = di.FullName };
+            psi = new ProcessStartInfo("cmd.exe", $"/c effortless -clean") { WorkingDirectory = di.FullName };
         }
         else
         {
-            psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -clean\"") { WorkingDirectory = di.FullName };
+            psi = new ProcessStartInfo("/bin/bash", $"-c \"effortless -clean\"") { WorkingDirectory = di.FullName };
         }
         Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
         var p = Process.Start(psi);

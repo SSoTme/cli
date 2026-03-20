@@ -52,7 +52,7 @@ namespace SSoTme.OST.Core.Lib.External
             var key = SSOTMEKey.GetSSoTmeKey(runAs);
             if (!key.APIKeys.ContainsKey("baserow"))
             {
-                throw new NoStackException("Baserow credentials not found. Add BASEROW_USERNAME/BASEROW_PASSWORD to effortless.env or run: ssotme -setAccountAPIKey=baserow/username/password");
+                throw new NoStackException("Baserow credentials not found. Add BASEROW_USERNAME/BASEROW_PASSWORD to effortless.env or run: effortless -setAccountAPIKey=baserow/username/password");
             }
 
             var baserowConfigJson = key.APIKeys["baserow"];

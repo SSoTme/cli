@@ -395,16 +395,16 @@ namespace SSoTme.OST.Lib.Extensions
         }
 
 
-        public static void CleanZippedFileSet(this byte[] zippedFileSet, bool debug = false)
+        public static void CleanZippedFileSet(this byte[] zippedFileSet, bool debug = false, bool deleteEmptyDirs = true)
         {
             if (debug) Console.WriteLine($"DEBUG: Unzipping {zippedFileSet.Length} bytes to string");
             var fileSetXml = zippedFileSet.UnzipToString();
             if (debug) Console.WriteLine($"DEBUG: Unzipped XML length: {fileSetXml.Length} chars, calling CleanFileSet()");
-            fileSetXml.CleanFileSet(debug);
+            fileSetXml.CleanFileSet(debug, deleteEmptyDirs);
             if (debug) Console.WriteLine($"DEBUG: CleanFileSet() completed");
         }
 
-        public static void CleanFileSet(this string fileSetXml, bool debug)
+        public static void CleanFileSet(this string fileSetXml, bool debug, bool deleteEmptyDirs = true)
         {
             if (debug) Console.WriteLine($"DEBUG: CleanFileSet called with XML (empty={String.IsNullOrEmpty(fileSetXml)})");
             if (!String.IsNullOrEmpty(fileSetXml) && fileSetXml.Contains("<"))
@@ -444,8 +444,11 @@ namespace SSoTme.OST.Lib.Extensions
                         Console.WriteLine($"DEBUG: FileSetFile node missing RelativePath");
                     }
                 }
-                if (debug) Console.WriteLine($"DEBUG: Calling CleanEmptyFolders()");
-                CleanEmptyFolders();
+                if (deleteEmptyDirs)
+                {
+                    if (debug) Console.WriteLine($"DEBUG: Calling CleanEmptyFolders()");
+                    CleanEmptyFolders();
+                }
             }
             else if (debug)
             {

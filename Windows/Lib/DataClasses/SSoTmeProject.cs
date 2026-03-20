@@ -203,19 +203,19 @@ namespace SSoTme.OST.Lib.DataClasses
             var envFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "effortless.env"));
             if (!envFI.Exists)
             {
-                var envTemplate = @"# Add this file to your .gitignore and use it to store any credentials ssotme needs to connect to external services
+                var envTemplate = @"# Add this file to your .gitignore and use it to store any credentials that the cli needs to connect to external services
 # You can use the -account xxx parameter when running a tool to inject that
 # service's credentials into the command; for example
 #
 # AIRTABLE_PAT=xyz
-# ssotme airtable-to-rulebook -account airtable
+# effortless airtable-to-rulebook -account airtable
 #
 # or, for services that need a username and password:
 #
 # BASEROW_USERNAME=...
 # BASEROW_PASSWORD=...
 #
-# ssotme baserow-to-rulebook -account baserow
+# effortless baserow-to-rulebook -account baserow
 ";
                 File.WriteAllText(envFI.FullName, envTemplate);
             }
@@ -713,13 +713,13 @@ effortless.env";
                 psi.WorkingDirectory = di.FullName;
 
                 string c = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "/C " : "-c ";
-                psi.Arguments = c + "\"ssotme spxml-to-detailed-spxml -i ./SSoTmeProject.spxml\"";
+                psi.Arguments = c + "\"effortless spxml-to-detailed-spxml -i ./SSoTmeProject.spxml\"";
                 var p = Process.Start(psi);
                 p.WaitForExit(100000);
                 if (!p.HasExited) throw new Exception("Failed waiting for Detailed SP Xml to be created.");
                 else
                 {
-                    psi.Arguments = c + "\"ssotme detailed-spxml-to-html-docs -i ./SSoTmeProject.dspxml\"";
+                    psi.Arguments = c + "\"effortless detailed-spxml-to-html-docs -i ./SSoTmeProject.dspxml\"";
                     p = Process.Start(psi);
 
                     p.WaitForExit(100000);
@@ -820,27 +820,24 @@ effortless.env";
             }
             string relativePath = this.GetProjectRelativePath(currentDir);
 
-            // Find and remove matching transpilers
-            var transpilersToRemove = this.ProjectTranspilers
-                .Where(pt =>
-                    (String.Equals(pt.Name, transpilerName, StringComparison.OrdinalIgnoreCase) ||
-                     String.Equals(pt.CommandLine?.Split(' ').FirstOrDefault(), transpilerName, StringComparison.OrdinalIgnoreCase)) &&
-                    String.Equals(pt.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase) &&
-                    (String.IsNullOrEmpty(transpilerGroup) || String.Equals(pt.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase)))
-                .ToList(); // Materialize to avoid collection modification issues
+            var transpilersToRemove = FindMatchingTranspilers(transpilerName, relativePath, transpilerGroup);
 
-            if (transpilersToRemove.Any())
+            if (transpilersToRemove.Count > 1)
             {
-                foreach (var transpiler in transpilersToRemove)
-                {
-                    this.ProjectTranspilers.Remove(transpiler);
-                    this.LogMessage("Removed transpiler: {0} from {1}", transpiler.Name, transpiler.RelativePath);
-                }
+                CliLog.LogLine($"Warning: '{transpilerName}' matched multiple tools. Provide a fully-qualified name to target a specific tool.", ConsoleColor.Yellow);
+                foreach (var t in transpilersToRemove)
+                    CliLog.LogLine($"  - {t.CommandLine}", ConsoleColor.Yellow);
+            }
+            else if (transpilersToRemove.Count == 1)
+            {
+                var transpiler = transpilersToRemove[0];
+                this.ProjectTranspilers.Remove(transpiler);
+                CliLog.LogTranspiler("Uninstalled Transpiler", ConsoleColor.Red, transpiler.CommandLine, transpiler.RelativePath, transpiler.TranspilerGroup);
                 this.Save();
             }
             else
             {
-                this.LogMessage("No matching transpiler found with name '{0}' in path '{1}'", transpilerName, relativePath);
+                CliLog.LogLine($"No tools matching tool name '{transpilerName}' in path '{relativePath}'", ConsoleColor.Yellow);
             }
         }
 
@@ -1091,11 +1088,11 @@ effortless.env";
                 ProcessStartInfo psi;
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    psi = new ProcessStartInfo("cmd.exe", $"/c ssotme -buildLocal -tg ssot") { WorkingDirectory = ".." };
+                    psi = new ProcessStartInfo("cmd.exe", $"/c effortless -buildLocal -tg ssot") { WorkingDirectory = ".." };
                 }
                 else
                 {
-                    psi = new ProcessStartInfo("/bin/bash", $"-c \"ssotme -buildLocal -tg ssot\"") { WorkingDirectory = ".." };
+                    psi = new ProcessStartInfo("/bin/bash", $"-c \"effortless -buildLocal -tg ssot\"") { WorkingDirectory = ".." };
                 }
                 Environment.SetEnvironmentVariable("SSOTME_CHILD_PROCESS", "1");
                 var p = Process.Start(psi);
@@ -1472,12 +1469,22 @@ effortless.env";
 
         private void IntegrateTranspiler(ProjectTranspiler projectTranspiler, bool addIfMissing, bool dryRun)
         {
-            ProjectTranspiler matchingTranspiler = FindMatchingTranspiler(projectTranspiler);
+            var matches = FindMatchingTranspilers(GetToolName(projectTranspiler.CommandLine), projectTranspiler.RelativePath, projectTranspiler.TranspilerGroup);
+
+            if (matches.Count > 1)
+            {
+                CliLog.LogLine($"Warning: '{GetToolName(projectTranspiler.CommandLine)}' matched multiple installed tools. Provide a fully-qualified name to target a specific tool.", ConsoleColor.Yellow);
+                foreach (var t in matches)
+                    CliLog.LogLine($"  - {t.CommandLine}", ConsoleColor.Yellow);
+                return;
+            }
+
+            var matchingTranspiler = matches.FirstOrDefault();
 
             if (dryRun)
             {
                 Console.WriteLine($"DRY RUN: Installing {projectTranspiler.Name}");
-                
+
                 if (matchingTranspiler is null)
                 {
                     Console.WriteLine($"DRY RUN: The {projectTranspiler.Name} transpiler will be installed in path {projectTranspiler.RelativePath}");
@@ -1489,13 +1496,17 @@ effortless.env";
 
                 return;
             }
-            
+
             int firstIndex = -1;
-            while (!ReferenceEquals(matchingTranspiler, null))
+            if (!ReferenceEquals(matchingTranspiler, null))
             {
-                if (firstIndex == -1) firstIndex = this.ProjectTranspilers.IndexOf(matchingTranspiler);
+                CliLog.LogTranspiler("Replaced Transpiler", ConsoleColor.Yellow, projectTranspiler.CommandLine, projectTranspiler.RelativePath, projectTranspiler.TranspilerGroup);
+                firstIndex = this.ProjectTranspilers.IndexOf(matchingTranspiler);
                 this.ProjectTranspilers.Remove(matchingTranspiler);
-                matchingTranspiler = FindMatchingTranspiler(projectTranspiler);
+            }
+            else
+            {
+                CliLog.LogTranspiler("Installed Transpiler", ConsoleColor.Green, projectTranspiler.CommandLine, projectTranspiler.RelativePath, projectTranspiler.TranspilerGroup);
             }
             firstIndex = Math.Min(firstIndex, this.ProjectTranspilers.Count);
             if (firstIndex >= 0) this.ProjectTranspilers.Insert(firstIndex, projectTranspiler);
@@ -1503,12 +1514,34 @@ effortless.env";
             projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name.Replace("-", "") ?? "noTranspilerFound";
         }
 
-        private ProjectTranspiler FindMatchingTranspiler(ProjectTranspiler projectTranspiler)
+        private static string GetToolName(string commandLine)
         {
-            return this.ProjectTranspilers.FirstOrDefault(fodPT => (fodPT.Name == projectTranspiler.Name) &&
-                                                                                     (fodPT.RelativePath == projectTranspiler.RelativePath) &&
-                                                                                     (String.Equals(fodPT.TranspilerGroup, projectTranspiler.TranspilerGroup)));
+            return commandLine?.Split(' ').FirstOrDefault() ?? "";
         }
+
+        private static bool ToolNameMatches(string installedToolName, string providedName)
+        {
+            if (String.Equals(installedToolName, providedName, StringComparison.OrdinalIgnoreCase))
+                return true;
+            // "common/airtable-to-rulebook" or "effortless/common/airtable-to-rulebook" matches installed "airtable-to-rulebook"
+            if (providedName.EndsWith("/" + installedToolName, StringComparison.OrdinalIgnoreCase))
+                return true;
+            // installed "effortless/common/airtable-to-rulebook" matches provided "airtable-to-rulebook"
+            if (installedToolName.EndsWith("/" + providedName, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+        }
+
+        private List<ProjectTranspiler> FindMatchingTranspilers(string toolName, string relativePath, string transpilerGroup)
+        {
+            return this.ProjectTranspilers
+                .Where(pt => ToolNameMatches(GetToolName(pt.CommandLine), toolName) &&
+                             String.Equals(pt.RelativePath, relativePath, StringComparison.OrdinalIgnoreCase) &&
+                             (String.IsNullOrEmpty(transpilerGroup) || String.Equals(pt.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
+
 
         public void RemoveSetting(string setting)
         {

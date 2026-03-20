@@ -11,7 +11,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
     [CommandLineManager(ApplicationName = "SSoTme CLI",
                         Copyright = "Copyright 2025, EffortlessAPI.com",
-                        Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions")]
+                        Description = @"-p description=\n\nSYNTAX: effortless {command} [...{additional_args}] [options]\nOptions")]
     public partial class SSoTmeCLIHandler
     {
         

@@ -151,7 +151,7 @@ namespace SSoTme.OST.Lib.DataClasses
             }
 
             Console.WriteLine("\n\n **** " + this.RelativePath + ": " + this.Name + " ****");
-            Console.WriteLine("CommandLine:> ssotme {0}", commandLineToRun);
+            Console.WriteLine("CommandLine:> effortless {0}", commandLineToRun);
             var transpileRootDI = new DirectoryInfo(Path.Combine(project.RootPath, $"{this.RelativePath}".Trim("\\/".ToCharArray())));
             if (!transpileRootDI.Exists) transpileRootDI.Create();
 
@@ -270,7 +270,7 @@ namespace SSoTme.OST.Lib.DataClasses
             Console.WriteLine("---- {0}{1}", this.Name, this.IsDisabled ? "    **** DISABLED ****" : "");
             Console.WriteLine("---- .{0}/", $"{this.RelativePath}".Replace("\\", "/"));
             Console.WriteLine("-----------------------------------");
-            Console.WriteLine("\nCommand Line:> ssotme {0}\n", this.CommandLine);
+            Console.WriteLine("\nCommand Line:> effortless {0}\n", this.CommandLine);
         }
 
         public bool IsAtPath(string relativePath, bool exactMatch = false)

@@ -42,7 +42,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         string TranspilerName { get; set; }
         List<Transpiler> Transpilers { get; set; }
 
-        void CleanFileSet();
+        void CleanFileSet(bool deleteEmptyDirs = true);
         string GetParameterByIndex(int parameterIndex);
         string GetParameterByName(string paramName);
         string GetSetting(string settingName, string defaultStringValue);
