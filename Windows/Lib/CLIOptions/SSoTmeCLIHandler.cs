@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.20.1158";
+        public string CLI_VERSION = "2026.03.23.1526";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -3413,6 +3413,79 @@ Seed Url: ");
                 try
                 {
                     var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+
+                    // Check if transpiler returned an async task (TaskId at same level as Logs)
+                    if (!string.IsNullOrEmpty(responsePayload?.TaskId) &&
+                        string.Equals(responsePayload.TaskStatus, "pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var taskPollUrl = $"{postUrl.TrimEnd('/')}/task/{responsePayload.TaskId}";
+                        var pollInterval = 3000;
+
+                        if (this.debug)
+                            Console.WriteLine($"DEBUG: Transpiler returned TaskId={responsePayload.TaskId}, switching to poll mode");
+
+                        CliLog.LogLine("Transpiler processing asynchronously, polling for result...", ConsoleColor.Cyan);
+
+                        while (stopwatch.ElapsedMilliseconds < this.waitTimeout)
+                        {
+                            await System.Threading.Tasks.Task.Delay(pollInterval);
+
+                            try
+                            {
+                                var pollResponse = await client.GetAsync(taskPollUrl);
+
+                                if (pollResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                                {
+                                    this.result = new SSOTMEPayload
+                                    {
+                                        Exception = new Exception("Async task not found on transpiler (container may have restarted). Please retry.")
+                                    };
+                                    return;
+                                }
+
+                                if (!pollResponse.IsSuccessStatusCode)
+                                {
+                                    if (this.debug)
+                                        Console.WriteLine($"DEBUG: Poll returned {pollResponse.StatusCode}, retrying...");
+                                    continue;
+                                }
+
+                                var pollContent = await pollResponse.Content.ReadAsStringAsync();
+                                var pollPayload = JsonConvert.DeserializeObject<SSOTMEPayload>(pollContent);
+
+                                if (string.Equals(pollPayload?.TaskStatus, "completed", StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(pollPayload?.TaskStatus, "failed", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    responsePayload = pollPayload;
+                                    break;
+                                }
+
+                                // Still pending
+                                if (this.debug)
+                                    Console.WriteLine($"DEBUG: Task still pending (elapsed: {stopwatch.ElapsedMilliseconds}ms)");
+                            }
+                            catch (TaskCanceledException)
+                            {
+                                continue;
+                            }
+                            catch (System.Net.Http.HttpRequestException ex)
+                            {
+                                if (this.debug)
+                                    Console.WriteLine($"DEBUG: Poll error: {ex.Message}");
+                                continue;
+                            }
+                        }
+
+                        // If we exited the loop still pending, it's a timeout
+                        if (string.Equals(responsePayload?.TaskStatus, "pending", StringComparison.OrdinalIgnoreCase))
+                        {
+                            this.result = new SSOTMEPayload
+                            {
+                                Exception = new Exception("Timed out waiting for async transpiler task to complete")
+                            };
+                            return;
+                        }
+                    }
 
                     // Fix missing transpiler name from remote transpiler
                     if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("http"))

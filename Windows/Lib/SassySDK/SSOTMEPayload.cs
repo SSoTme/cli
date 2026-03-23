@@ -112,6 +112,8 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         public int CLIWaitTimeout { get; set; }
         public bool CLIDebug { get; set; }
         public List<LogEntry> Logs { get; set; }
+        public string TaskId { get; set; }
+        public string TaskStatus { get; set; }
         public List<FileType> FileTypes { get; set; }
         public SSoTmeProject SSoTmeProject { get; set; }
         public SSOTMEKey SSoTmeKey { get; set; }
