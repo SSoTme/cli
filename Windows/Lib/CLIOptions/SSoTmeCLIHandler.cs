@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.20.1158";
+        public string CLI_VERSION = "2026.03.24.1247";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -65,6 +65,17 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string ResolvedVersionKey { get; private set; }  // e.g. "v2026.03.12.1934"
         public string ResolvedToolName { get; private set; }    // e.g. "effortless/effortless/rulebook-to-xlsx"
         private bool _suppressGenericToolNotFoundError = false;
+        private bool _showedBootMessage = false;
+
+        private void ClearBootLine()
+        {
+            if (!_showedBootMessage) return;
+            _showedBootMessage = false;
+            var clearLine = "\r" + new string(' ', "Waiting for the remote transpiler to boot up ...".Length) + "\r";
+            Console.Write(clearLine);
+            Console.WriteLine();
+            Console.WriteLine();
+        }
 
         private SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
@@ -1536,10 +1547,12 @@ Seed Url: ");
                     this.cleanAll = true;
                     break;
 
+                case "list":
                 case "describe":
                     this.describe = true;
                     break;
 
+                case "da":
                 case "describeall":
                     this.describeAll = true;
                     break;
@@ -1746,7 +1759,7 @@ Seed Url: ");
                     }
                     SSOTMEKey.SetSSoTmeKey(key, this.runAs);
                 }
-                else if (this.install && this.transpiler.StartsWith("http"))
+                else if (this.install && this.IsHttpUrl(this._rawTranspilerArg ?? this.transpiler))
                 {
                     result = new SSOTMEPayload()
                     {
@@ -1774,11 +1787,11 @@ Seed Url: ");
                 }
                 else if (this.build || this.buildLocal)
                 {
-                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
+                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug, ignoreErrors: this.ignoreErrors);
                 }
                 else if (this.buildAll)
                 {
-                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug);
+                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug, ignoreErrors: this.ignoreErrors);
                 }
                 else if (this.uninstall)
                 {
@@ -1895,6 +1908,10 @@ Seed Url: ");
                         var exceptionMessage = result.Exception.Message ?? "";
                         var isTranspilerNotFound = exceptionMessage.Contains("Could not find transpiler") ||
                                                   exceptionMessage.Contains("transpiler status message");
+                        var isBrokerUnreachable = exceptionMessage.Contains("RabbitMQ broker unreachable");
+
+                        // Already printed a clear message in StartTranspile — just return
+                        if (isBrokerUnreachable) return -1;
 
                         // For "transpiler not found" errors, show a simpler message without the warning box
                         if (isTranspilerNotFound && !this._suppressGenericToolNotFoundError)
@@ -2850,7 +2867,17 @@ Seed Url: ");
             bool isLocalOrUrl = !String.IsNullOrEmpty(this.targetUrl) || this.IsHttpUrl(this.transpiler) || !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler));
             bool useRabbitMQ = !isLocalOrUrl;
 
-            this.AccountHolder = new SMQAccountHolder(isAutoConnect: useRabbitMQ);
+            try
+            {
+                this.AccountHolder = new SMQAccountHolder(isAutoConnect: useRabbitMQ);
+            }
+            catch (RabbitMQ.Client.Exceptions.BrokerUnreachableException)
+            {
+                ShowError($"ERROR: Unable to reach the RabbitMQ broker for transpiler '{this.transpiler}'.");
+                ShowError("Check your network connection or use a URL-based transpiler.");
+                this.result = new SSOTMEPayload { Exception = new Exception("RabbitMQ broker unreachable") };
+                return;
+            }
             var currentSSoTmeKey = SSOTMEKey.GetSSoTmeKey(this.runAs);
             result = null;
 
@@ -2867,7 +2894,6 @@ Seed Url: ");
                 {
                     var dots = new[] { "   ", ".  ", ".. ", "..." };
                     int elapsed = 0;
-                    bool showedBootMessage = false;
                     int dotIndex = 0;
                     while (ReferenceEquals(result, null))
                     {
@@ -2875,20 +2901,16 @@ Seed Url: ");
                         elapsed += 500;
                         if (elapsed >= 15000)
                         {
-                            if (!showedBootMessage)
+                            if (!_showedBootMessage)
                             {
                                 Console.Write("Waiting for the remote transpiler to boot up    ");
-                                showedBootMessage = true;
+                                _showedBootMessage = true;
                             }
                             Console.Write("\b\b\b" + dots[dotIndex % 4]);
                             dotIndex++;
                         }
                     }
-                    if (showedBootMessage)
-                    {
-                        var clearLine = "\r" + new string(' ', "Waiting for the remote transpiler to boot up ...".Length) + "\r";
-                        Console.Write(clearLine);
-                    }
+                    ClearBootLine();
                 }
                 else
                 {
@@ -3375,6 +3397,7 @@ Seed Url: ");
             if (response != null)
             {
                 var responseContent = await response.Content.ReadAsStringAsync();
+                ClearBootLine();
 
                 // Check if response is successful
                 if (!response.IsSuccessStatusCode)
@@ -3413,6 +3436,79 @@ Seed Url: ");
                 try
                 {
                     var responsePayload = JsonConvert.DeserializeObject<SSOTMEPayload>(responseContent);
+
+                    // Check if transpiler returned an async task (TaskId at same level as Logs)
+                    if (!string.IsNullOrEmpty(responsePayload?.TaskId) &&
+                        string.Equals(responsePayload.TaskStatus, "pending", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var taskPollUrl = $"{postUrl.TrimEnd('/')}/task/{responsePayload.TaskId}";
+                        var pollInterval = 3000;
+
+                        if (this.debug)
+                            Console.WriteLine($"DEBUG: Transpiler returned TaskId={responsePayload.TaskId}, switching to poll mode");
+
+                        CliLog.LogLine("Transpiler processing asynchronously, polling for result...", ConsoleColor.Cyan);
+
+                        while (stopwatch.ElapsedMilliseconds < this.waitTimeout)
+                        {
+                            await System.Threading.Tasks.Task.Delay(pollInterval);
+
+                            try
+                            {
+                                var pollResponse = await client.GetAsync(taskPollUrl);
+
+                                if (pollResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                                {
+                                    this.result = new SSOTMEPayload
+                                    {
+                                        Exception = new Exception("Async task not found on transpiler (container may have restarted). Please retry.")
+                                    };
+                                    return;
+                                }
+
+                                if (!pollResponse.IsSuccessStatusCode)
+                                {
+                                    if (this.debug)
+                                        Console.WriteLine($"DEBUG: Poll returned {pollResponse.StatusCode}, retrying...");
+                                    continue;
+                                }
+
+                                var pollContent = await pollResponse.Content.ReadAsStringAsync();
+                                var pollPayload = JsonConvert.DeserializeObject<SSOTMEPayload>(pollContent);
+
+                                if (string.Equals(pollPayload?.TaskStatus, "completed", StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(pollPayload?.TaskStatus, "failed", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    responsePayload = pollPayload;
+                                    break;
+                                }
+
+                                // Still pending
+                                if (this.debug)
+                                    Console.WriteLine($"DEBUG: Task still pending (elapsed: {stopwatch.ElapsedMilliseconds}ms)");
+                            }
+                            catch (TaskCanceledException)
+                            {
+                                continue;
+                            }
+                            catch (System.Net.Http.HttpRequestException ex)
+                            {
+                                if (this.debug)
+                                    Console.WriteLine($"DEBUG: Poll error: {ex.Message}");
+                                continue;
+                            }
+                        }
+
+                        // If we exited the loop still pending, it's a timeout
+                        if (string.Equals(responsePayload?.TaskStatus, "pending", StringComparison.OrdinalIgnoreCase))
+                        {
+                            this.result = new SSOTMEPayload
+                            {
+                                Exception = new Exception("Timed out waiting for async transpiler task to complete")
+                            };
+                            return;
+                        }
+                    }
 
                     // Fix missing transpiler name from remote transpiler
                     if (!string.IsNullOrEmpty(this.targetUrl) && this.transpiler.StartsWith("http"))

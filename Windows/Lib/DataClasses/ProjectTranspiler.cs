@@ -141,7 +141,7 @@ namespace SSoTme.OST.Lib.DataClasses
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
         }
 
-        internal void Rebuild(SSoTmeProject project, bool debugOption)
+        internal void Rebuild(SSoTmeProject project, bool debugOption, bool ignoreErrors = false)
         {
             // Build command line with debug flag if needed, but don't mutate this.CommandLine
             var commandLineToRun = this.CommandLine;
@@ -167,6 +167,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 cliHandler.AICaptureProject = project;
                 cliHandler.commandLine = commandLineToRun;  // Use the modified command line, not this.CommandLine
                 cliHandler.ParseCommand();
+                cliHandler.ignoreErrors = ignoreErrors;
                 if (!String.IsNullOrEmpty(cliHandler.ResolvedVersionLabel))
                 {
                     Console.ForegroundColor = ConsoleColor.Blue;
