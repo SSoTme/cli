@@ -896,9 +896,9 @@ effortless.env";
             return relativePath.Replace("\\", "/");
         }
 
-        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug)
+        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug, bool ignoreErrors = false)
         {
-            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, debug, true);
+            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, debug, true, ignoreErrors: ignoreErrors);
         }
 
         internal void Rebuild(
@@ -909,7 +909,8 @@ effortless.env";
             bool copilotConnect,
             bool isBuildLocal,
             bool debug,
-            bool isBuildAll = false)
+            bool isBuildAll = false,
+            bool ignoreErrors = false)
         {
             if (!string.IsNullOrEmpty(buildOnTrigger))
             {
@@ -918,7 +919,7 @@ effortless.env";
             }
             else
             {
-                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
+                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll, ignoreErrors: ignoreErrors);
             }
         }
         
@@ -1032,7 +1033,7 @@ effortless.env";
             }
         }
 
-        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool debugOption, bool isBuildAll = false)
+        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool debugOption, bool isBuildAll = false, bool ignoreErrors = false)
         {
             if (!isBuildLocal) this.CheckIfParentIsRootSeed();
             if (isBuildAll) this.FindSSoTmeJsonFiles();
@@ -1046,7 +1047,7 @@ effortless.env";
                     .ToList();  // Materialize the query to prevent "Collection was modified" error
                 foreach (var pt in matchingProjectTranspilers)
                 {
-                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption);
+                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption, ignoreErrors);
                     else this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
                 }
                 if (isBuildAll) this.BuildSubSSoTmeProjects();
