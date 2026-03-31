@@ -132,19 +132,22 @@ namespace SSoTme.OST.Lib.Services
         /// </summary>
         private string GetEmailFromUser()
         {
-            Console.Write("Enter your email address: ");
-            string email = Console.ReadLine()?.Trim() ?? "";
-
-            if (string.IsNullOrWhiteSpace(email))
-                return "";
-
-            if (!email.Contains("@") || !email.Contains("."))
+            while (true)
             {
-                Console.WriteLine("Invalid email format. Please enter a valid email address.");
-                return GetEmailFromUser();
-            }
+                Console.Write("Enter your email address: ");
+                string email = Console.ReadLine()?.Trim() ?? "";
 
-            return email;
+                if (string.IsNullOrWhiteSpace(email))
+                    return "";
+
+                if (!email.Contains("@") || !email.Contains("."))
+                {
+                    Console.WriteLine("Invalid email format. Please enter a valid email address.");
+                    continue;
+                }
+
+                return email;
+            }
         }
 
         public void HandleSubscription(string jwt)
@@ -155,7 +158,7 @@ namespace SSoTme.OST.Lib.Services
                 return;
             }
 
-            var result = InvokeListTranspilerAuth($"-p mode=viewPlan -p jwt={jwt}");
+            var result = InvokeListTranspilerAuth($"-p mode=viewPlan -p jwt=\"{jwt}\"");
             if (result == null || !result.Success)
             {
                 Console.WriteLine($"Failed to fetch subscription: {result?.Error ?? "Unknown error"}");
@@ -254,6 +257,7 @@ namespace SSoTme.OST.Lib.Services
 
                 string tokenFile = Path.Combine(ssotmeDirectory, "effortlessapi_token.txt");
                 File.WriteAllText(tokenFile, jwtToken);
+                SetFilePermissions600(tokenFile);
 
                 // Also store with timestamp for reference
                 string tokenInfoFile = Path.Combine(ssotmeDirectory, "effortlessapi_token_info.json");
@@ -265,6 +269,7 @@ namespace SSoTme.OST.Lib.Services
                     ExpiresAt = DateTime.UtcNow.AddHours(24).ToString("yyyy-MM-ddTHH:mm:ssZ")
                 };
                 File.WriteAllText(tokenInfoFile, JsonConvert.SerializeObject(tokenInfo, Formatting.Indented));
+                SetFilePermissions600(tokenInfoFile);
 
                 return true;
             }
@@ -340,7 +345,7 @@ namespace SSoTme.OST.Lib.Services
         {
             if (!IsAuthenticated())
             {
-                Console.WriteLine("You are not logged in. Some tools may be unavailable.");
+                Console.WriteLine("You are not logged in. Some tools may be unavailable. Use `effortless login`");
                 return null;
             }
 
@@ -353,7 +358,7 @@ namespace SSoTme.OST.Lib.Services
                 }
                 else
                 {
-                    Console.WriteLine("Session refresh failed. You are not logged in. Some tools may be unavailable.");
+                    Console.WriteLine("Session refresh failed. You are not logged in. Some tools may be unavailable. Use `effortless login`");
                     ClearAuthToken();
                     return null;
                 }
@@ -457,6 +462,16 @@ namespace SSoTme.OST.Lib.Services
             {
                 Console.WriteLine($"❌ Local guide failed: {ex.Message}");
                 Console.WriteLine("Please check your project name and try again.");
+            }
+        }
+
+        private static void SetFilePermissions600(string path)
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Unix ||
+                Environment.OSVersion.Platform == PlatformID.MacOSX)
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("chmod", $"600 \"{path}\"") { CreateNoWindow = true })?.WaitForExit(); }
+                catch { /* best effort */ }
             }
         }
     }
