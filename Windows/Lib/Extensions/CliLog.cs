@@ -4,8 +4,10 @@ namespace SSoTme.OST.Lib.Extensions
 {
     public static class CliLog
     {
-        public static void Writing(string path) => LogLine("Creating", path, ConsoleColor.Green);
-        public static void Cleaning(string path) => LogLine("Cleaning", path, ConsoleColor.Red);
+        public static bool SuppressFileLog { get; set; } = false;
+
+        public static void Writing(string path) { if (!SuppressFileLog) LogLine("Creating", path, ConsoleColor.Green); }
+        public static void Cleaning(string path) { if (!SuppressFileLog) LogLine("Cleaning", path, ConsoleColor.Red); }
 
         static private ConsoleColor CliLogIdColor = ConsoleColor.Blue;
 

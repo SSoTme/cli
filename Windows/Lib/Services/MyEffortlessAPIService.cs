@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using SSoTme.OST.Lib.Extensions;
 
 namespace SSoTme.OST.Lib.Services
 {
@@ -30,15 +31,46 @@ namespace SSoTme.OST.Lib.Services
                 // Check if already authenticated
                 if (IsAuthenticated())
                 {
-                    Console.WriteLine("You are already authenticated.");
-                    Console.Write("Do you want to re-authenticate? (y/N): ");
-                    string response = Console.ReadLine()?.Trim().ToLower() ?? "";
-                    if (response != "y" && response != "yes")
+                    var storedEmail = GetStoredEmail();
+                    if (IsTokenExpired())
                     {
-                        Console.WriteLine("Authentication cancelled.");
-                        return;
+                        Console.WriteLine("Your session has expired. Attempting to refresh...");
+                        if (RefreshToken())
+                        {
+                            storedEmail = GetStoredEmail();
+                            Console.WriteLine(string.IsNullOrEmpty(storedEmail)
+                                ? "Session refreshed. You are already authenticated."
+                                : $"Session refreshed. You are already authenticated as {storedEmail}.");
+                            Console.Write("Do you want to re-authenticate? (y/N): ");
+                            string refreshResponse = Console.ReadLine()?.Trim().ToLower() ?? "";
+                            if (refreshResponse != "y" && refreshResponse != "yes")
+                            {
+                                Console.WriteLine("Authentication cancelled.");
+                                return;
+                            }
+                            Console.WriteLine();
+                        }
+                        else
+                        {
+                            Console.WriteLine("Session refresh failed. Please log in again.");
+                            ClearAuthToken();
+                            Console.WriteLine();
+                        }
                     }
-                    Console.WriteLine();
+                    else
+                    {
+                        Console.WriteLine(string.IsNullOrEmpty(storedEmail)
+                            ? "You are already authenticated."
+                            : $"You are already authenticated as {storedEmail}.");
+                        Console.Write("Do you want to re-authenticate? (y/N): ");
+                        string response = Console.ReadLine()?.Trim().ToLower() ?? "";
+                        if (response != "y" && response != "yes")
+                        {
+                            Console.WriteLine("Authentication cancelled.");
+                            return;
+                        }
+                        Console.WriteLine();
+                    }
                 }
 
                 // Step 1: Get email from user
@@ -80,14 +112,14 @@ namespace SSoTme.OST.Lib.Services
                 }
 
                 // Step 5: Store JWT token
-                bool tokenStored = StoreJWTToken(verifyResult.Token);
+                bool tokenStored = StoreJWTToken(verifyResult.Token, email);
                 if (!tokenStored)
                 {
                     Console.WriteLine("Authentication successful but failed to store token locally.");
                     return;
                 }
 
-                Console.WriteLine("Authentication successful! Token stored in ~/.ssotme/");
+                Console.WriteLine("Authentication successful!");
             }
             catch (Exception ex)
             {
@@ -113,6 +145,33 @@ namespace SSoTme.OST.Lib.Services
             }
 
             return email;
+        }
+
+        public void HandleSubscription(string jwt)
+        {
+            if (string.IsNullOrEmpty(jwt))
+            {
+                Console.WriteLine("You are not logged in. Use `effortless login` first.");
+                return;
+            }
+
+            var result = InvokeListTranspilerAuth($"-p mode=viewPlan -p jwt={jwt}");
+            if (result == null || !result.Success)
+            {
+                Console.WriteLine($"Failed to fetch subscription: {result?.Error ?? "Unknown error"}");
+                return;
+            }
+
+            var plan = result.Plan ?? "free";
+            CliLog.LogLine("Account:", GetStoredEmail(), ConsoleColor.Cyan);
+            var planColor = plan == "free" ? ConsoleColor.Yellow : ConsoleColor.Green;
+            CliLog.LogLine("Subscription plan:", plan, planColor);
+            if (plan == "free")
+            {
+                Console.WriteLine("Some tools may be unavailable on the free tier.");
+                Console.WriteLine($"You can upgrade your plan by logging in at bases.effortlessapi.com with email: {GetStoredEmail()}");
+                Console.WriteLine($"and contacting us at https://bases.effortlessapi.com/dashboard/contact");
+            }
         }
 
         /// <summary>
@@ -150,7 +209,7 @@ namespace SSoTme.OST.Lib.Services
                 var result = InvokeListTranspilerAuth($"-p mode=refresh -p jwt={currentToken}");
                 if (result != null && result.Success && !string.IsNullOrEmpty(result.Token))
                 {
-                    StoreJWTToken(result.Token);
+                    StoreJWTToken(result.Token, GetStoredEmail());
                     return true;
                 }
                 return false;
@@ -168,37 +227,8 @@ namespace SSoTme.OST.Lib.Services
         {
             try
             {
-                string token = GetStoredJWTToken();
-                if (string.IsNullOrWhiteSpace(token))
-                    return;
-
-                // Decode JWT payload (second segment, base64)
-                var parts = token.Split('.');
-                if (parts.Length != 3)
-                    return;
-
-                var payloadBase64 = parts[1];
-                // Pad base64 if needed
-                switch (payloadBase64.Length % 4)
-                {
-                    case 2: payloadBase64 += "=="; break;
-                    case 3: payloadBase64 += "="; break;
-                }
-                var payloadJson = Encoding.UTF8.GetString(Convert.FromBase64String(payloadBase64));
-                var payload = JsonConvert.DeserializeObject<dynamic>(payloadJson);
-
-                long exp = (long)(payload?.exp ?? 0);
-                if (exp == 0)
-                    return;
-
-                var expiresAt = DateTimeOffset.FromUnixTimeSeconds(exp);
-                var now = DateTimeOffset.UtcNow;
-
-                // Refresh if expiring within 5 minutes
-                if (expiresAt - now < TimeSpan.FromMinutes(5))
-                {
+                if (IsAuthenticated() && IsTokenExpired())
                     RefreshToken();
-                }
             }
             catch
             {
@@ -209,7 +239,7 @@ namespace SSoTme.OST.Lib.Services
         /// <summary>
         /// Stores JWT token in ~/.ssotme folder
         /// </summary>
-        private bool StoreJWTToken(string jwtToken)
+        private bool StoreJWTToken(string jwtToken, string email = null)
         {
             try
             {
@@ -230,6 +260,7 @@ namespace SSoTme.OST.Lib.Services
                 var tokenInfo = new
                 {
                     Token = jwtToken,
+                    Email = email,
                     CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                     ExpiresAt = DateTime.UtcNow.AddHours(24).ToString("yyyy-MM-ddTHH:mm:ssZ")
                 };
@@ -267,6 +298,21 @@ namespace SSoTme.OST.Lib.Services
             }
         }
 
+        public string GetStoredEmail()
+        {
+            try
+            {
+                string tokenInfoFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssotme", "effortlessapi_token_info.json");
+                if (File.Exists(tokenInfoFile))
+                {
+                    var info = JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(File.ReadAllText(tokenInfoFile));
+                    return info?["Email"]?.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
         /// <summary>
         /// Creates an HttpClient with authentication header for EffortlessAPI calls.
         /// Automatically refreshes the token if it is near expiry.
@@ -290,10 +336,57 @@ namespace SSoTme.OST.Lib.Services
         /// <summary>
         /// Checks if user is currently authenticated (has valid token)
         /// </summary>
+        public string CheckLoginStatus()
+        {
+            if (!IsAuthenticated())
+            {
+                Console.WriteLine("You are not logged in. Some tools may be unavailable.");
+                return null;
+            }
+
+            if (IsTokenExpired())
+            {
+                Console.WriteLine("Refreshing session...");
+                if (RefreshToken())
+                {
+                    return GetStoredJWTToken();
+                }
+                else
+                {
+                    Console.WriteLine("Session refresh failed. You are not logged in. Some tools may be unavailable.");
+                    ClearAuthToken();
+                    return null;
+                }
+            }
+
+            return GetStoredJWTToken();
+        }
+
         public bool IsAuthenticated()
         {
             string token = GetStoredJWTToken();
             return !string.IsNullOrWhiteSpace(token);
+        }
+
+        public bool IsTokenExpired()
+        {
+            try
+            {
+                string token = GetStoredJWTToken();
+                if (string.IsNullOrWhiteSpace(token)) return true;
+                var parts = token.Split('.');
+                if (parts.Length != 3) return true;
+                var payloadBase64 = parts[1];
+                switch (payloadBase64.Length % 4)
+                {
+                    case 2: payloadBase64 += "=="; break;
+                    case 3: payloadBase64 += "="; break;
+                }
+                var payload = JsonConvert.DeserializeObject<dynamic>(Encoding.UTF8.GetString(Convert.FromBase64String(payloadBase64)));
+                long exp = (long)(payload?.exp ?? 0);
+                return exp == 0 || DateTimeOffset.FromUnixTimeSeconds(exp) <= DateTimeOffset.UtcNow;
+            }
+            catch { return true; }
         }
 
         /// <summary>
@@ -740,5 +833,8 @@ namespace SSoTme.OST.Lib.Services
 
         [JsonProperty("error")]
         public string Error { get; set; }
+
+        [JsonProperty("plan")]
+        public string Plan { get; set; }
     }
 }

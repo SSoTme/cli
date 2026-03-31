@@ -49,16 +49,17 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.24.1247";
+        public string CLI_VERSION = "2026.03.31.1253";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-31-1243-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
         private bool _hasRunRemoteToolsUpdate = false;
         internal bool skipRemoteToolsLookup = false;
         internal bool suppressVersionLabel = false;
+        internal string jwt = null;
         private string _rawTranspilerArg = null;
         public string ResolvedVersionLabel { get; private set; } // e.g. "effortless/common/airtable-to-rulebook v2026.03.13.1534 [latest]"
         public string ResolvedVersionUrl { get; private set; }
@@ -1497,6 +1498,22 @@ Seed Url: ");
                     this.help = true;
                     break;
 
+                case "auth":
+                case "login":
+                case "authenticate":
+                    this.authenticate = true;
+                    break;
+
+                case "subscription":
+                case "plan":
+                    this.subscription = true;
+                    break;
+
+                case "logout":
+                case "signout":
+                    this.logout = true;
+                    break;
+
                 case "install":
                     this.install = true;
                     break;
@@ -1621,10 +1638,46 @@ Seed Url: ");
             {
                 var hasRemainingArguments = this.HasRemainingArguments;
                 var zfsFileSetFile = this.ZFSFileSetFile;
+                if (!this.authenticate && !this.logout && !this.skipRemoteToolsLookup)
+                {
+                    this.jwt = new MyEffortlessAPIService().CheckLoginStatus();
+                }
+
                 if (this.authenticate)
                 {
                     var effortlessAPIService = new MyEffortlessAPIService();
                     effortlessAPIService.HandleAuth().Wait();
+                    this.SuppressTranspile = true;
+                    return 0;
+                }
+                else if (this.subscription)
+                {
+                    new MyEffortlessAPIService().HandleSubscription(this.jwt);
+                    this.SuppressTranspile = true;
+                    return 0;
+                }
+                else if (this.logout)
+                {
+                    var svc = new MyEffortlessAPIService();
+                    if (!svc.IsAuthenticated())
+                    {
+                        Console.WriteLine("No active session found.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"You're logged in as {svc.GetStoredEmail()}.");
+                        Console.Write("Are you sure you want to log out? (y/N): ");
+                        var confirm = Console.ReadLine()?.Trim().ToLower() ?? "";
+                        if (confirm == "y" || confirm == "yes")
+                        {
+                            svc.ClearAuthToken();
+                            Console.WriteLine("Logged out successfully.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Logout cancelled.");
+                        }
+                    }
                     this.SuppressTranspile = true;
                     return 0;
                 }
@@ -2326,7 +2379,9 @@ Seed Url: ");
                     var transpilerHandler = CreateInternalHandler();
                     transpilerHandler.commandLine = $"{SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME} -p cli_version={this.CLI_VERSION}";
                     transpilerHandler.ParseCommand();
-                    transpilerHandler.TranspileProject();
+                    CliLog.SuppressFileLog = true;
+                    try { transpilerHandler.TranspileProject(); }
+                    finally { CliLog.SuppressFileLog = false; }
 
                     // Check if the server flagged a CLI update and persist it
                     var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
@@ -2477,7 +2532,9 @@ Seed Url: ");
                 handler.suppressVersionLabel = true;
                 handler.commandLine = commandLine;
                 handler.ParseCommand();
-                handler.TranspileProject();
+                CliLog.SuppressFileLog = true;
+                try { handler.TranspileProject(); }
+                finally { CliLog.SuppressFileLog = false; }
 
                 // Read the output file
                 var outputPath = Path.Combine(tempDir, outputFileName);
@@ -2653,7 +2710,7 @@ Seed Url: ");
 
         private bool IsManagementCommand =>
             this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.uninstall ||
-            this.authenticate || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade ||
+            this.authenticate || this.logout || this.subscription || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade ||
             !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || !String.IsNullOrEmpty(this.removeUrl);
 
         private bool ListTranspilerVersions(string transpilerName)
@@ -3441,6 +3498,16 @@ Seed Url: ");
                     || ex.Message.Contains("No such host"))
                 {
                     CliLog.LogLine("Host not found. Retrying in 6 seconds...");
+                    await System.Threading.Tasks.Task.Delay(6000);
+                    continue;
+                }
+                catch (System.Net.Http.HttpRequestException ex) when (
+                    ex.InnerException is System.Net.Sockets.SocketException se2 && (
+                        se2.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionReset ||
+                        se2.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionRefused ||
+                        se2.SocketErrorCode == System.Net.Sockets.SocketError.NetworkUnreachable))
+                {
+                    CliLog.LogLine($"Connection error ({se2.SocketErrorCode}). Retrying in 6 seconds...");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
