@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.31.1352";
+        public string CLI_VERSION = "2026.03.31.1548";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-31-1243-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -151,8 +151,41 @@ namespace SSoTme.OST.Lib.CLIOptions
                 var projectName = this.AICaptureProject?.Name ?? "<null>";
                 Console.WriteLine($"\nSSoTme CLI Version {this.CLI_VERSION}\n\nConfiguration for `{runas}`:");
                 Console.WriteLine($"Project: {projectName}");
-                Console.WriteLine($"Email Address: {key.EmailAddress}");
-                Console.WriteLine($"Secret: {key.Secret}");
+                // Console.WriteLine($"Email Address: {key.EmailAddress}");
+                // Console.WriteLine($"Secret: {key.Secret}");
+
+                // Resolve login status and plan before printing
+                string activeJwt = null;
+                string loginLabel = null;
+                string plan = null;
+                var envFile = SsotmeEnvFile.TryLoadFromNearestProject(false);
+                var projectJwt = envFile?.GetValue("EFFORTLESS_JWT");
+                if (!string.IsNullOrEmpty(projectJwt) && !MyEffortlessAPIService.IsJwtExpired(projectJwt))
+                {
+                    activeJwt = projectJwt;
+                    var email = MyEffortlessAPIService.GetEmailFromJwt(projectJwt);
+                    loginLabel = string.IsNullOrEmpty(email)
+                        ? "(unknown) [project]"
+                        : $"{email} [project]";
+                }
+                else
+                {
+                    var svc = new MyEffortlessAPIService();
+                    if (svc.IsAuthenticated() && !svc.IsTokenExpired())
+                    {
+                        activeJwt = svc.GetStoredJWTToken();
+                        var email = svc.GetStoredEmail() ?? MyEffortlessAPIService.GetEmailFromJwt(activeJwt);
+                        loginLabel = string.IsNullOrEmpty(email)
+                            ? "(unknown) [global]"
+                            : $"{email} [global]";
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(activeJwt))
+                    plan = new MyEffortlessAPIService().GetPlan(activeJwt);
+
+                Console.WriteLine($"Logged in as: {loginLabel ?? "(not logged in)"}");
+                Console.WriteLine($"Subscription: {plan ?? "n/a"}");
 
                 // Display API keys if they exist
                 if (key.APIKeys != null && key.APIKeys.Count > 0)
@@ -665,7 +698,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.listVersions || this.refreshTools || this.authenticate || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
+                else if (this.listVersions || this.refreshTools || this.authenticate || this.projectLogin || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
                 {
                     continueToLoad = false;
                 }
@@ -1504,6 +1537,11 @@ Seed Url: ");
                     this.authenticate = true;
                     break;
 
+                case "projectlogin":
+                case "projectauth":
+                    this.projectLogin = true;
+                    break;
+
                 case "subscription":
                 case "plan":
                     this.subscription = true;
@@ -1638,15 +1676,64 @@ Seed Url: ");
             {
                 var hasRemainingArguments = this.HasRemainingArguments;
                 var zfsFileSetFile = this.ZFSFileSetFile;
-                if (!this.authenticate && !this.logout && !this.skipRemoteToolsLookup)
+                if (!this.authenticate && !this.projectLogin && !this.logout && !this.skipRemoteToolsLookup)
                 {
-                    this.jwt = new MyEffortlessAPIService().CheckLoginStatus();
+                    // Check project-level EFFORTLESS_JWT first (takes priority over global login)
+                    var envFile = SsotmeEnvFile.TryLoadFromNearestProject(this.debug);
+                    var projectJwt = envFile?.GetValue("EFFORTLESS_JWT");
+                    if (!string.IsNullOrEmpty(projectJwt))
+                    {
+                        if (this.debug) Console.WriteLine("DEBUG: Found EFFORTLESS_JWT in effortless.env");
+                        if (MyEffortlessAPIService.IsJwtExpired(projectJwt))
+                        {
+                            if (this.debug) Console.WriteLine("DEBUG: Project JWT is expired, attempting refresh...");
+                            var projectRoot = FindNearestProjectRoot();
+                            if (projectRoot != null)
+                            {
+                                var envFilePath = Path.Combine(projectRoot, "effortless.env");
+                                var refreshed = new MyEffortlessAPIService().RefreshProjectToken(envFilePath, projectJwt);
+                                if (!string.IsNullOrEmpty(refreshed))
+                                {
+                                    this.jwt = refreshed;
+                                    var refreshedEmail = MyEffortlessAPIService.GetEmailFromJwt(refreshed);
+                                    Console.WriteLine(string.IsNullOrEmpty(refreshedEmail)
+                                        ? "Using effortless project credentials."
+                                        : $"Using effortless project credentials, logged in as: {refreshedEmail}");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Warning: Project EFFORTLESS_JWT expired and refresh failed. Falling back to global login.");
+                                    this.jwt = new MyEffortlessAPIService().CheckLoginStatus();
+                                }
+                            }
+                        }
+                        else
+                        {
+                            this.jwt = projectJwt;
+                            var projectEmail = MyEffortlessAPIService.GetEmailFromJwt(projectJwt);
+                            Console.WriteLine(string.IsNullOrEmpty(projectEmail)
+                                ? "Using effortless project credentials."
+                                : $"Using effortless project credentials, logged in as: {projectEmail}");
+                        }
+                    }
+                    else
+                    {
+                        // No project JWT — fall back to global login
+                        this.jwt = new MyEffortlessAPIService().CheckLoginStatus();
+                    }
                 }
 
                 if (this.authenticate)
                 {
                     var effortlessAPIService = new MyEffortlessAPIService();
                     effortlessAPIService.HandleAuth().Wait();
+                    this.SuppressTranspile = true;
+                    return 0;
+                }
+                else if (this.projectLogin)
+                {
+                    var effortlessAPIService = new MyEffortlessAPIService();
+                    effortlessAPIService.HandleProjectAuth().Wait();
                     this.SuppressTranspile = true;
                     return 0;
                 }
@@ -2312,6 +2399,26 @@ Seed Url: ");
             return Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "remote_tools");
         }
 
+        private static string FindNearestProjectRoot()
+        {
+            try
+            {
+                var dir = new DirectoryInfo(Environment.CurrentDirectory);
+                while (dir != null)
+                {
+                    if (File.Exists(Path.Combine(dir.FullName, "effortless.json")) ||
+                        File.Exists(Path.Combine(dir.FullName, "ssotme.json")) ||
+                        File.Exists(Path.Combine(dir.FullName, "aicapture.json")))
+                    {
+                        return dir.FullName;
+                    }
+                    dir = dir.Parent;
+                }
+            }
+            catch { }
+            return null;
+        }
+
         /// <summary>
         /// Runs the remote tools refresh: fetches the latest tool index from the server,
         /// persists update_available.json, and writes the cli_version marker.
@@ -2710,7 +2817,7 @@ Seed Url: ");
 
         private bool IsManagementCommand =>
             this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.uninstall ||
-            this.authenticate || this.logout || this.subscription || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade ||
+            this.authenticate || this.projectLogin || this.logout || this.subscription || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade ||
             !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || !String.IsNullOrEmpty(this.removeUrl);
 
         private bool ListTranspilerVersions(string transpilerName)

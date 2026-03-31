@@ -4,7 +4,9 @@
 | License:    Mozilla Public License 2.0
 | *******************************************/
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,7 +21,8 @@ namespace SSoTme.OST.Lib.Services
     public class MyEffortlessAPIService
     {
         /// <summary>
-        /// Handles authentication functionality via email magic link through list-transpilers tool
+        /// Handles global user authentication via email magic link through list-transpilers tool.
+        /// Stores the JWT in ~/.ssotme/
         /// </summary>
         public async Task HandleAuth()
         {
@@ -73,46 +76,10 @@ namespace SSoTme.OST.Lib.Services
                     }
                 }
 
-                // Step 1: Get email from user
-                string email = GetEmailFromUser();
-                if (string.IsNullOrWhiteSpace(email))
-                {
-                    Console.WriteLine("Authentication cancelled - no email provided.");
-                    return;
-                }
+                var result = RunMagicLinkFlow();
+                if (result == null) return;
 
-                // Step 2: Send auth request via list-transpilers tool
-                Console.WriteLine($"Sending verification code to {email}...");
-                var authResult = InvokeListTranspilerAuth($"-p mode=auth -p email={email}");
-                if (authResult == null || !authResult.Success)
-                {
-                    Console.WriteLine($"Failed to send verification code: {authResult?.Error ?? "Unknown error"}");
-                    return;
-                }
-
-                Console.WriteLine("Verification code sent to your email.");
-                Console.WriteLine();
-
-                // Step 3: Get verification code from user
-                Console.Write("Enter the verification code you received: ");
-                string code = Console.ReadLine()?.Trim() ?? "";
-                if (string.IsNullOrWhiteSpace(code))
-                {
-                    Console.WriteLine("Authentication cancelled - no code provided.");
-                    return;
-                }
-
-                // Step 4: Verify code and get JWT token via list-transpilers tool
-                Console.WriteLine("Verifying code...");
-                var verifyResult = InvokeListTranspilerAuth($"-p mode=verify -p email={email} -p code={code}");
-                if (verifyResult == null || !verifyResult.Success || string.IsNullOrEmpty(verifyResult.Token))
-                {
-                    Console.WriteLine($"Verification failed: {verifyResult?.Error ?? "Invalid or expired code"}");
-                    return;
-                }
-
-                // Step 5: Store JWT token
-                bool tokenStored = StoreJWTToken(verifyResult.Token, email);
+                bool tokenStored = StoreJWTToken(result.Value.token, result.Value.email);
                 if (!tokenStored)
                 {
                     Console.WriteLine("Authentication successful but failed to store token locally.");
@@ -125,6 +92,98 @@ namespace SSoTme.OST.Lib.Services
             {
                 Console.WriteLine($"Authentication failed: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Handles project-specific authentication. Runs the same magic link flow but stores
+        /// the JWT as EFFORTLESS_JWT in the project's effortless.env file.
+        /// </summary>
+        public async Task HandleProjectAuth()
+        {
+            try
+            {
+                Console.WriteLine("=== Project Authentication ===");
+                Console.WriteLine();
+
+                // Find the project root
+                string projectRoot = FindNearestProjectRoot();
+                if (projectRoot == null)
+                {
+                    Console.WriteLine("No project found. Run this from a directory with effortless.json, ssotme.json, or aicapture.json.");
+                    return;
+                }
+
+                var envFilePath = Path.Combine(projectRoot, "effortless.env");
+                Console.WriteLine($"Project: {projectRoot}");
+
+                // Check if EFFORTLESS_JWT already exists in the env file
+                var existingJwt = ReadEnvValue(envFilePath, "EFFORTLESS_JWT");
+                if (!string.IsNullOrEmpty(existingJwt) && !IsJwtExpired(existingJwt))
+                {
+                    Console.WriteLine("This project already has a valid EFFORTLESS_JWT.");
+                    Console.Write("Do you want to re-authenticate? (y/N): ");
+                    string resp = Console.ReadLine()?.Trim().ToLower() ?? "";
+                    if (resp != "y" && resp != "yes")
+                    {
+                        Console.WriteLine("Project authentication cancelled.");
+                        return;
+                    }
+                    Console.WriteLine();
+                }
+
+                var result = RunMagicLinkFlow();
+                if (result == null) return;
+
+                WriteEnvValue(envFilePath, "EFFORTLESS_JWT", result.Value.token);
+                Console.WriteLine($"Project authentication successful! EFFORTLESS_JWT stored in {envFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Project authentication failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Shared magic link flow: prompt email, send code, prompt code, verify, return JWT.
+        /// Returns null if cancelled or failed.
+        /// </summary>
+        private (string token, string email)? RunMagicLinkFlow()
+        {
+            string email = GetEmailFromUser();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                Console.WriteLine("Authentication cancelled - no email provided.");
+                return null;
+            }
+
+            Console.WriteLine($"Sending verification code to {email}...");
+            var authResult = InvokeListTranspilerAuth($"-p mode=auth -p email={email}");
+            if (authResult == null || !authResult.Success)
+            {
+                Console.WriteLine($"Failed to send verification code: {authResult?.Error ?? "Unknown error"}");
+                return null;
+            }
+
+            Console.WriteLine("Verification code sent to your email.");
+            Console.WriteLine();
+
+            Console.Write("Enter the verification code you received: ");
+            string code = Console.ReadLine()?.Trim() ?? "";
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                Console.WriteLine("Authentication cancelled - no code provided.");
+                return null;
+            }
+
+            Console.WriteLine("Verifying code...");
+            var verifyResult = InvokeListTranspilerAuth($"-p mode=verify -p email={email} -p code={code}");
+            if (verifyResult == null || !verifyResult.Success || string.IsNullOrEmpty(verifyResult.Token))
+            {
+                Console.WriteLine($"Verification failed: {verifyResult?.Error ?? "Invalid or expired code"}");
+                return null;
+            }
+
+            return (verifyResult.Token, email);
         }
 
         /// <summary>
@@ -175,6 +234,22 @@ namespace SSoTme.OST.Lib.Services
                 Console.WriteLine($"You can upgrade your plan by logging in at bases.effortlessapi.com with email: {GetStoredEmail()}");
                 Console.WriteLine($"and contacting us at https://bases.effortlessapi.com/dashboard/contact");
             }
+        }
+
+        /// <summary>
+        /// Fetches the account plan for the given JWT. Returns the plan name or null on failure.
+        /// </summary>
+        public string GetPlan(string jwt)
+        {
+            if (string.IsNullOrEmpty(jwt)) return null;
+            try
+            {
+                var result = InvokeListTranspilerAuth($"-p mode=viewPlan -p jwt=\"{jwt}\"");
+                if (result != null && result.Success)
+                    return result.Plan ?? "free";
+            }
+            catch { }
+            return null;
         }
 
         /// <summary>
@@ -236,6 +311,162 @@ namespace SSoTme.OST.Lib.Services
             catch
             {
                 // Best effort - don't block on refresh failures
+            }
+        }
+
+        /// <summary>
+        /// Refreshes a project-level JWT from effortless.env and updates the file.
+        /// Returns the new token, or null if refresh failed.
+        /// </summary>
+        public string RefreshProjectToken(string projectEnvFilePath, string currentToken)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(currentToken))
+                    return null;
+
+                var result = InvokeListTranspilerAuth($"-p mode=refresh -p jwt={currentToken}");
+                if (result != null && result.Success && !string.IsNullOrEmpty(result.Token))
+                {
+                    WriteEnvValue(projectEnvFilePath, "EFFORTLESS_JWT", result.Token);
+                    return result.Token;
+                }
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Extracts the email claim from a JWT without signature verification.
+        /// </summary>
+        public static string GetEmailFromJwt(string token)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(token)) return null;
+                var parts = token.Split('.');
+                if (parts.Length != 3) return null;
+                var payloadBase64 = parts[1];
+                switch (payloadBase64.Length % 4)
+                {
+                    case 2: payloadBase64 += "=="; break;
+                    case 3: payloadBase64 += "="; break;
+                }
+                var payload = JsonConvert.DeserializeObject<dynamic>(Encoding.UTF8.GetString(Convert.FromBase64String(payloadBase64)));
+                return payload?.email?.ToString();
+            }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// Checks if a JWT string is expired by decoding the exp claim.
+        /// </summary>
+        public static bool IsJwtExpired(string token)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(token)) return true;
+                var parts = token.Split('.');
+                if (parts.Length != 3) return true;
+                var payloadBase64 = parts[1];
+                switch (payloadBase64.Length % 4)
+                {
+                    case 2: payloadBase64 += "=="; break;
+                    case 3: payloadBase64 += "="; break;
+                }
+                var payload = JsonConvert.DeserializeObject<dynamic>(Encoding.UTF8.GetString(Convert.FromBase64String(payloadBase64)));
+                long exp = (long)(payload?.exp ?? 0);
+                return exp == 0 || DateTimeOffset.FromUnixTimeSeconds(exp) <= DateTimeOffset.UtcNow;
+            }
+            catch { return true; }
+        }
+
+        /// <summary>
+        /// Finds the nearest project root by walking up from cwd looking for project files.
+        /// </summary>
+        private static string FindNearestProjectRoot()
+        {
+            try
+            {
+                var dir = new DirectoryInfo(Environment.CurrentDirectory);
+                while (dir != null)
+                {
+                    if (File.Exists(Path.Combine(dir.FullName, "effortless.json")) ||
+                        File.Exists(Path.Combine(dir.FullName, "ssotme.json")) ||
+                        File.Exists(Path.Combine(dir.FullName, "aicapture.json")))
+                    {
+                        return dir.FullName;
+                    }
+                    dir = dir.Parent;
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// Reads a value from an env file (key=value format).
+        /// </summary>
+        public static string ReadEnvValue(string envFilePath, string key)
+        {
+            if (!File.Exists(envFilePath)) return null;
+            foreach (var line in File.ReadAllLines(envFilePath))
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith("#")) continue;
+                var eqIndex = trimmed.IndexOf('=');
+                if (eqIndex <= 0) continue;
+                var lineKey = trimmed.Substring(0, eqIndex).Trim();
+                if (lineKey.Equals(key, StringComparison.OrdinalIgnoreCase))
+                {
+                    var value = trimmed.Substring(eqIndex + 1).Trim();
+                    if (value.Length >= 2 &&
+                        ((value.StartsWith("\"") && value.EndsWith("\"")) ||
+                         (value.StartsWith("'") && value.EndsWith("'"))))
+                    {
+                        value = value.Substring(1, value.Length - 2);
+                    }
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Writes or updates a key=value entry in an env file.
+        /// If the file exists and contains the key, replaces that line.
+        /// Otherwise appends. Creates the file if it doesn't exist.
+        /// </summary>
+        public static void WriteEnvValue(string envFilePath, string key, string value)
+        {
+            var newLine = $"{key}={value}";
+            if (File.Exists(envFilePath))
+            {
+                var lines = File.ReadAllLines(envFilePath).ToList();
+                bool replaced = false;
+                for (int i = 0; i < lines.Count; i++)
+                {
+                    var trimmed = lines[i].Trim();
+                    var eqIndex = trimmed.IndexOf('=');
+                    if (eqIndex <= 0) continue;
+                    var lineKey = trimmed.Substring(0, eqIndex).Trim();
+                    if (lineKey.Equals(key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        lines[i] = newLine;
+                        replaced = true;
+                        break;
+                    }
+                }
+                if (!replaced)
+                    lines.Add(newLine);
+                File.WriteAllLines(envFilePath, lines);
+            }
+            else
+            {
+                File.WriteAllText(envFilePath, newLine + Environment.NewLine);
             }
         }
 

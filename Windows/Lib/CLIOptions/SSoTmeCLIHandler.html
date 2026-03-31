@@ -1,5 +1,5 @@
 <html><head><title>Command Line Arguments - summary</title></head><body><h1>Command Line Arguments</h1><p>
-    There are 62 command line arguments defined at this time.  They are:
+    There are 64 command line arguments defined at this time.  They are:
       
       <div style=""><h3>
         -help  or -h    [bool]
@@ -169,6 +169,14 @@
         -authenticate  or -auth,login    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
       Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.
+      </div></div><div style=""><h3>
+        -projectLogin  or -projectAuth    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Authenticate the ssotme CLI for this specific project (overrides global user login)
+      </div></div><div style=""><h3>
+        -noAuthRefresh  or -skipRefresh    [bool]
+      </h3><div style="font-size: 0.8em; margin-top: -1em;">
+      Skip auto-refresh of the user JWT
       </div></div><div style=""><h3>
         -logout  or -signout    [bool]
       </h3><div style="font-size: 0.8em; margin-top: -1em;">
