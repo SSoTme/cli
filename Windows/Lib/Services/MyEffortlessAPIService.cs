@@ -5,11 +5,11 @@
 | *******************************************/
 using System;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using SSoTme.OST.Lib.Extensions;
 
 namespace SSoTme.OST.Lib.Services
 {
@@ -18,12 +18,8 @@ namespace SSoTme.OST.Lib.Services
     /// </summary>
     public class MyEffortlessAPIService
     {
-        private static readonly HttpClient httpClient = new HttpClient();
-        // private const string API_BASE_URL = "https://api.effortlessapi.com/api/auth";
-        private const string API_BASE_URL = "http://localhost:8000/api/auth";
-        
         /// <summary>
-        /// Handles authentication functionality - replaces the existing authenticate behavior
+        /// Handles authentication functionality via email magic link through list-transpilers tool
         /// </summary>
         public async Task HandleAuth()
         {
@@ -35,183 +31,218 @@ namespace SSoTme.OST.Lib.Services
                 // Check if already authenticated
                 if (IsAuthenticated())
                 {
-                    Console.WriteLine("✅ You are already authenticated!");
-                    Console.Write("Do you want to re-authenticate? (y/N): ");
-                    string response = Console.ReadLine()?.Trim().ToLower() ?? "";
-                    if (response != "y" && response != "yes")
+                    var storedEmail = GetStoredEmail();
+                    if (IsTokenExpired())
                     {
-                        Console.WriteLine("Authentication cancelled.");
-                        return;
+                        Console.WriteLine("Your session has expired. Attempting to refresh...");
+                        if (RefreshToken())
+                        {
+                            storedEmail = GetStoredEmail();
+                            Console.WriteLine(string.IsNullOrEmpty(storedEmail)
+                                ? "Session refreshed. You are already authenticated."
+                                : $"Session refreshed. You are already authenticated as {storedEmail}.");
+                            Console.Write("Do you want to re-authenticate? (y/N): ");
+                            string refreshResponse = Console.ReadLine()?.Trim().ToLower() ?? "";
+                            if (refreshResponse != "y" && refreshResponse != "yes")
+                            {
+                                Console.WriteLine("Authentication cancelled.");
+                                return;
+                            }
+                            Console.WriteLine();
+                        }
+                        else
+                        {
+                            Console.WriteLine("Session refresh failed. Please log in again.");
+                            ClearAuthToken();
+                            Console.WriteLine();
+                        }
                     }
-                    Console.WriteLine();
+                    else
+                    {
+                        Console.WriteLine(string.IsNullOrEmpty(storedEmail)
+                            ? "You are already authenticated."
+                            : $"You are already authenticated as {storedEmail}.");
+                        Console.Write("Do you want to re-authenticate? (y/N): ");
+                        string response = Console.ReadLine()?.Trim().ToLower() ?? "";
+                        if (response != "y" && response != "yes")
+                        {
+                            Console.WriteLine("Authentication cancelled.");
+                            return;
+                        }
+                        Console.WriteLine();
+                    }
                 }
 
-                // Step 1: Get phone number from user
-                string phoneNumber = GetPhoneNumberFromUser();
-                if (string.IsNullOrWhiteSpace(phoneNumber))
+                // Step 1: Get email from user
+                string email = GetEmailFromUser();
+                if (string.IsNullOrWhiteSpace(email))
                 {
-                    Console.WriteLine("❌ Authentication cancelled - no phone number provided.");
+                    Console.WriteLine("Authentication cancelled - no email provided.");
                     return;
                 }
 
-                // Step 2: Send login request to get OTP
-                Console.WriteLine($"📱 Sending authentication request for {phoneNumber}...");
-                bool loginSuccess = await SendLoginRequest(phoneNumber);
-                if (!loginSuccess)
+                // Step 2: Send auth request via list-transpilers tool
+                Console.WriteLine($"Sending verification code to {email}...");
+                var authResult = InvokeListTranspilerAuth($"-p mode=auth -p email={email}");
+                if (authResult == null || !authResult.Success)
                 {
-                    Console.WriteLine("❌ Failed to send authentication request. Please try again.");
+                    Console.WriteLine($"Failed to send verification code: {authResult?.Error ?? "Unknown error"}");
                     return;
                 }
 
-                Console.WriteLine("✅ Authentication code sent to your phone and email!");
+                Console.WriteLine("Verification code sent to your email.");
                 Console.WriteLine();
 
-                // Step 3: Get OTP from user
-                string otpCode = GetOTPFromUser();
-                if (string.IsNullOrWhiteSpace(otpCode))
+                // Step 3: Get verification code from user
+                Console.Write("Enter the verification code you received: ");
+                string code = Console.ReadLine()?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(code))
                 {
-                    Console.WriteLine("❌ Authentication cancelled - no OTP code provided.");
+                    Console.WriteLine("Authentication cancelled - no code provided.");
                     return;
                 }
 
-                // Step 4: Validate OTP and get JWT token
-                Console.WriteLine($"🔐 Validating authentication code for {phoneNumber}...");
-                string jwtToken = await ValidateOTPAndGetToken(phoneNumber, otpCode);
-                if (string.IsNullOrWhiteSpace(jwtToken))
+                // Step 4: Verify code and get JWT token via list-transpilers tool
+                Console.WriteLine("Verifying code...");
+                var verifyResult = InvokeListTranspilerAuth($"-p mode=verify -p email={email} -p code={code}");
+                if (verifyResult == null || !verifyResult.Success || string.IsNullOrEmpty(verifyResult.Token))
                 {
-                    Console.WriteLine("❌ Invalid or expired authentication code. Please try again.");
+                    Console.WriteLine($"Verification failed: {verifyResult?.Error ?? "Invalid or expired code"}");
                     return;
                 }
 
                 // Step 5: Store JWT token
-                Console.WriteLine("💾 Storing authentication token...");
-                bool tokenStored = StoreJWTToken(jwtToken);
+                bool tokenStored = StoreJWTToken(verifyResult.Token, email);
                 if (!tokenStored)
                 {
-                    Console.WriteLine("⚠️  Authentication successful but failed to store token locally.");
+                    Console.WriteLine("Authentication successful but failed to store token locally.");
                     return;
                 }
 
-                Console.WriteLine("✅ Authentication successful! Token stored in ~/.ssotme/");
-                Console.WriteLine("You can now use EffortlessAPI endpoints.");
+                Console.WriteLine("Authentication successful!");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Authentication failed: {ex.Message}");
-                Console.WriteLine("Please try again or contact support if the issue persists.");
+                Console.WriteLine($"Authentication failed: {ex.Message}");
             }
         }
 
         /// <summary>
-        /// Gets phone number input from user with validation
+        /// Gets email input from user with basic validation
         /// </summary>
-        private string GetPhoneNumberFromUser()
+        private string GetEmailFromUser()
         {
-            Console.Write("Enter your phone number (e.g., +1234567890 or 234-567-8900): ");
-            string phoneNumber = Console.ReadLine()?.Trim() ?? "";
-            
-            if (string.IsNullOrWhiteSpace(phoneNumber))
+            while (true)
             {
-                return "";
-            }
+                Console.Write("Enter your email address: ");
+                string email = Console.ReadLine()?.Trim() ?? "";
 
-            // Basic phone number validation - remove common formatting
-            phoneNumber = phoneNumber.Replace("(", "").Replace(")", "").Replace("-", "").Replace(" ", "").Replace(".", "");
-            
-            // Handle + prefix
-            if (phoneNumber.StartsWith("+"))
-            {
-                phoneNumber = phoneNumber.Substring(1);
-            }
+                if (string.IsNullOrWhiteSpace(email))
+                    return "";
 
-            // Basic validation - should be all digits and reasonable length
-            if (!phoneNumber.All(char.IsDigit) || phoneNumber.Length < 10 || phoneNumber.Length > 15)
-            {
-                Console.WriteLine("❌ Invalid phone number format. Please enter a valid phone number.");
-                return GetPhoneNumberFromUser(); // Recursive retry
-            }
+                if (!email.Contains("@") || !email.Contains("."))
+                {
+                    Console.WriteLine("Invalid email format. Please enter a valid email address.");
+                    continue;
+                }
 
-            Console.WriteLine($"Using phone number: +{phoneNumber}");
-            return phoneNumber;
+                return email;
+            }
         }
 
-        /// <summary>
-        /// Gets OTP code input from user
-        /// </summary>
-        private string GetOTPFromUser()
+        public void HandleSubscription(string jwt)
         {
-            Console.Write("Enter the authentication code you received: ");
-            return Console.ReadLine()?.Trim() ?? "";
+            if (string.IsNullOrEmpty(jwt))
+            {
+                Console.WriteLine("You are not logged in. Use `effortless login` first.");
+                return;
+            }
+
+            var result = InvokeListTranspilerAuth($"-p mode=viewPlan -p jwt=\"{jwt}\"");
+            if (result == null || !result.Success)
+            {
+                Console.WriteLine($"Failed to fetch subscription: {result?.Error ?? "Unknown error"}");
+                return;
+            }
+
+            var plan = result.Plan ?? "free";
+            CliLog.LogLine("Account:", GetStoredEmail(), ConsoleColor.Cyan);
+            var planColor = plan == "free" ? ConsoleColor.Yellow : ConsoleColor.Green;
+            CliLog.LogLine("Subscription plan:", plan, planColor);
+            if (plan == "free")
+            {
+                Console.WriteLine("Some tools may be unavailable on the free tier.");
+                Console.WriteLine($"You can upgrade your plan by logging in at bases.effortlessapi.com with email: {GetStoredEmail()}");
+                Console.WriteLine($"and contacting us at https://bases.effortlessapi.com/dashboard/contact");
+            }
         }
 
         /// <summary>
-        /// Sends login request to EffortlessAPI
+        /// Invokes the list-transpilers tool with auth parameters and parses the result
         /// </summary>
-        private async Task<bool> SendLoginRequest(string phoneNumber)
+        private AuthResult InvokeListTranspilerAuth(string paramString)
         {
             try
             {
-                var loginRequest = new { PhoneNumber = phoneNumber };
-                var json = JsonConvert.SerializeObject(loginRequest);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var commandLine = $"{SSoTme.OST.Lib.CLIOptions.SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME} {paramString}";
+                var output = SSoTme.OST.Lib.CLIOptions.SSoTmeCLIHandler.InvokeToolAndGetOutput(commandLine, "auth-result.json");
 
-                var response = await httpClient.PostAsync($"{API_BASE_URL}/login", content);
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    return true;
-                }
-                else
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Server error: {response.StatusCode} - {errorContent}");
-                    return false;
-                }
+                if (string.IsNullOrEmpty(output))
+                    return new AuthResult { Success = false, Error = "No response from auth service" };
+
+                return JsonConvert.DeserializeObject<AuthResult>(output);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Network error: {ex.Message}");
+                return new AuthResult { Success = false, Error = ex.Message };
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the stored JWT token via the list-transpilers tool
+        /// </summary>
+        public bool RefreshToken()
+        {
+            try
+            {
+                string currentToken = GetStoredJWTToken();
+                if (string.IsNullOrWhiteSpace(currentToken))
+                    return false;
+
+                var result = InvokeListTranspilerAuth($"-p mode=refresh -p jwt={currentToken}");
+                if (result != null && result.Success && !string.IsNullOrEmpty(result.Token))
+                {
+                    StoreJWTToken(result.Token, GetStoredEmail());
+                    return true;
+                }
+                return false;
+            }
+            catch
+            {
                 return false;
             }
         }
 
         /// <summary>
-        /// Validates OTP and retrieves JWT token
+        /// Checks if the stored token is near expiry and refreshes it if needed
         /// </summary>
-        private async Task<string> ValidateOTPAndGetToken(string phoneNumber, string otpCode)
+        public void EnsureValidToken()
         {
             try
             {
-                var validateRequest = new { PhoneNumber = phoneNumber, OTP = otpCode };
-                var json = JsonConvert.SerializeObject(validateRequest);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                var response = await httpClient.PostAsync($"{API_BASE_URL}/validate", content);
-                
-                if (response.IsSuccessStatusCode)
-                {
-                    var responseContent = await response.Content.ReadAsStringAsync();
-                    var tokenResponse = JsonConvert.DeserializeObject<dynamic>(responseContent);
-                    return tokenResponse?.token?.ToString() ?? "";
-                }
-                else
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Console.WriteLine($"Validation error: {response.StatusCode} - {errorContent}");
-                    return "";
-                }
+                if (IsAuthenticated() && IsTokenExpired())
+                    RefreshToken();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Validation error: {ex.Message}");
-                return "";
+                // Best effort - don't block on refresh failures
             }
         }
 
         /// <summary>
         /// Stores JWT token in ~/.ssotme folder
         /// </summary>
-        private bool StoreJWTToken(string jwtToken)
+        private bool StoreJWTToken(string jwtToken, string email = null)
         {
             try
             {
@@ -226,16 +257,19 @@ namespace SSoTme.OST.Lib.Services
 
                 string tokenFile = Path.Combine(ssotmeDirectory, "effortlessapi_token.txt");
                 File.WriteAllText(tokenFile, jwtToken);
+                SetFilePermissions600(tokenFile);
 
                 // Also store with timestamp for reference
                 string tokenInfoFile = Path.Combine(ssotmeDirectory, "effortlessapi_token_info.json");
                 var tokenInfo = new
                 {
                     Token = jwtToken,
+                    Email = email,
                     CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                     ExpiresAt = DateTime.UtcNow.AddHours(24).ToString("yyyy-MM-ddTHH:mm:ssZ")
                 };
                 File.WriteAllText(tokenInfoFile, JsonConvert.SerializeObject(tokenInfo, Formatting.Indented));
+                SetFilePermissions600(tokenInfoFile);
 
                 return true;
             }
@@ -269,30 +303,95 @@ namespace SSoTme.OST.Lib.Services
             }
         }
 
+        public string GetStoredEmail()
+        {
+            try
+            {
+                string tokenInfoFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssotme", "effortlessapi_token_info.json");
+                if (File.Exists(tokenInfoFile))
+                {
+                    var info = JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(File.ReadAllText(tokenInfoFile));
+                    return info?["Email"]?.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
         /// <summary>
-        /// Creates an HttpClient with authentication header for EffortlessAPI calls
+        /// Creates an HttpClient with authentication header for EffortlessAPI calls.
+        /// Automatically refreshes the token if it is near expiry.
         /// </summary>
         public HttpClient CreateAuthenticatedHttpClient()
         {
+            EnsureValidToken();
+
             var client = new HttpClient();
             string token = GetStoredJWTToken();
-            
+
             if (!string.IsNullOrWhiteSpace(token))
             {
-                client.DefaultRequestHeaders.Authorization = 
+                client.DefaultRequestHeaders.Authorization =
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             }
-            
+
             return client;
         }
 
         /// <summary>
         /// Checks if user is currently authenticated (has valid token)
         /// </summary>
+        public string CheckLoginStatus()
+        {
+            if (!IsAuthenticated())
+            {
+                Console.WriteLine("You are not logged in. Some tools may be unavailable. Use `effortless login`");
+                return null;
+            }
+
+            if (IsTokenExpired())
+            {
+                Console.WriteLine("Refreshing session...");
+                if (RefreshToken())
+                {
+                    return GetStoredJWTToken();
+                }
+                else
+                {
+                    Console.WriteLine("Session refresh failed. You are not logged in. Some tools may be unavailable. Use `effortless login`");
+                    ClearAuthToken();
+                    return null;
+                }
+            }
+
+            return GetStoredJWTToken();
+        }
+
         public bool IsAuthenticated()
         {
             string token = GetStoredJWTToken();
             return !string.IsNullOrWhiteSpace(token);
+        }
+
+        public bool IsTokenExpired()
+        {
+            try
+            {
+                string token = GetStoredJWTToken();
+                if (string.IsNullOrWhiteSpace(token)) return true;
+                var parts = token.Split('.');
+                if (parts.Length != 3) return true;
+                var payloadBase64 = parts[1];
+                switch (payloadBase64.Length % 4)
+                {
+                    case 2: payloadBase64 += "=="; break;
+                    case 3: payloadBase64 += "="; break;
+                }
+                var payload = JsonConvert.DeserializeObject<dynamic>(Encoding.UTF8.GetString(Convert.FromBase64String(payloadBase64)));
+                long exp = (long)(payload?.exp ?? 0);
+                return exp == 0 || DateTimeOffset.FromUnixTimeSeconds(exp) <= DateTimeOffset.UtcNow;
+            }
+            catch { return true; }
         }
 
         /// <summary>
@@ -363,6 +462,16 @@ namespace SSoTme.OST.Lib.Services
             {
                 Console.WriteLine($"❌ Local guide failed: {ex.Message}");
                 Console.WriteLine("Please check your project name and try again.");
+            }
+        }
+
+        private static void SetFilePermissions600(string path)
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Unix ||
+                Environment.OSVersion.Platform == PlatformID.MacOSX)
+            {
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("chmod", $"600 \"{path}\"") { CreateNoWindow = true })?.WaitForExit(); }
+                catch { /* best effort */ }
             }
         }
     }
@@ -721,5 +830,26 @@ namespace SSoTme.OST.Lib.Services
 
         [JsonProperty("last_modified")]
         public string LastModified { get; set; }
+    }
+
+    /// <summary>
+    /// Response from list-transpilers auth operations
+    /// </summary>
+    public class AuthResult
+    {
+        [JsonProperty("success")]
+        public bool Success { get; set; }
+
+        [JsonProperty("token")]
+        public string Token { get; set; }
+
+        [JsonProperty("email")]
+        public string Email { get; set; }
+
+        [JsonProperty("error")]
+        public string Error { get; set; }
+
+        [JsonProperty("plan")]
+        public string Plan { get; set; }
     }
 }

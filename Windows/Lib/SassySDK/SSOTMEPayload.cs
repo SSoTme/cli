@@ -111,6 +111,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
         public String CLITranspiler { get; set; }
         public int CLIWaitTimeout { get; set; }
         public bool CLIDebug { get; set; }
+        public string CLIJwt { get; set; }
         public List<LogEntry> Logs { get; set; }
         public string TaskId { get; set; }
         public string TaskStatus { get; set; }
@@ -256,6 +257,7 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             this.CLITranspiler = sSoTmeCLIHandler.transpiler;
             this.CLIWaitTimeout = sSoTmeCLIHandler.waitTimeout;
             this.CLIDebug = sSoTmeCLIHandler.debug;
+            this.CLIJwt = sSoTmeCLIHandler.jwt;
         }
     }
 }

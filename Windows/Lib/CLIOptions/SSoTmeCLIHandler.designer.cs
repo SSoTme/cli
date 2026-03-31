@@ -10,7 +10,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 {
 
     [CommandLineManager(ApplicationName = "SSoTme CLI",
-                        Copyright = "Copyright 2025, EffortlessAPI.com",
+                        Copyright = "Copyright 2026, EffortlessAPI.com",
                         Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions")]
     public partial class SSoTmeCLIHandler
     {
@@ -138,8 +138,11 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Add an account api key", MinOccurs = 0, Aliases = "api")]
         public string setAccountAPIKey { get; set; }
         
-        [CommandLineOption(Description = "Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.", MinOccurs = 0, Aliases = "auth")]
+        [CommandLineOption(Description = "Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.", MinOccurs = 0, Aliases = "auth,login")]
         public bool authenticate { get; set; }
+        
+        [CommandLineOption(Description = "Logout of your cli user account", MinOccurs = 0, Aliases = "signout")]
+        public bool logout { get; set; }
         
         [CommandLineOption(Description = "Override the default URL specified by the seed repository", MinOccurs = 0, Aliases = "")]
         public string repoUrl { get; set; }
@@ -194,6 +197,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         
         [CommandLineOption(Description = "Run this tool using the current head version and update its pinned version for this project", MinOccurs = 0, Aliases = "lat")]
         public bool latest { get; set; }
+        
+        [CommandLineOption(Description = "View your account's EffortlessAPI subscription plan", MinOccurs = 0, Aliases = "plan")]
+        public bool subscription { get; set; }
         
     }
 }
