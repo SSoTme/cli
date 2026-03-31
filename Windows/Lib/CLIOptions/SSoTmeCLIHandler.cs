@@ -53,7 +53,7 @@ namespace SSoTme.OST.Lib.CLIOptions
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-19-1411-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
-        // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL
+        // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
         private bool _hasRunRemoteToolsUpdate = false;
@@ -2420,6 +2420,77 @@ Seed Url: ");
             handler.suppressVersionLabel = true;
             handler.debug = this.debug;
             return handler;
+        }
+
+        /// <summary>
+        /// Invokes a tool via the transpiler mechanism and returns the content of a specific output file.
+        /// Used by MyEffortlessAPIService to call list-transpilers for auth operations.
+        /// </summary>
+        public static string InvokeToolAndGetOutput(string commandLine, string outputFileName)
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), $"ssotme_auth_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDir);
+            var savedDir = Environment.CurrentDirectory;
+
+            try
+            {
+                Environment.CurrentDirectory = tempDir;
+
+                // Write minimal ssotme.json so the handler has a valid project
+                var ssotmeJsonPath = Path.Combine(tempDir, "ssotme.json");
+                File.WriteAllText(ssotmeJsonPath, $@"{{
+  ""ShowHidden"": false,
+  ""ShowAllFiles"": false,
+  ""CurrentPath"": null,
+  ""SSoTmeProjectFiles"": null,
+  ""Name"": ""auth_temp"",
+  ""ProjectSettings"": [
+    {{
+      ""ProjectSettingId"": ""{Guid.NewGuid()}"",
+      ""Name"": ""project-name"",
+      ""Value"": ""auth_temp""
+    }}
+  ],
+  ""ProjectTranspilers"": []
+}}");
+
+                // Ensure the tool URL is in the global tool_urls.json
+                // (it should already be there from RunRemoteToolsRefresh, but ensure as fallback)
+                var globalToolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
+                Dictionary<string, string> urlMappings;
+                if (File.Exists(globalToolUrlsPath))
+                {
+                    urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(globalToolUrlsPath)) ?? new Dictionary<string, string>();
+                }
+                else
+                {
+                    urlMappings = new Dictionary<string, string>();
+                }
+                if (!urlMappings.ContainsKey(TRANSPILERS_LISTER_TOOL_NAME))
+                {
+                    urlMappings[TRANSPILERS_LISTER_TOOL_NAME] = LATEST_TRANSPILERS_LISTER_URL;
+                    File.WriteAllText(globalToolUrlsPath, JsonConvert.SerializeObject(urlMappings, Formatting.Indented));
+                }
+
+                var handler = new SSoTmeCLIHandler();
+                handler.skipRemoteToolsLookup = true;
+                handler.suppressVersionLabel = true;
+                handler.commandLine = commandLine;
+                handler.ParseCommand();
+                handler.TranspileProject();
+
+                // Read the output file
+                var outputPath = Path.Combine(tempDir, outputFileName);
+                if (File.Exists(outputPath))
+                    return File.ReadAllText(outputPath);
+
+                return null;
+            }
+            finally
+            {
+                Environment.CurrentDirectory = savedDir;
+                try { Directory.Delete(tempDir, true); } catch { }
+            }
         }
 
         private void RefreshRemoteTools()
