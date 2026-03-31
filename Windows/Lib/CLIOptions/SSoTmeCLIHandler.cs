@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.31.1548";
+        public string CLI_VERSION = "2026.03.31.1552";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-31-1243-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-31-1546-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
 
@@ -160,15 +160,32 @@ namespace SSoTme.OST.Lib.CLIOptions
                 string plan = null;
                 var envFile = SsotmeEnvFile.TryLoadFromNearestProject(false);
                 var projectJwt = envFile?.GetValue("EFFORTLESS_JWT");
-                if (!string.IsNullOrEmpty(projectJwt) && !MyEffortlessAPIService.IsJwtExpired(projectJwt))
+                if (!string.IsNullOrEmpty(projectJwt))
                 {
-                    activeJwt = projectJwt;
-                    var email = MyEffortlessAPIService.GetEmailFromJwt(projectJwt);
-                    loginLabel = string.IsNullOrEmpty(email)
-                        ? "(unknown) [project]"
-                        : $"{email} [project]";
+                    // Refresh if expired
+                    if (MyEffortlessAPIService.IsJwtExpired(projectJwt))
+                    {
+                        var projectRoot = FindNearestProjectRoot();
+                        if (projectRoot != null)
+                        {
+                            var envFilePath = Path.Combine(projectRoot, "effortless.env");
+                            var refreshed = new MyEffortlessAPIService().RefreshProjectToken(envFilePath, projectJwt);
+                            if (!string.IsNullOrEmpty(refreshed))
+                                projectJwt = refreshed;
+                            else
+                                projectJwt = null; // refresh failed, fall through to global
+                        }
+                    }
+                    if (!string.IsNullOrEmpty(projectJwt))
+                    {
+                        activeJwt = projectJwt;
+                        var email = MyEffortlessAPIService.GetEmailFromJwt(projectJwt);
+                        loginLabel = string.IsNullOrEmpty(email)
+                            ? "(unknown) [project]"
+                            : $"{email} [project]";
+                    }
                 }
-                else
+                if (activeJwt == null)
                 {
                     var svc = new MyEffortlessAPIService();
                     if (svc.IsAuthenticated() && !svc.IsTokenExpired())
