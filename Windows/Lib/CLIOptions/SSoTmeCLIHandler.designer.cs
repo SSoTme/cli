@@ -141,6 +141,9 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.", MinOccurs = 0, Aliases = "auth,login")]
         public bool authenticate { get; set; }
         
+        [CommandLineOption(Description = "Authenticate the ssotme CLI for this specific project (overrides global user login)", MinOccurs = 0, Aliases = "projectAuth")]
+        public bool projectLogin { get; set; }
+        
         [CommandLineOption(Description = "Logout of your cli user account", MinOccurs = 0, Aliases = "signout")]
         public bool logout { get; set; }
         

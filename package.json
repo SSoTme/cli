@@ -1,7 +1,7 @@
 {
   "name": "ssotme",
-  "version": "2026.03.31.1352",
-  "transpiler_lister_url": "https://ssotme-list-transpilers-v2026-03-31-1243-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/",
+  "version": "2026.03.31.1651",
+  "transpiler_lister_url": "https://ssotme-list-transpilers-v2026-03-31-1649-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/",
   "dotnet": "8.0.410",
   "description": "",
   "bin": {
