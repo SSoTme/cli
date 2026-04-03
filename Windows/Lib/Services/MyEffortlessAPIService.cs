@@ -274,6 +274,35 @@ namespace SSoTme.OST.Lib.Services
         }
 
         /// <summary>
+        /// Checks if a project exists in the remote DB, and registers it if not.
+        /// Requires the user to be logged in (JWT).
+        /// </summary>
+        public bool RegisterProject(string projectUuid, string projectName)
+        {
+            var jwt = GetStoredJWTToken();
+            if (string.IsNullOrEmpty(jwt))
+                return false;
+
+            try
+            {
+                // Check if project already exists
+                var checkResult = InvokeListTranspilerAuth(
+                    $"-p mode=checkProject -p jwt=\"{jwt}\" -p project_uuid={projectUuid}");
+                if (checkResult != null && checkResult.Success && checkResult.Exists == true)
+                    return true;
+
+                // Not found — register it
+                var result = InvokeListTranspilerAuth(
+                    $"-p mode=registerProject -p jwt=\"{jwt}\" -p project_uuid={projectUuid} -p project_name={projectName}");
+                return result != null && result.Success;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Refreshes the stored JWT token via the list-transpilers tool
         /// </summary>
         public bool RefreshToken()
@@ -1082,5 +1111,8 @@ namespace SSoTme.OST.Lib.Services
 
         [JsonProperty("plan")]
         public string Plan { get; set; }
+
+        [JsonProperty("exists")]
+        public bool? Exists { get; set; }
     }
 }

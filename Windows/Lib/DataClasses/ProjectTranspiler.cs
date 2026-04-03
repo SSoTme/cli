@@ -141,8 +141,32 @@ namespace SSoTme.OST.Lib.DataClasses
             this.MatchedTranspiler = localCommand ? default(Transpiler) : result.Transpiler;
         }
 
+        /// <summary>
+        /// If the CommandLine contains an embedded version (e.g. "author/package/tool/v2025.12.25.1915")
+        /// that doesn't match PinnedVersion, update it to match and save.
+        /// </summary>
+        private void SyncCommandLineVersion(SSoTmeProject project)
+        {
+            if (String.IsNullOrEmpty(this.PinnedVersion) || String.IsNullOrEmpty(this.CommandLine)) return;
+            var parts = this.CommandLine.Split(' ');
+            var toolPart = parts[0];
+            // Check if the tool part has a version segment (e.g. "author/package/tool/v2025.12.25.1915")
+            var segments = toolPart.Split('/');
+            if (segments.Length < 2) return;
+            var lastSegment = segments[segments.Length - 1];
+            // Version segments start with 'v' followed by a digit
+            if (!lastSegment.StartsWith("v", StringComparison.OrdinalIgnoreCase) || lastSegment.Length < 2 || !Char.IsDigit(lastSegment[1])) return;
+            if (String.Equals(lastSegment, this.PinnedVersion, StringComparison.OrdinalIgnoreCase)) return;
+            // Replace the version segment in CommandLine
+            segments[segments.Length - 1] = this.PinnedVersion;
+            parts[0] = String.Join("/", segments);
+            this.CommandLine = String.Join(" ", parts);
+            project.Save();
+        }
+
         internal void Rebuild(SSoTmeProject project, bool debugOption, bool ignoreErrors = false)
         {
+            SyncCommandLineVersion(project);
             // Build command line with debug flag if needed, but don't mutate this.CommandLine
             var commandLineToRun = this.CommandLine;
             if (debugOption)

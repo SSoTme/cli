@@ -49,12 +49,12 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.03.31.1651";
+        public string CLI_VERSION = "2026.04.03.1718";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-list-transpilers-v2026-03-31-1649-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-03-1641-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
-        public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "list-transpilers";
+        public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 
         private bool _hasRunRemoteToolsUpdate = false;
         internal bool skipRemoteToolsLookup = false;
@@ -1740,6 +1740,20 @@ Seed Url: ");
                     }
                 }
 
+                // Register project with remote DB (best effort, requires JWT + loaded project)
+                if (!string.IsNullOrEmpty(this.jwt) && this.AICaptureProject != null
+                    && !string.IsNullOrEmpty(this.AICaptureProject.SSoTmeProjectId)
+                    && this.AICaptureProject.SSoTmeProjectId != Guid.Empty.ToString()
+                    && !this.skipRemoteToolsLookup)
+                {
+                    try
+                    {
+                        new MyEffortlessAPIService().RegisterProject(
+                            this.AICaptureProject.SSoTmeProjectId, this.AICaptureProject.Name);
+                    }
+                    catch { }
+                }
+
                 if (this.authenticate)
                 {
                     var effortlessAPIService = new MyEffortlessAPIService();
@@ -2470,6 +2484,8 @@ Seed Url: ");
 
                 // Write the URL to tool_urls.json so the transpiler handler can resolve it.
                 this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
+                // Remove legacy "list-transpilers" entry if present (renamed to cli-cloud-bridge)
+                try { this.RemoveToolUrl("list-transpilers"); } catch { }
                 if (this.debug) Console.WriteLine($"DEBUG: wrote {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
 
                 // Ensure a minimal ssotme.json exists in remoteToolsDir so the internal
@@ -2603,7 +2619,7 @@ Seed Url: ");
 
         /// <summary>
         /// Invokes a tool via the transpiler mechanism and returns the content of a specific output file.
-        /// Used by MyEffortlessAPIService to call list-transpilers for auth operations.
+        /// Used by MyEffortlessAPIService to call cli-cloud-bridge for auth operations.
         /// </summary>
         public static string InvokeToolAndGetOutput(string commandLine, string outputFileName)
         {
@@ -2816,7 +2832,18 @@ Seed Url: ");
             {
                 var isPinnedAtHead = String.Equals(pinnedVersion, headVersionKey, StringComparison.OrdinalIgnoreCase);
                 var shortToolName = candidates[0].Contains("/") ? candidates[0].Substring(candidates[0].LastIndexOf('/') + 1) : candidates[0];
-                versionSuffix = isPinnedAtHead ? " [pinned, latest]" : $" [pinned, out-of-date (use `effortless {shortToolName} -upgrade`)]";
+                // Check if multiple transpilers share this tool name — if so, include path context in the hint
+                var upgradeHint = $"effortless {shortToolName} -upgrade";
+                var matchCount = this.AICaptureProject?.ProjectTranspilers?.Count(pt => {
+                    var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
+                    return ToolNameMatches(cmdTool, shortToolName);
+                }) ?? 0;
+                if (matchCount > 1)
+                {
+                    var chainOp = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ";" : "&&";
+                    upgradeHint = $"cd {Environment.CurrentDirectory} {chainOp} effortless {shortToolName} -upgrade";
+                }
+                versionSuffix = isPinnedAtHead ? " [pinned, latest]" : $" [pinned, out-of-date (use `{upgradeHint}`)]";
             }
             else
             {
@@ -2917,19 +2944,56 @@ Seed Url: ");
         /// Returns the PinnedVersion for the tool whose CommandLine starts with <paramref name="toolName"/> (short or qualified),
         /// or null if not found / not pinned.
         /// </summary>
+        /// <summary>
+        /// Checks if a CommandLine tool part matches a given tool name.
+        /// Handles short names ("airtable-to-rulebook"), qualified names ("effortless/effortless/airtable-to-rulebook"),
+        /// and qualified names with version ("effortless/effortless/airtable-to-rulebook/v2025.12.25.1915").
+        /// </summary>
+        private static bool ToolNameMatches(string cmdTool, string toolName)
+        {
+            if (String.Equals(cmdTool, toolName, StringComparison.OrdinalIgnoreCase)) return true;
+            // Extract short name from both and compare
+            var cmdShort = cmdTool.Contains('/') ? cmdTool.Substring(cmdTool.LastIndexOf('/') + 1) : cmdTool;
+            var toolShort = toolName.Contains('/') ? toolName.Substring(toolName.LastIndexOf('/') + 1) : toolName;
+            if (String.Equals(cmdShort, toolShort, StringComparison.OrdinalIgnoreCase)) return true;
+            // cmdTool might be "author/package/tool/version" — strip trailing version segment and retry
+            if (cmdTool.Contains('/'))
+            {
+                var cmdWithoutVersion = cmdTool.Substring(0, cmdTool.LastIndexOf('/'));
+                var cmdToolName = cmdWithoutVersion.Contains('/') ? cmdWithoutVersion.Substring(cmdWithoutVersion.LastIndexOf('/') + 1) : cmdWithoutVersion;
+                if (String.Equals(cmdToolName, toolShort, StringComparison.OrdinalIgnoreCase)) return true;
+                if (String.Equals(cmdWithoutVersion, toolName, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
         private string GetPinnedVersionForTool(string toolName)
         {
             var transpilers = this.AICaptureProject?.ProjectTranspilers;
             if (transpilers == null || String.IsNullOrEmpty(toolName)) return null;
-            var shortName = toolName.Contains('/') ? toolName.Substring(toolName.LastIndexOf('/') + 1) : toolName;
-            foreach (var pt in transpilers)
-            {
+            var matches = transpilers.Where(pt => {
                 var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
-                if (String.Equals(cmdTool, shortName, StringComparison.OrdinalIgnoreCase)
-                    || String.Equals(cmdTool, toolName, StringComparison.OrdinalIgnoreCase))
-                    return pt.PinnedVersion; // may be null if not yet pinned
+                return ToolNameMatches(cmdTool, toolName);
+            }).ToList();
+
+            if (matches.Count > 1 && this.AICaptureProject?.RootPath != null)
+            {
+                // Disambiguate by current directory relative to project root
+                var cwd = Environment.CurrentDirectory.Replace("\\", "/").TrimEnd('/');
+                var root = this.AICaptureProject.RootPath.Replace("\\", "/").TrimEnd('/');
+                var relativeCwd = cwd.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+                    ? "/" + cwd.Substring(root.Length).TrimStart('/')
+                    : null;
+                if (relativeCwd != null)
+                {
+                    var match = matches.FirstOrDefault(pt =>
+                        String.Equals(pt.RelativePath?.Replace("\\", "/").TrimEnd('/'),
+                            relativeCwd.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
+                    if (match != null) return match.PinnedVersion;
+                }
             }
-            return null;
+
+            return matches.FirstOrDefault()?.PinnedVersion;
         }
 
         /// <summary>
@@ -2959,13 +3023,32 @@ Seed Url: ");
                 ShowError("No effortless.json project found in this directory.");
                 return;
             }
-            var shortName = toolName.Contains('/') ? toolName.Substring(toolName.LastIndexOf('/') + 1) : toolName;
-            var matched = project.ProjectTranspilers?
-                .FirstOrDefault(pt => {
+            var allMatches = project.ProjectTranspilers?
+                .Where(pt => {
                     var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
-                    return String.Equals(cmdTool, shortName, StringComparison.OrdinalIgnoreCase)
-                        || String.Equals(cmdTool, toolName, StringComparison.OrdinalIgnoreCase);
-                });
+                    return ToolNameMatches(cmdTool, toolName);
+                }).ToList();
+            ProjectTranspiler matched = null;
+            if (allMatches?.Count > 1 && project.RootPath != null)
+            {
+                // Disambiguate by current directory relative to project root
+                var cwd = Environment.CurrentDirectory.Replace("\\", "/").TrimEnd('/');
+                var root = project.RootPath.Replace("\\", "/").TrimEnd('/');
+                var relativeCwd = cwd.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+                    ? "/" + cwd.Substring(root.Length).TrimStart('/')
+                    : null;
+                if (relativeCwd != null)
+                {
+                    matched = allMatches.FirstOrDefault(pt =>
+                        String.Equals(pt.RelativePath?.Replace("\\", "/").TrimEnd('/'),
+                            relativeCwd.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
+                }
+                matched ??= allMatches.FirstOrDefault();
+            }
+            else
+            {
+                matched = allMatches?.FirstOrDefault();
+            }
             if (matched == null)
             {
                 ShowError($"No installed transpiler matching '{toolName}' found in effortless.json.");
