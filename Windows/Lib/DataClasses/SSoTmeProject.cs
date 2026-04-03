@@ -428,9 +428,11 @@ effortless.env";
             }
         }
 
-        public Guid GenerateNewProject()
+        public string GenerateNewProject()
         {
-            this.SSoTmeProjectId = Guid.NewGuid();
+            if (string.IsNullOrEmpty(this.SSoTmeProjectId) || this.SSoTmeProjectId == Guid.Empty.ToString())
+                this.SSoTmeProjectId = Guid.NewGuid().ToString();
+
             return this.SSoTmeProjectId;
         }
 
@@ -541,11 +543,10 @@ effortless.env";
                         ssotmeProject.Name = Path.GetFileName(ssotmeProject.RootPath);
                     }
 
-                    if (ssotmeProject.SSoTmeProjectId == Guid.Empty)
-                    {
-                        ssotmeProject.GenerateNewProject();
+                    var hadNoId = string.IsNullOrEmpty(ssotmeProject.SSoTmeProjectId) || ssotmeProject.SSoTmeProjectId == Guid.Empty.ToString();
+                    ssotmeProject.GenerateNewProject();
+                    if (hadNoId)
                         ssotmeProject.Save(projectFI.Directory);
-                    }
 
                     if (updateCurrent) ssotmeProject.SetCurrentFromRequestDirectory(requestDirectory);
 
@@ -1056,6 +1057,10 @@ effortless.env";
                     .Where(wherePT => String.IsNullOrEmpty(transpilerGroup) ||
                                       String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase))
                     .ToList();  // Materialize the query to prevent "Collection was modified" error
+                // Sync any embedded CommandLine versions with PinnedVersion before building
+                if (matchingProjectTranspilers.Any(pt => pt.SyncCommandLineVersion()))
+                    this.Save();
+
                 foreach (var pt in matchingProjectTranspilers)
                 {
                     if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption, ignoreErrors);
