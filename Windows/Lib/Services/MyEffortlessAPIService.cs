@@ -285,15 +285,20 @@ namespace SSoTme.OST.Lib.Services
 
             try
             {
+                // Sanitize inputs to prevent parameter injection
+                var safeUuid = projectUuid.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
+                var safeName = projectName.Replace("\"", "").Replace("-p ", "");
+                var safeJwt = jwt.Replace("\"", "").Replace("'", "").Replace(" ", "");
+
                 // Check if project already exists
                 var checkResult = InvokeListTranspilerAuth(
-                    $"-p mode=checkProject -p jwt=\"{jwt}\" -p project_uuid={projectUuid}");
+                    $"-p mode=checkProject -p jwt=\"{safeJwt}\" -p project_uuid=\"{safeUuid}\"");
                 if (checkResult != null && checkResult.Success && checkResult.Exists == true)
                     return true;
 
                 // Not found — register it
                 var result = InvokeListTranspilerAuth(
-                    $"-p mode=registerProject -p jwt=\"{jwt}\" -p project_uuid={projectUuid} -p project_name={projectName}");
+                    $"-p mode=registerProject -p jwt=\"{safeJwt}\" -p project_uuid=\"{safeUuid}\" -p project_name=\"{safeName}\"");
                 return result != null && result.Success;
             }
             catch

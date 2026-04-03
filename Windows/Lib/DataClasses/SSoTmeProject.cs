@@ -1057,6 +1057,10 @@ effortless.env";
                     .Where(wherePT => String.IsNullOrEmpty(transpilerGroup) ||
                                       String.Equals(wherePT.TranspilerGroup, transpilerGroup, StringComparison.OrdinalIgnoreCase))
                     .ToList();  // Materialize the query to prevent "Collection was modified" error
+                // Sync any embedded CommandLine versions with PinnedVersion before building
+                if (matchingProjectTranspilers.Any(pt => pt.SyncCommandLineVersion()))
+                    this.Save();
+
                 foreach (var pt in matchingProjectTranspilers)
                 {
                     if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption, ignoreErrors);

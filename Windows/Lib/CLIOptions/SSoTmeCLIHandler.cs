@@ -1751,7 +1751,7 @@ Seed Url: ");
                         new MyEffortlessAPIService().RegisterProject(
                             this.AICaptureProject.SSoTmeProjectId, this.AICaptureProject.Name);
                     }
-                    catch { }
+                    catch (Exception ex) { if (this.debug) Console.WriteLine($"DEBUG: RegisterProject failed: {ex.Message}"); }
                 }
 
                 if (this.authenticate)
@@ -2485,7 +2485,7 @@ Seed Url: ");
                 // Write the URL to tool_urls.json so the transpiler handler can resolve it.
                 this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
                 // Remove legacy "list-transpilers" entry if present (renamed to cli-cloud-bridge)
-                try { this.RemoveToolUrl("list-transpilers"); } catch { }
+                try { this.RemoveToolUrl("list-transpilers"); } catch (Exception ex) { if (this.debug) Console.WriteLine($"DEBUG: RemoveToolUrl('list-transpilers') skipped: {ex.Message}"); }
                 if (this.debug) Console.WriteLine($"DEBUG: wrote {SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME}={effectiveUrl} to tool_urls.json");
 
                 // Ensure a minimal ssotme.json exists in remoteToolsDir so the internal
@@ -2967,6 +2967,28 @@ Seed Url: ");
             return false;
         }
 
+        /// <summary>
+        /// Given multiple transpiler matches, picks the one whose RelativePath matches
+        /// the current working directory relative to the project root. Falls back to first match.
+        /// </summary>
+        private static ProjectTranspiler DisambiguateByCurrentDirectory(List<ProjectTranspiler> matches, string projectRootPath)
+        {
+            if (matches == null || matches.Count == 0) return null;
+            if (matches.Count == 1 || string.IsNullOrEmpty(projectRootPath)) return matches.FirstOrDefault();
+
+            var cwd = Environment.CurrentDirectory.Replace("\\", "/").TrimEnd('/');
+            var root = projectRootPath.Replace("\\", "/").TrimEnd('/');
+            if (cwd.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+            {
+                var relativeCwd = "/" + cwd.Substring(root.Length).TrimStart('/');
+                var match = matches.FirstOrDefault(pt =>
+                    String.Equals(pt.RelativePath?.Replace("\\", "/").TrimEnd('/'),
+                        relativeCwd.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
+                if (match != null) return match;
+            }
+            return matches.FirstOrDefault();
+        }
+
         private string GetPinnedVersionForTool(string toolName)
         {
             var transpilers = this.AICaptureProject?.ProjectTranspilers;
@@ -2976,24 +2998,7 @@ Seed Url: ");
                 return ToolNameMatches(cmdTool, toolName);
             }).ToList();
 
-            if (matches.Count > 1 && this.AICaptureProject?.RootPath != null)
-            {
-                // Disambiguate by current directory relative to project root
-                var cwd = Environment.CurrentDirectory.Replace("\\", "/").TrimEnd('/');
-                var root = this.AICaptureProject.RootPath.Replace("\\", "/").TrimEnd('/');
-                var relativeCwd = cwd.StartsWith(root, StringComparison.OrdinalIgnoreCase)
-                    ? "/" + cwd.Substring(root.Length).TrimStart('/')
-                    : null;
-                if (relativeCwd != null)
-                {
-                    var match = matches.FirstOrDefault(pt =>
-                        String.Equals(pt.RelativePath?.Replace("\\", "/").TrimEnd('/'),
-                            relativeCwd.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
-                    if (match != null) return match.PinnedVersion;
-                }
-            }
-
-            return matches.FirstOrDefault()?.PinnedVersion;
+            return DisambiguateByCurrentDirectory(matches, this.AICaptureProject?.RootPath)?.PinnedVersion;
         }
 
         /// <summary>
@@ -3028,27 +3033,7 @@ Seed Url: ");
                     var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
                     return ToolNameMatches(cmdTool, toolName);
                 }).ToList();
-            ProjectTranspiler matched = null;
-            if (allMatches?.Count > 1 && project.RootPath != null)
-            {
-                // Disambiguate by current directory relative to project root
-                var cwd = Environment.CurrentDirectory.Replace("\\", "/").TrimEnd('/');
-                var root = project.RootPath.Replace("\\", "/").TrimEnd('/');
-                var relativeCwd = cwd.StartsWith(root, StringComparison.OrdinalIgnoreCase)
-                    ? "/" + cwd.Substring(root.Length).TrimStart('/')
-                    : null;
-                if (relativeCwd != null)
-                {
-                    matched = allMatches.FirstOrDefault(pt =>
-                        String.Equals(pt.RelativePath?.Replace("\\", "/").TrimEnd('/'),
-                            relativeCwd.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
-                }
-                matched ??= allMatches.FirstOrDefault();
-            }
-            else
-            {
-                matched = allMatches?.FirstOrDefault();
-            }
+            var matched = DisambiguateByCurrentDirectory(allMatches, project.RootPath);
             if (matched == null)
             {
                 ShowError($"No installed transpiler matching '{toolName}' found in effortless.json.");
