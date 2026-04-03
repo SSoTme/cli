@@ -428,9 +428,14 @@ effortless.env";
             }
         }
 
+        public Guid GenerateNewProject()
+        {
+            this.SSoTmeProjectId = Guid.NewGuid();
+            return this.SSoTmeProjectId;
+        }
+
         public void RemoveUUIds()
         {
-            this.SSoTmeProjectId = Guid.Empty;
             this.ProjectSettings.ToList().ForEach(setting =>
             {
                 setting.ProjectSettingId = Guid.Empty;
@@ -534,6 +539,12 @@ effortless.env";
                     if (String.IsNullOrEmpty(ssotmeProject.Name))
                     {
                         ssotmeProject.Name = Path.GetFileName(ssotmeProject.RootPath);
+                    }
+
+                    if (ssotmeProject.SSoTmeProjectId == Guid.Empty)
+                    {
+                        ssotmeProject.GenerateNewProject();
+                        ssotmeProject.Save(projectFI.Directory);
                     }
 
                     if (updateCurrent) ssotmeProject.SetCurrentFromRequestDirectory(requestDirectory);
