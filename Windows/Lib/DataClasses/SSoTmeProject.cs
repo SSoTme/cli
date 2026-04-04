@@ -1424,7 +1424,7 @@ effortless.env";
             // Capture the user's original CWD once — we must never delete it or any ancestor,
             // because the shell's CWD cannot be changed from within a child process.
             string originalCwd = null;
-            try { originalCwd = Path.GetFullPath(Environment.CurrentDirectory); } catch { }
+            try { originalCwd = Path.GetFullPath(Environment.CurrentDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar); } catch { }
 
             // Build set of paths that are RelativePath targets for installed transpiler tools.
             // These must not be deleted even if empty, and neither should their ancestors up to RootPath.
@@ -1478,7 +1478,7 @@ effortless.env";
                 }
 
                 // Never delete a folder that is a transpiler tool's RelativePath target
-                if (protectedPaths.Contains(childDir.FullName)) continue;
+                if (protectedPaths.Contains(childDir.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))) continue;
 
                 // Never delete the user's CWD or any ancestor of it — the shell would be stranded
                 if (!String.IsNullOrEmpty(originalCwd))
@@ -1512,7 +1512,7 @@ effortless.env";
             }
 
             // Never delete a folder that is a transpiler tool's RelativePath target
-            if (protectedPaths.Contains(cleanDI.FullName)) return;
+            if (protectedPaths.Contains(cleanDI.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))) return;
 
             // Never delete the user's CWD or any ancestor of it
             if (!String.IsNullOrEmpty(originalCwd))

@@ -2463,10 +2463,9 @@ Seed Url: ");
             File.WriteAllText(cliVersionPath, this.CLI_VERSION);
             if (this.debug) Console.WriteLine($"DEBUG: wrote cli_version {this.CLI_VERSION} to {cliVersionPath}");
 
-            // IMPORTANT: Do NOT change Environment.CurrentDirectory here.
-            // This method is called from CheckForUpdateNotice which must be purely presentational
-            // with zero impact on CLI flow. Changing CWD can strand the user's shell or cause
-            // subsequent commands (like clean) to operate in the wrong directory.
+            // IMPORTANT: Any CWD changes in this method must be tightly scoped in try/finally blocks
+            // that guarantee immediate restoration. This method is called from CheckForUpdateNotice
+            // which must be purely presentational with zero lasting impact on CLI flow.
 
             // Determine the effective transpilers URL: on version change use the built-in default,
             // otherwise prefer whatever is in tool_urls.json.
@@ -2511,8 +2510,8 @@ Seed Url: ");
 }}");
             }
 
-            // Invoke the transpilers tool directly, using the remoteToolsDir as the working directory
-            // for the internal handler without changing the process-wide Environment.CurrentDirectory.
+            // Invoke the transpilers tool directly. The CWD must temporarily be set to remoteToolsDir
+            // for ParseCommand/TranspileProject, but is tightly scoped in a try/finally to guarantee restoration.
             bool RunRefresh()
             {
                 var savedDir = Environment.CurrentDirectory;
