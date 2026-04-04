@@ -77,9 +77,18 @@ echo "Using version: $SSOTME_VERSION from package.json"
 CSPROJ_FILE="$ROOT_DIR/Windows/CLI/SSoTme.OST.CLI.csproj"
 CLIHANDLER_FILE="$ROOT_DIR/Windows/Lib/CLIOptions/SSoTmeCLIHandler.cs"
 
-# Always use package.json version
-NEW_CSPROJ_VERSION="$SSOTME_VERSION"
-echo "Using package.json version: $NEW_CSPROJ_VERSION"
+# Convert version to numeric format for .csproj (YYYY.M.D.HHMM)
+# e.g. "2026-04-04.19.17" -> "2026.4.4.1917"
+if [[ "$SSOTME_VERSION" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})\.([0-9]{1,2})\.([0-9]{1,2})$ ]]; then
+    CSPROJ_YEAR="${BASH_REMATCH[1]}"
+    CSPROJ_MONTH=$((10#${BASH_REMATCH[2]}))
+    CSPROJ_DAY=$((10#${BASH_REMATCH[3]}))
+    CSPROJ_HHMM="$((10#${BASH_REMATCH[4]}))$(printf '%02d' $((10#${BASH_REMATCH[5]})))"
+    NEW_CSPROJ_VERSION="${CSPROJ_YEAR}.${CSPROJ_MONTH}.${CSPROJ_DAY}.${CSPROJ_HHMM}"
+else
+    NEW_CSPROJ_VERSION="$SSOTME_VERSION"
+fi
+echo "Using csproj version: $NEW_CSPROJ_VERSION (from $SSOTME_VERSION)"
 
 if [ ! -f "$CSPROJ_FILE" ]; then
     echo "WARNING: $CSPROJ_FILE not found"
@@ -88,8 +97,8 @@ fi
 echo "Updating version in $CSPROJ_FILE to $NEW_CSPROJ_VERSION"
 sed -i '' "s/<Version>[^<]*<\/Version>/<Version>$NEW_CSPROJ_VERSION<\/Version>/g" "$CSPROJ_FILE"
 
-echo "Updating version in $CLIHANDLER_FILE to $NEW_CSPROJ_VERSION"
-sed -i '' "s/public string CLI_VERSION = \".*\";/public string CLI_VERSION = \"$NEW_CSPROJ_VERSION\";/g" "$CLIHANDLER_FILE"
+echo "Updating CLI_VERSION in $CLIHANDLER_FILE to $SSOTME_VERSION"
+sed -i '' "s/public string CLI_VERSION = \".*\";/public string CLI_VERSION = \"$SSOTME_VERSION\";/g" "$CLIHANDLER_FILE"
 
 # Clean previous builds
 sudo rm -rf "$DIST_DIR"

@@ -108,14 +108,35 @@ foreach ($Dir in $Directories) {
 
 $packageJsonTxt = Get-Content (Join-Path $RootDir "package.json") -Raw | ConvertFrom-Json
 $ssotmeVersionOriginal = $packageJsonTxt.version
-$ssotmeVersion = $ssotmeVersionOriginal -replace "0", ""  #  Invalid product version '2024.08.23'. Product version must have a major version less than 256, a minor version less than 256
+# Convert version to valid MSI format (major < 256, minor < 256, build < 65536).
+# Version format is "YYYY-MM-DD.HH.MM" (e.g. "2026-04-04.19.17").
+# Encoding: major = year % 100, minor = month, build = day * 1440 + hour * 60 + minute
+# Max build = 31*1440 + 23*60 + 59 = 46079 < 65536. All constraints satisfied.
+# e.g. "2026-04-04.19.17" -> "26.4.6917"  (4*1440 + 19*60 + 17 = 6917)
+if ($ssotmeVersionOriginal -match '(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})') {
+    $msiMajor = [int]$matches[1] % 100
+    $msiMinor = [int]$matches[2]
+    $msiBuild = [int]$matches[3] * 1440 + [int]$matches[4] * 60 + [int]$matches[5]
+    $ssotmeVersion = "$msiMajor.$msiMinor.$msiBuild"
+} else {
+    # Fallback: strip leading zeros from each segment
+    $ssotmeVersion = ($ssotmeVersionOriginal -replace '-', '.' -split '\.' | ForEach-Object { [int]$_ }) -join '.'
+}
 Write-Host "Using version: $ssotmeVersion from package.json"
 
-# update csproj version
+# Convert version to numeric format for .csproj (YYYY.M.D.HHMM)
+# e.g. "2026-04-04.19.17" -> "2026.4.4.1917"
+if ($ssotmeVersionOriginal -match '^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$') {
+    $csprojVersion = "$([int]$matches[1]).$([int]$matches[2]).$([int]$matches[3]).$([int]$matches[4])$($matches[5].PadLeft(2,'0'))"
+} else {
+    $csprojVersion = $ssotmeVersionOriginal
+}
+
+# update csproj version (numeric for AssemblyVersion/FileVersion)
 $CSPROJ_CONTENT = Get-Content "$SourceDir/SSoTme.OST.CLI.csproj" -Raw
-$CSPROJ_CONTENT_new = $CSPROJ_CONTENT -replace "<Version>.*?</Version>", "<Version>$ssotmeVersionOriginal</Version>"
+$CSPROJ_CONTENT_new = $CSPROJ_CONTENT -replace "<Version>.*?</Version>", "<Version>$csprojVersion</Version>"
 Set-Content "$SourceDir/SSoTme.OST.CLI.csproj" $CSPROJ_CONTENT_new -NoNewline
-Write-Host "Updated version of $SourceDir/SSoTme.OST.CLI.csproj to $ssotmeVersionOriginal"
+Write-Host "Updated version of $SourceDir/SSoTme.OST.CLI.csproj to $csprojVersion"
 
 # copy LICENSE from the root dir into Resources/ (this will be included in the app, while Assets/LICENSE.rtf is only showed at install time)
 Write-Host "`nCopying license and documentation files..." -ForegroundColor Yellow
