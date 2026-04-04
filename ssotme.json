@@ -1,6 +1,9 @@
 {
   "ShowHidden": false,
   "ShowAllFiles": false,
+  "CurrentPath": null,
+  "SSoTmeProjectFiles": null,
+  "SSoTmeProjectId": "691f7e3b-0480-4c9b-a777-2c184731dd93",
   "Name": "SSoTme-OST-CLI",
   "ProjectSettings": [
     {

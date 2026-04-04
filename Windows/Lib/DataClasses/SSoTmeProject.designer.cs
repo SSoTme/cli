@@ -12,7 +12,7 @@ namespace SSoTme.OST.Lib.DataClasses
         private void InitPoco()
         {
             
-            this.SSoTmeProjectId = Guid.NewGuid();
+            this.SSoTmeProjectId = Guid.NewGuid().ToString();
             
                 this.ProjectSettings = new BindingList<ProjectSetting>();
             
@@ -31,7 +31,7 @@ namespace SSoTme.OST.Lib.DataClasses
 
         
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "SSoTmeProjectId")]
-        public Guid SSoTmeProjectId { get; set; }
+        public String SSoTmeProjectId { get; set; }
     
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "Name")]
         public String Name { get; set; }
