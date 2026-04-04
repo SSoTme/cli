@@ -95,6 +95,17 @@ class Installer:
         print(f"Package version is '{version}'")
         return version
 
+    @staticmethod
+    def to_pep440_version(version):
+        """Convert 'YYYY-MM-DD.HH.MM' to PEP 440 compatible 'YYYY.MDD.HHMM'."""
+        import re
+        m = re.match(r'^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$', version)
+        if m:
+            year, month, day, hour, minute = (int(x) for x in m.groups())
+            return f"{year}.{month * 100 + day}.{hour * 100 + minute}"
+        # Already valid or unknown format — return with hyphens replaced by dots
+        return version.replace("-", ".")
+
     def get_transpiler_lister_url(self):
         print("Fetching transpiler lister URL from package.json")
         try:
@@ -442,7 +453,7 @@ def run_setup():
         
         setup_config = {
             "name": "ssotme",
-            "version": installer.get_package_version(),
+            "version": Installer.to_pep440_version(installer.get_package_version()),
             "description": "Python wrapper for installing SSoTme CLI tools",
             "author": "SSoTme",
             "author_email": "michael@ssot.me",
