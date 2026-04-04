@@ -3635,6 +3635,15 @@ Seed Url: ");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
+                catch (System.Net.Http.HttpRequestException ex) when (
+                    ex.InnerException is System.Security.Authentication.AuthenticationException ||
+                    ex.Message.Contains("SSL"))
+                {
+                    CliLog.LogLine("SSL connection error. Retrying in 6 seconds...", ConsoleColor.Yellow);
+                    if (this.debug) Console.WriteLine($"DEBUG: {ex.Message}");
+                    await System.Threading.Tasks.Task.Delay(6000);
+                    continue;
+                }
 
                 // Retry on gateway timeout (remote transpiler still cold-booting)
                 if (response.StatusCode == System.Net.HttpStatusCode.GatewayTimeout ||
@@ -3646,6 +3655,20 @@ Seed Url: ");
                     if (this.debug) Console.WriteLine($"DEBUG: Response body: {retryContent}");
                     await System.Threading.Tasks.Task.Delay(5000);
                     continue;
+                }
+
+                // Retry on server-side SSL errors (transient infrastructure issue)
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    var badRequestContent = await response.Content.ReadAsStringAsync();
+                    if (badRequestContent.Contains("SSL connection could not be established") ||
+                        badRequestContent.Contains("SSL") && badRequestContent.Contains("error"))
+                    {
+                        CliLog.LogLine("Remote transpiler SSL error. Retrying in 6 seconds...", ConsoleColor.Yellow);
+                        if (this.debug) Console.WriteLine($"DEBUG: Response body: {badRequestContent}");
+                        await System.Threading.Tasks.Task.Delay(6000);
+                        continue;
+                    }
                 }
 
                 break; // Got a non-retryable response
