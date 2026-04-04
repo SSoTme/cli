@@ -1421,6 +1421,37 @@ effortless.env";
 
         private void RemoveEmptyFolders(string pathToClean)
         {
+            // Capture the user's original CWD once — we must never delete it or any ancestor,
+            // because the shell's CWD cannot be changed from within a child process.
+            string originalCwd = null;
+            try { originalCwd = Path.GetFullPath(Environment.CurrentDirectory); } catch { }
+
+            // Build set of paths that are RelativePath targets for installed transpiler tools.
+            // These must not be deleted even if empty, and neither should their ancestors up to RootPath.
+            var protectedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (this.ProjectTranspilers != null)
+            {
+                foreach (var pt in this.ProjectTranspilers)
+                {
+                    if (String.IsNullOrEmpty(pt.RelativePath)) continue;
+                    var ptPath = Path.GetFullPath(Path.Combine(this.RootPath, pt.RelativePath.Trim("\\/".ToCharArray())));
+                    // Protect this path and all ancestor paths up to RootPath
+                    var current = ptPath;
+                    while (!String.IsNullOrEmpty(current)
+                           && !String.Equals(current, this.RootPath, StringComparison.OrdinalIgnoreCase)
+                           && current.StartsWith(this.RootPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        protectedPaths.Add(current);
+                        current = Path.GetDirectoryName(current);
+                    }
+                }
+            }
+
+            RemoveEmptyFoldersInternal(pathToClean, originalCwd, protectedPaths);
+        }
+
+        private void RemoveEmptyFoldersInternal(string pathToClean, string originalCwd, HashSet<string> protectedPaths)
+        {
             var cleanDI = new DirectoryInfo(pathToClean);
 
             if (!cleanDI.Exists) return;
@@ -1429,7 +1460,7 @@ effortless.env";
 
             foreach (var childDir in cleanChildDirs)
             {
-                RemoveEmptyFolders(childDir.FullName);
+                RemoveEmptyFoldersInternal(childDir.FullName, originalCwd, protectedPaths);
 
                 childDir.Refresh();
                 if (!childDir.Exists) continue;
@@ -1446,25 +1477,17 @@ effortless.env";
                     throw new Exception($"ERROR: Cannot delete project root directory: {this.RootPath}");
                 }
 
-                // If deleting current working directory, change to parent first
-                try
+                // Never delete a folder that is a transpiler tool's RelativePath target
+                if (protectedPaths.Contains(childDir.FullName)) continue;
+
+                // Never delete the user's CWD or any ancestor of it — the shell would be stranded
+                if (!String.IsNullOrEmpty(originalCwd))
                 {
-                    var currentDir = Environment.CurrentDirectory;
-                    if (String.Equals(childDir.FullName, currentDir, StringComparison.OrdinalIgnoreCase))
+                    var childFullName = childDir.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    if (String.Equals(childFullName, originalCwd, StringComparison.OrdinalIgnoreCase)
+                        || originalCwd.StartsWith(childFullName + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (childDir.Parent != null)
-                        {
-                            Environment.CurrentDirectory = childDir.Parent.FullName;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    // CurrentDirectory may throw if the directory was already deleted on macOS
-                    // Safe to continue - just navigate to project root
-                    if (Directory.Exists(this.RootPath))
-                    {
-                        try { Environment.CurrentDirectory = this.RootPath; } catch { }
+                        continue;
                     }
                 }
 
@@ -1474,8 +1497,7 @@ effortless.env";
                 }
                 catch (IOException)
                 {
-                    // On Linux, may not be able to delete current working directory even after changing it
-                    // Skip this directory and continue cleaning others
+                    // May not be able to delete on some platforms — skip and continue
                 }
             }
 
@@ -1489,25 +1511,17 @@ effortless.env";
                 throw new Exception($"ERROR: Cannot delete project root directory: {this.RootPath}");
             }
 
-            // If deleting current working directory, change to parent first
-            try
+            // Never delete a folder that is a transpiler tool's RelativePath target
+            if (protectedPaths.Contains(cleanDI.FullName)) return;
+
+            // Never delete the user's CWD or any ancestor of it
+            if (!String.IsNullOrEmpty(originalCwd))
             {
-                var currentDir = Environment.CurrentDirectory;
-                if (String.Equals(cleanDI.FullName, currentDir, StringComparison.OrdinalIgnoreCase))
+                var cleanFullName = cleanDI.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (String.Equals(cleanFullName, originalCwd, StringComparison.OrdinalIgnoreCase)
+                    || originalCwd.StartsWith(cleanFullName + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (cleanDI.Parent != null)
-                    {
-                        Environment.CurrentDirectory = cleanDI.Parent.FullName;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                // CurrentDirectory may throw if the directory was already deleted on macOS
-                // Safe to continue - just navigate to project root
-                if (Directory.Exists(this.RootPath))
-                {
-                    try { Environment.CurrentDirectory = this.RootPath; } catch { }
+                    return;
                 }
             }
 
@@ -1517,8 +1531,7 @@ effortless.env";
             }
             catch (IOException)
             {
-                // On Linux, may not be able to delete current working directory even after changing it
-                // Skip this directory and continue cleaning others
+                // May not be able to delete on some platforms — skip and continue
             }
         }
 
