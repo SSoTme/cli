@@ -264,6 +264,24 @@ namespace SSoTme.OST.Lib.DataClasses
 
             String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
             var zfsFI = new FileInfo(zsfFileName);
+
+            // If the expected .zfs file doesn't exist, the build may have saved it under
+            // the resolved URL-based name (e.g. "httpsexample-com-tool-v2026..." instead of
+            // "toolname"). Fall back to the single .zfs file in this transpiler's ZFS directory.
+            if (!zfsFI.Exists && zfsDI.Exists)
+            {
+                var zfsFiles = zfsDI.GetFiles("*.zfs");
+                if (zfsFiles.Length == 1)
+                {
+                    zfsFI = zfsFiles[0];
+                    if (debug) Console.WriteLine($"DEBUG: Expected ZFS '{zsfFileName}' not found, using '{zfsFI.FullName}'");
+                }
+                else if (zfsFiles.Length > 1 && debug)
+                {
+                    Console.WriteLine($"DEBUG: Expected ZFS '{zsfFileName}' not found, and {zfsFiles.Length} .zfs files exist — cannot determine which to clean");
+                }
+            }
+
             if (zfsFI.Exists)
             {
                 var zippedFileSet = File.ReadAllBytes(zfsFI.FullName);
