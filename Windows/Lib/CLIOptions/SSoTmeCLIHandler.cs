@@ -2166,13 +2166,21 @@ Seed Url: ");
                         // Update runtime-only properties without saving during build operations
                         GetProjectOrThrow().UpdateRuntimeOnly(projectTranspiler, result);
 
-                        // Auto-pin on first successful build if not yet pinned
-                        if (String.IsNullOrEmpty(projectTranspiler.PinnedVersion) && !String.IsNullOrEmpty(this.ResolvedVersionKey))
+                        // Track what version and URL were used (soft pin — auto-updates each run)
+                        if (!String.IsNullOrEmpty(this.ResolvedVersionKey))
                         {
-                            projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
-                            GetProjectOrThrow().Save();
-                            CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
-                            CliLog.LogLine($"Use `effortless {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
+                            bool changed = false;
+                            if (!String.Equals(projectTranspiler.LastVersionUsed, this.ResolvedVersionKey))
+                            {
+                                projectTranspiler.LastVersionUsed = this.ResolvedVersionKey;
+                                changed = true;
+                            }
+                            if (!String.IsNullOrEmpty(this.ResolvedVersionUrl) && !String.Equals(projectTranspiler.LastUrl, this.ResolvedVersionUrl))
+                            {
+                                projectTranspiler.LastUrl = this.ResolvedVersionUrl;
+                                changed = true;
+                            }
+                            if (changed) GetProjectOrThrow().Save();
                         }
                     }
                     else
@@ -2184,24 +2192,37 @@ Seed Url: ");
                             GetProjectOrThrow().Update(projectTranspiler, result);
                         }
 
-                        // Auto-pin on first run if not yet pinned
-                        if (!this.install && !ReferenceEquals(projectTranspiler, null)
-                            && String.IsNullOrEmpty(projectTranspiler.PinnedVersion) && !String.IsNullOrEmpty(this.ResolvedVersionKey))
+                        // Track what version and URL were used (soft pin — auto-updates each run)
+                        if (!this.install && !ReferenceEquals(projectTranspiler, null) && !String.IsNullOrEmpty(this.ResolvedVersionKey))
                         {
-                            projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
-                            GetProjectOrThrow().Save();
-                            CliLog.LogLine($"{this.ResolvedToolName ?? this.transpiler}: {this.ResolvedVersionKey} has been pinned as the default version for this project.", ConsoleColor.Blue);
-                            CliLog.LogLine($"Use `effortless {this.ResolvedToolName ?? this.transpiler} -latest` to always run the newest version.", ConsoleColor.Blue);
+                            bool changed = false;
+                            if (!String.Equals(projectTranspiler.LastVersionUsed, this.ResolvedVersionKey))
+                            {
+                                projectTranspiler.LastVersionUsed = this.ResolvedVersionKey;
+                                changed = true;
+                            }
+                            if (!String.IsNullOrEmpty(this.ResolvedVersionUrl) && !String.Equals(projectTranspiler.LastUrl, this.ResolvedVersionUrl))
+                            {
+                                projectTranspiler.LastUrl = this.ResolvedVersionUrl;
+                                changed = true;
+                            }
+                            if (changed) GetProjectOrThrow().Save();
                         }
 
-                        // -latest: update the pinned version to the resolved head version
+                        // -latest: update LastVersionUsed to the resolved head version (clears any hard pin)
                         if (this.latest && !String.IsNullOrEmpty(this.ResolvedVersionKey) && !ReferenceEquals(projectTranspiler, null))
                         {
-                            var oldPin = projectTranspiler.PinnedVersion ?? "(unpinned)";
-                            projectTranspiler.PinnedVersion = this.ResolvedVersionKey;
+                            projectTranspiler.LastVersionUsed = this.ResolvedVersionKey;
+                            if (!String.IsNullOrEmpty(this.ResolvedVersionUrl))
+                                projectTranspiler.LastUrl = this.ResolvedVersionUrl;
+                            // -latest clears hard pin so future runs auto-track HEAD again
+                            if (!String.IsNullOrEmpty(projectTranspiler.PinnedVersion))
+                            {
+                                CliLog.LogLine($"Cleared hard pin on {this.ResolvedToolName ?? this.transpiler} (was {projectTranspiler.PinnedVersion})");
+                                projectTranspiler.PinnedVersion = null;
+                            }
                             GetProjectOrThrow().Save();
-                            if (!String.Equals(oldPin, this.ResolvedVersionKey))
-                                CliLog.LogLine($"Pinned {this.ResolvedToolName ?? this.transpiler} to {this.ResolvedVersionKey}");
+                            CliLog.LogLine($"Now using {this.ResolvedToolName ?? this.transpiler} {this.ResolvedVersionKey} [latest]");
                         }
                     }
                 }
@@ -2827,23 +2848,33 @@ Seed Url: ");
             }
 
             var url = selectedVersion["urls"]?["post"]?.Value<string>();
+
+            // Determine the version label based on pin state:
+            // - PinnedVersion set: hard lock, user said "stay here forever" → [pinned] / [pinned, latest]
+            // - LastVersionUsed set (no hard pin): auto-tracked → [latest] / [update available]
+            // - Neither set: first run → [latest]
+            var matchingPT = GetMatchingTranspilerForTool(toolPart);
+            bool isHardPinned = !String.IsNullOrEmpty(matchingPT?.PinnedVersion);
+            bool isAtHead = String.Equals(resolvedVersionPart, headVersionKey, StringComparison.OrdinalIgnoreCase);
+
             string versionSuffix;
-            if (!String.IsNullOrEmpty(pinnedVersion))
+            if (isHardPinned)
             {
-                var isPinnedAtHead = String.Equals(pinnedVersion, headVersionKey, StringComparison.OrdinalIgnoreCase);
-                var shortToolName = candidates[0].Contains("/") ? candidates[0].Substring(candidates[0].LastIndexOf('/') + 1) : candidates[0];
-                // Check if multiple transpilers share this tool name — if so, include path context in the hint
-                var upgradeHint = $"effortless {shortToolName} -upgrade";
-                var matchCount = this.AICaptureProject?.ProjectTranspilers?.Count(pt => {
-                    var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
-                    return ToolNameMatches(cmdTool, shortToolName);
-                }) ?? 0;
-                if (matchCount > 1)
+                versionSuffix = isAtHead ? " [pinned, latest]" : " [pinned]";
+            }
+            else if (!String.IsNullOrEmpty(pinnedVersion))
+            {
+                // pinnedVersion came from LastVersionUsed (soft pin)
+                if (isAtHead)
                 {
-                    var chainOp = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ";" : "&&";
-                    upgradeHint = $"cd {Environment.CurrentDirectory} {chainOp} effortless {shortToolName} -upgrade";
+                    versionSuffix = " [latest]";
                 }
-                versionSuffix = isPinnedAtHead ? " [pinned, latest]" : $" [pinned, out-of-date (use `{upgradeHint}`)]";
+                else
+                {
+                    var shortToolName = candidates[0].Contains("/") ? candidates[0].Substring(candidates[0].LastIndexOf('/') + 1) : candidates[0];
+                    var upgradeHint = $"effortless {shortToolName} -upgrade";
+                    versionSuffix = $" [update available (use `{upgradeHint}`)]";
+                }
             }
             else
             {
@@ -2989,7 +3020,7 @@ Seed Url: ");
             return matches.FirstOrDefault();
         }
 
-        private string GetPinnedVersionForTool(string toolName)
+        private ProjectTranspiler GetMatchingTranspilerForTool(string toolName)
         {
             var transpilers = this.AICaptureProject?.ProjectTranspilers;
             if (transpilers == null || String.IsNullOrEmpty(toolName)) return null;
@@ -2998,7 +3029,19 @@ Seed Url: ");
                 return ToolNameMatches(cmdTool, toolName);
             }).ToList();
 
-            return DisambiguateByCurrentDirectory(matches, this.AICaptureProject?.RootPath)?.PinnedVersion;
+            return DisambiguateByCurrentDirectory(matches, this.AICaptureProject?.RootPath);
+        }
+
+        private string GetPinnedVersionForTool(string toolName)
+        {
+            var pt = GetMatchingTranspilerForTool(toolName);
+            if (pt == null) return null;
+
+            // Hard pin takes absolute precedence (user explicitly said "stay here forever")
+            if (!String.IsNullOrEmpty(pt.PinnedVersion)) return pt.PinnedVersion;
+
+            // Soft pin: use the last version that ran successfully
+            return pt.LastVersionUsed;
         }
 
         /// <summary>

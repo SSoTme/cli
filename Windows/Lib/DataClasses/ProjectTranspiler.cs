@@ -229,25 +229,31 @@ namespace SSoTme.OST.Lib.DataClasses
             Environment.CurrentDirectory = di.FullName;
             var zfsDI = project.GetZFSDI(this.RelativePath);
 
-            // Derive transpiler name from command line (not from saved JSON)
-            // For remote transpilers, extract and sanitize the URL from command line
-            string transpilerName = SSoTmeProject.LowerHyphenName(this.Name);
-            if (IsRemoteUrlCommandLine(this.CommandLine))
+            // Derive transpiler name for ZFS file lookup.
+            // Priority: LastUrl (saved from last successful run) > CommandLine URL > Name
+            string transpilerName = null;
+
+            // Best: use LastUrl — this is the actual URL that was used to create the ZFS file
+            if (!String.IsNullOrEmpty(this.LastUrl))
             {
-                // Extract URL from command line - handle both "-g URL" and direct "URL" syntax
+                transpilerName = this.LastUrl.SanitizeUrlForFilename();
+                if (debug) Console.WriteLine($"DEBUG: Using LastUrl for ZFS lookup: {this.LastUrl} -> {transpilerName}");
+            }
+
+            // Fallback: extract URL from CommandLine for remote transpilers
+            if (String.IsNullOrEmpty(transpilerName) && IsRemoteUrlCommandLine(this.CommandLine))
+            {
                 var trimmedCmd = this.CommandLine.Trim();
                 string targetUrl = null;
 
                 if (trimmedCmd.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                     trimmedCmd.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Direct URL syntax: extract URL as first word
                     var parts = trimmedCmd.Split(' ');
                     targetUrl = parts[0];
                 }
                 else if (trimmedCmd.Contains("-g "))
                 {
-                    // "-g URL" syntax: extract URL after -g flag
                     var parts = this.CommandLine.Split(' ');
                     var gIndex = Array.IndexOf(parts, "-g");
                     if (gIndex >= 0 && gIndex + 1 < parts.Length)
@@ -262,12 +268,17 @@ namespace SSoTme.OST.Lib.DataClasses
                 }
             }
 
+            // Final fallback: derive from tool name
+            if (String.IsNullOrEmpty(transpilerName))
+            {
+                transpilerName = SSoTmeProject.LowerHyphenName(this.Name);
+            }
+
             String zsfFileName = String.Format("{0}/{1}.zfs", zfsDI.FullName, transpilerName);
             var zfsFI = new FileInfo(zsfFileName);
 
-            // If the expected .zfs file doesn't exist, the build may have saved it under
-            // the resolved URL-based name (e.g. "httpsexample-com-tool-v2026..." instead of
-            // "toolname"). Fall back to the single .zfs file in this transpiler's ZFS directory.
+            // If the expected .zfs file doesn't exist, fall back to the single .zfs file
+            // in this transpiler's ZFS directory (handles version changes, name mismatches).
             if (!zfsFI.Exists && zfsDI.Exists)
             {
                 var zfsFiles = zfsDI.GetFiles("*.zfs");

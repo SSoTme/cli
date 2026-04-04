@@ -55,5 +55,11 @@ namespace SSoTme.OST.Lib.DataClasses
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "PinnedVersion")]
         public String PinnedVersion { get; set; }
 
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "LastVersionUsed")]
+        public String LastVersionUsed { get; set; }
+
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate, PropertyName = "LastUrl")]
+        public String LastUrl { get; set; }
+
     }
 }
