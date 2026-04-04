@@ -521,30 +521,10 @@ namespace SSoTme.OST.Lib.CLIOptions
                         // When URL is the transpiler, only count additional args beyond it as "remaining"
                         this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                     }
-                    // First, try to get URL from tool_urls.json (skipped in -legacy mode)
-                    else if (!this.legacy && !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
-                    {
-                        var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
-
-                        // Check if the tool name has account prefix before overwriting transpiler
-                        if (this.transpiler.Contains("/") && !this.IsHttpUrl(this.transpiler))
-                        {
-                            this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
-
-                            if (this.debug)
-                            {
-                                Console.WriteLine($"DEBUG: Extracted account '{this.account}' from tool name before URL lookup");
-                            }
-                        }
-
-                        if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
-                        this.ResolvedVersionLabel = $"{this._rawTranspilerArg ?? this.transpiler} [user-set]";
-                        this.ResolvedVersionUrl = urlFromFile;
-                        this.targetUrl = urlFromFile;
-                        this.transpiler = urlFromFile.SanitizeUrlForFilename();
-                    }
                     else
                     {
+                        // Try remote tools index first (versioned, deployed infrastructure),
+                        // then fall back to tool_urls.json (local dev overrides).
                         var urlFromRemote = !this.legacy ? this.TryGetUrlFromRemoteTools(this.transpiler) : null;
                         if (this._suppressGenericToolNotFoundError) { this.SuppressTranspile = true; return; }
                         if (!String.IsNullOrEmpty(urlFromRemote))
@@ -552,6 +532,28 @@ namespace SSoTme.OST.Lib.CLIOptions
                             if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from remote_tools: {urlFromRemote}");
                             this.targetUrl = urlFromRemote;
                             this.transpiler = urlFromRemote.SanitizeUrlForFilename();
+                        }
+                        // Fall back to tool_urls.json (skipped in -legacy mode)
+                        else if (!this.legacy && !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                        {
+                            var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+
+                            // Check if the tool name has account prefix before overwriting transpiler
+                            if (this.transpiler.Contains("/") && !this.IsHttpUrl(this.transpiler))
+                            {
+                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+
+                                if (this.debug)
+                                {
+                                    Console.WriteLine($"DEBUG: Extracted account '{this.account}' from tool name before URL lookup");
+                                }
+                            }
+
+                            if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
+                            this.ResolvedVersionLabel = $"{this._rawTranspilerArg ?? this.transpiler} [user-set]";
+                            this.ResolvedVersionUrl = urlFromFile;
+                            this.targetUrl = urlFromFile;
+                            this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
                         else if (this.transpiler.Contains("/"))
                         {
@@ -589,30 +591,10 @@ namespace SSoTme.OST.Lib.CLIOptions
                             // When URL is the transpiler, only count additional args beyond it as "remaining"
                             this.HasRemainingArguments = remainingArguments.Skip(1).Any();
                         }
-                        // First, try to get URL from tool_urls.json (skipped in -legacy mode)
-                        else if (!this.legacy && !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
-                        {
-                            var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
-
-                            // Check if the tool name has account prefix before overwriting transpiler
-                            if (this.transpiler.Contains("/") && !this.IsHttpUrl(this.transpiler))
-                            {
-                                this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
-
-                                if (this.debug)
-                                {
-                                    Console.WriteLine($"DEBUG: Extracted account '{this.account}' from tool name before URL lookup (else block)");
-                                }
-                            }
-
-                            if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
-                            this.ResolvedVersionLabel = $"{this._rawTranspilerArg ?? this.transpiler} [user-set]";
-                        this.ResolvedVersionUrl = urlFromFile;
-                            this.targetUrl = urlFromFile;
-                            this.transpiler = urlFromFile.SanitizeUrlForFilename();
-                        }
                         else
                         {
+                            // Try remote tools index first (versioned, deployed infrastructure),
+                            // then fall back to tool_urls.json (local dev overrides).
                             var urlFromRemote = !this.legacy ? this.TryGetUrlFromRemoteTools(this.transpiler) : null;
                             if (this._suppressGenericToolNotFoundError) { this.SuppressTranspile = true; return; }
                             if (!String.IsNullOrEmpty(urlFromRemote))
@@ -620,6 +602,28 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from remote_tools: {urlFromRemote}");
                                 this.targetUrl = urlFromRemote;
                                 this.transpiler = urlFromRemote.SanitizeUrlForFilename();
+                            }
+                            // Fall back to tool_urls.json (skipped in -legacy mode)
+                            else if (!this.legacy && !String.IsNullOrEmpty(this.TryGetUrlFromFileUrls(this.transpiler)))
+                            {
+                                var urlFromFile = this.TryGetUrlFromFileUrls(this.transpiler);
+
+                                // Check if the tool name has account prefix before overwriting transpiler
+                                if (this.transpiler.Contains("/") && !this.IsHttpUrl(this.transpiler))
+                                {
+                                    this.account = this.transpiler.Substring(0, this.transpiler.IndexOf("/"));
+
+                                    if (this.debug)
+                                    {
+                                        Console.WriteLine($"DEBUG: Extracted account '{this.account}' from tool name before URL lookup (else block)");
+                                    }
+                                }
+
+                                if (this.debug) Console.WriteLine($"DEBUG: Tool '{this.transpiler}' matched to URL from tool_urls.json: {urlFromFile}");
+                                this.ResolvedVersionLabel = $"{this._rawTranspilerArg ?? this.transpiler} [user-set]";
+                                this.ResolvedVersionUrl = urlFromFile;
+                                this.targetUrl = urlFromFile;
+                                this.transpiler = urlFromFile.SanitizeUrlForFilename();
                             }
                             else if (this.transpiler.Contains("/"))
                             {
@@ -3669,8 +3673,12 @@ Seed Url: ");
             var postUrl = $"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}";
             System.Net.Http.HttpResponseMessage response = null;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            const int maxRetries = 10;
+            int retryCount = 0;
+            int connectionRefusedCount = 0;
+            const int maxConnectionRefused = 3; // ConnectionRefused likely means wrong URL, not cold boot
 
-            while (stopwatch.ElapsedMilliseconds < this.waitTimeout)
+            while (stopwatch.ElapsedMilliseconds < this.waitTimeout && retryCount < maxRetries)
             {
                 try
                 {
@@ -3685,7 +3693,8 @@ Seed Url: ");
                     ex.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
                     || ex.Message.Contains("No such host"))
                 {
-                    CliLog.LogLine("Host not found. Retrying in 6 seconds...");
+                    retryCount++;
+                    CliLog.LogLine($"Host not found. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
@@ -3695,7 +3704,21 @@ Seed Url: ");
                         se2.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionRefused ||
                         se2.SocketErrorCode == System.Net.Sockets.SocketError.NetworkUnreachable))
                 {
-                    CliLog.LogLine($"Connection error ({se2.SocketErrorCode}). Retrying in 6 seconds...");
+                    retryCount++;
+                    if (se2.SocketErrorCode == System.Net.Sockets.SocketError.ConnectionRefused)
+                    {
+                        connectionRefusedCount++;
+                        if (connectionRefusedCount >= maxConnectionRefused)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"\nERROR: Connection refused {maxConnectionRefused} times for: {postUrl}");
+                            Console.WriteLine("The transpiler URL may be incorrect or the service is not deployed.");
+                            Console.WriteLine("If this tool has no PinnedVersion, add one to your project config or use -id to specify a version.");
+                            Console.ResetColor();
+                            return;
+                        }
+                    }
+                    CliLog.LogLine($"Connection error ({se2.SocketErrorCode}). Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
@@ -3703,7 +3726,8 @@ Seed Url: ");
                     ex.InnerException is System.Security.Authentication.AuthenticationException ||
                     ex.Message.Contains("SSL"))
                 {
-                    CliLog.LogLine("SSL connection error. Retrying in 6 seconds...", ConsoleColor.Yellow);
+                    retryCount++;
+                    CliLog.LogLine($"SSL connection error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                     if (this.debug) Console.WriteLine($"DEBUG: {ex.Message}");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
@@ -3714,8 +3738,9 @@ Seed Url: ");
                     response.StatusCode == System.Net.HttpStatusCode.BadGateway ||
                     response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
                 {
+                    retryCount++;
                     var retryContent = await response.Content.ReadAsStringAsync();
-                    CliLog.LogLine($"Remote transpiler not ready ({response.StatusCode}). Retrying...", ConsoleColor.Yellow);
+                    CliLog.LogLine($"Remote transpiler not ready ({response.StatusCode}). Retrying... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                     if (this.debug) Console.WriteLine($"DEBUG: Response body: {retryContent}");
                     await System.Threading.Tasks.Task.Delay(5000);
                     continue;
@@ -3728,7 +3753,8 @@ Seed Url: ");
                     if (badRequestContent.Contains("SSL connection could not be established") ||
                         badRequestContent.Contains("SSL") && badRequestContent.Contains("error"))
                     {
-                        CliLog.LogLine("Remote transpiler SSL error. Retrying in 6 seconds...", ConsoleColor.Yellow);
+                        retryCount++;
+                        CliLog.LogLine($"Remote transpiler SSL error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                         if (this.debug) Console.WriteLine($"DEBUG: Response body: {badRequestContent}");
                         await System.Threading.Tasks.Task.Delay(6000);
                         continue;
@@ -3736,6 +3762,14 @@ Seed Url: ");
                 }
 
                 break; // Got a non-retryable response
+            }
+
+            if (retryCount >= maxRetries)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\nERROR: Failed to connect to transpiler after {maxRetries} attempts: {postUrl}");
+                Console.ResetColor();
+                return;
             }
 
             if (response == null)
