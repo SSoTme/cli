@@ -128,8 +128,8 @@ namespace SassyMQ.Lib.RabbitMQ.Payload
                     }
                 }
 
-                this.RMQChannel.Close();
-                if (this.RMQConnection.IsOpen) this.RMQConnection.Close();
+                try { if (this.RMQChannel != null && this.RMQChannel.IsOpen) this.RMQChannel.Close(); } catch { }
+                try { if (this.RMQConnection != null && this.RMQConnection.IsOpen) this.RMQConnection.Close(); } catch { }
             });
 
             this.MonitorTask.Start();
@@ -257,6 +257,8 @@ namespace SassyMQ.Lib.RabbitMQ.Payload
         public void Disconnect()
         {
             this.IsConnected = false;
+            try { if (this.RMQChannel != null && this.RMQChannel.IsOpen) this.RMQChannel.Close(); } catch { }
+            try { if (this.RMQConnection != null && this.RMQConnection.IsOpen) this.RMQConnection.Close(); } catch { }
         }
 
         public static bool CustomInvokeScheme { get; set; }

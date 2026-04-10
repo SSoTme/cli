@@ -40,7 +40,12 @@ namespace SSoTme.OST.ConApp
                 ShowError(ex.Message);  // don't print stack trace
                 return -1;
             }
-            // other exceptions throw normally
+            catch (Exception ex)
+            {
+                ShowError(ex.Message);
+                Environment.Exit(-1);
+                return -1;
+            }
         }
         
         private static void SafeReadKey()
