@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.04.03.1718";
+        public string CLI_VERSION = "2026-04-15.13.37";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-03-1641-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-15-1353-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 
@@ -879,9 +879,9 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.WriteLine("\nERROR: Tool '{0}' does not exist.", this.transpiler);
                     Console.WriteLine("\nThe tool was not found locally or on the tools server.");
                     Console.WriteLine("\nTo see available tools, run:");
-                    Console.WriteLine("  effortless -list-tool-urls");
+                    Console.WriteLine("  effortless listToolUrls");
                     Console.WriteLine("\nTo add a new tool URL mapping, run:");
-                    Console.WriteLine("  effortless -set-tool-url <tool-name>=<url>");
+                    Console.WriteLine("  effortless setToolUrl <tool-name>=<url>");
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                     return;
@@ -2094,9 +2094,9 @@ Seed Url: ");
                             ShowError("\nERROR: Tool '" + this.transpiler + "' does not exist.");
                             ShowError("\nThe tool was not found locally or on the tools server.");
                             ShowError("\nTo see available tools, run:");
-                            ShowError("  effortless -list-tool-urls");
+                            ShowError("  effortless listToolUrls");
                             ShowError("\nTo add a new tool URL mapping, run:");
-                            ShowError("  effortless -set-tool-url <tool-name>=<url>");
+                            ShowError("  effortless setToolUrl <tool-name>=<url>");
                             return -1;
                         }
                         else if (isTranspilerNotFound && this._suppressGenericToolNotFoundError)
@@ -3687,6 +3687,51 @@ Seed Url: ");
             payload.SaveCLIOptions(this);
             this.conditionallyPopulateTranspiler(payload, this.transpiler);
 
+            // -------- QUOTA: pre-transpile fetch --------
+            // Only attempt when this is an HTTP-direct transpiler we resolved from the remote registry
+            // (ResolvedToolName holds the canonical "author/package/tool" key). RabbitMQ-path and
+            // unresolved tools get no quota enforcement — the transpiler just runs.
+            // Null-safe: if any of these are missing, we skip silently.
+            string quotaTranspilerKey = null;
+            string quotaProjectUuid = null;
+            bool quotaAttempted = false;
+            if (!String.IsNullOrEmpty(this.jwt)
+                && !String.IsNullOrEmpty(this.ResolvedToolName)
+                && this.AICaptureProject != null
+                && !String.IsNullOrEmpty(this.AICaptureProject.SSoTmeProjectId)
+                && this.AICaptureProject.SSoTmeProjectId != Guid.Empty.ToString()
+                && !this.skipRemoteToolsLookup)
+            {
+                quotaTranspilerKey = this.ResolvedToolName;
+                quotaProjectUuid = this.AICaptureProject.SSoTmeProjectId;
+                try
+                {
+                    var quotaInfo = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
+                        .GetQuota(quotaProjectUuid, quotaTranspilerKey);
+                    if (quotaInfo != null && quotaInfo.Success)
+                    {
+                        quotaAttempted = true;
+                        // Inject params so the transpiler can check itself and surface a warning
+                        // in its output if it exceeds the available headroom.
+                        if (payload.CLIParams == null) payload.CLIParams = new List<string>();
+                        payload.CLIParams.Add($"available_quota={quotaInfo.AvailableNativeCount.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+                        payload.CLIParams.Add($"project_uuid={quotaProjectUuid}");
+                        payload.CLIParams.Add($"has_unlimited_quota={(quotaInfo.HasUnlimitedQuota ? "true" : "false")}");
+                        if (this.debug)
+                            Console.WriteLine($"DEBUG: Quota for {quotaTranspilerKey}: {quotaInfo.CurrentUsed}/{quotaInfo.Limit} (peak {quotaInfo.Peak}), project prev {quotaInfo.ThisProjectTranspilerPrevious}, available native {quotaInfo.AvailableNativeCount}");
+                    }
+                    else if (this.debug && quotaInfo != null)
+                    {
+                        Console.WriteLine($"DEBUG: getQuota failed: {quotaInfo.Error}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (this.debug) Console.WriteLine($"DEBUG: getQuota threw: {ex.Message}");
+                }
+            }
+            // -------- end QUOTA: pre-transpile fetch --------
+
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
             {
@@ -4098,6 +4143,57 @@ Seed Url: ");
                     // Preserve CLI debug flag from request to response
                     responsePayload.CLIDebug = this.debug;
                     this.result = responsePayload;
+
+                    // -------- QUOTA: post-transpile update --------
+                    // If we sent quota context on the way in, look for quota-report.json in the
+                    // returned FileSet, read the functionCount, and tell the bridge so it can
+                    // apply the weight + update the account's current/peak usage.
+                    if (quotaAttempted && !String.IsNullOrEmpty(quotaProjectUuid) && !String.IsNullOrEmpty(quotaTranspilerKey))
+                    {
+                        try
+                        {
+                            byte[] zippedOutput = responsePayload?.TranspileRequest?.ZippedOutputFileSet;
+                            if (zippedOutput != null && zippedOutput.Length > 0)
+                            {
+                                var outputFsXml = zippedOutput.UnzipToString();
+                                var outputFs = outputFsXml.ToFileSet();
+                                var report = outputFs?.FileSetFiles?.FirstOrDefault(f =>
+                                    f.RelativePath != null &&
+                                    f.RelativePath.Trim('/', '\\').Equals("quota-report.json", StringComparison.OrdinalIgnoreCase));
+                                if (report != null)
+                                {
+                                    var json = report.GetFileSetFileContents();
+                                    if (!String.IsNullOrWhiteSpace(json))
+                                    {
+                                        var parsed = Newtonsoft.Json.Linq.JObject.Parse(json);
+                                        var functionCountToken = parsed["functionCount"];
+                                        if (functionCountToken != null && functionCountToken.Type != Newtonsoft.Json.Linq.JTokenType.Null)
+                                        {
+                                            var newNativeCount = functionCountToken.Value<decimal>();
+                                            var updateResult = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
+                                                .UpdateQuota(quotaProjectUuid, quotaTranspilerKey, newNativeCount);
+                                            if (this.debug && updateResult != null)
+                                                Console.WriteLine($"DEBUG: updateQuota {(updateResult.Success ? "ok" : "failed")}: delta={updateResult.Delta}, newUsed={updateResult.NewUsed}, newPeak={updateResult.NewPeak}, error={updateResult.Error}");
+
+                                            // Surface a user-visible warning if the transpiler flagged this transpile as over-quota.
+                                            var exceededToken = parsed["quotaExceeded"];
+                                            if (exceededToken != null && exceededToken.Type == Newtonsoft.Json.Linq.JTokenType.Boolean && exceededToken.Value<bool>())
+                                            {
+                                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                                Console.WriteLine($"WARNING: This transpile exceeded your quota ({newNativeCount} units generated). Transpile succeeded — please upgrade your plan to avoid future overage charges.");
+                                                Console.ResetColor();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (this.debug) Console.WriteLine($"DEBUG: updateQuota post-processing threw: {ex.Message}");
+                        }
+                    }
+                    // -------- end QUOTA: post-transpile update --------
                 }
                 catch (JsonException ex)
                 {

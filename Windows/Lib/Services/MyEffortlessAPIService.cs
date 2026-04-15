@@ -308,6 +308,74 @@ namespace SSoTme.OST.Lib.Services
         }
 
         /// <summary>
+        /// Fetches the account's quota state plus this (project, transpiler)'s previous unit count.
+        /// Returns null if we aren't logged in or the call fails — callers should treat that as "no quota enforcement".
+        /// </summary>
+        public QuotaResult GetQuota(string projectUuid, string transpilerKey)
+        {
+            var jwt = GetStoredJWTToken();
+            if (string.IsNullOrEmpty(jwt)) return null;
+            if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
+
+            try
+            {
+                var safeUuid = projectUuid.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
+                var safeKey = transpilerKey.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
+                var safeJwt = jwt.Replace("\"", "").Replace("'", "").Replace(" ", "");
+
+                return InvokeQuotaCall(
+                    $"-p mode=getQuota -p jwt=\"{safeJwt}\" -p project_uuid=\"{safeUuid}\" -p transpiler_key=\"{safeKey}\"");
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Reports the post-transpile native count (e.g. function count for rulebook-to-postgres)
+        /// back to the bridge so it can apply the weight, update the project's JSON blob, and
+        /// adjust the account's current_monthly_quota_used / peak_monthly_quota_used.
+        /// </summary>
+        public QuotaResult UpdateQuota(string projectUuid, string transpilerKey, decimal newNativeCount)
+        {
+            var jwt = GetStoredJWTToken();
+            if (string.IsNullOrEmpty(jwt)) return null;
+            if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
+
+            try
+            {
+                var safeUuid = projectUuid.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
+                var safeKey = transpilerKey.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
+                var safeJwt = jwt.Replace("\"", "").Replace("'", "").Replace(" ", "");
+                // Format invariantly so decimals don't get culture-localized (e.g. "," vs ".").
+                var countStr = newNativeCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                return InvokeQuotaCall(
+                    $"-p mode=updateQuota -p jwt=\"{safeJwt}\" -p project_uuid=\"{safeUuid}\" -p transpiler_key=\"{safeKey}\" -p new_native_count={countStr}");
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private QuotaResult InvokeQuotaCall(string paramString)
+        {
+            try
+            {
+                var commandLine = $"{SSoTme.OST.Lib.CLIOptions.SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME} {paramString}";
+                var output = SSoTme.OST.Lib.CLIOptions.SSoTmeCLIHandler.InvokeToolAndGetOutput(commandLine, "auth-result.json");
+                if (string.IsNullOrEmpty(output)) return null;
+                return JsonConvert.DeserializeObject<QuotaResult>(output);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Refreshes the stored JWT token via the list-transpilers tool
         /// </summary>
         public bool RefreshToken()
@@ -1119,5 +1187,58 @@ namespace SSoTme.OST.Lib.Services
 
         [JsonProperty("exists")]
         public bool? Exists { get; set; }
+    }
+
+    /// <summary>
+    /// Deserialized response from cli-cloud-bridge's getQuota / updateQuota modes.
+    /// Fields populated depend on which call was made — the same class is used for both
+    /// to keep the calling code simple.
+    /// </summary>
+    public class QuotaResult
+    {
+        [JsonProperty("success")]
+        public bool Success { get; set; }
+
+        [JsonProperty("error")]
+        public string Error { get; set; }
+
+        [JsonProperty("transpilerKey")]
+        public string TranspilerKey { get; set; }
+
+        [JsonProperty("weight")]
+        public decimal Weight { get; set; }
+
+        [JsonProperty("limit")]
+        public decimal Limit { get; set; }
+
+        [JsonProperty("currentUsed")]
+        public decimal CurrentUsed { get; set; }
+
+        [JsonProperty("peak")]
+        public decimal Peak { get; set; }
+
+        [JsonProperty("thisProjectTranspilerPrevious")]
+        public decimal ThisProjectTranspilerPrevious { get; set; }
+
+        // getQuota only — the headroom available to this transpile, in the tool's native units
+        // (e.g. "functions" for rulebook-to-postgres). Pass this as available_quota to the transpiler.
+        [JsonProperty("availableNativeCount")]
+        public decimal AvailableNativeCount { get; set; }
+
+        [JsonProperty("hasUnlimitedQuota")]
+        public bool HasUnlimitedQuota { get; set; }
+
+        [JsonProperty("planName")]
+        public string PlanName { get; set; }
+
+        // updateQuota only — what the account's usage became after applying the delta.
+        [JsonProperty("newUsed")]
+        public decimal? NewUsed { get; set; }
+
+        [JsonProperty("newPeak")]
+        public decimal? NewPeak { get; set; }
+
+        [JsonProperty("delta")]
+        public decimal? Delta { get; set; }
     }
 }
