@@ -49,10 +49,13 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-16.12.01";
+        public string CLI_VERSION = "2026-04-16.13.13";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-1158-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
+        // The bridge's list response includes latestBridgeVersion which auto-updates tool_urls.json,
+        // so this URL only needs to point to ANY working bridge — it doesn't need to be the latest.
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-1332-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 
@@ -2510,19 +2513,11 @@ Seed Url: ");
             // that guarantee immediate restoration. This method is called from CheckForUpdateNotice
             // which must be purely presentational with zero lasting impact on CLI flow.
 
-            // Determine the effective transpilers URL: on version change use the built-in default,
-            // otherwise prefer whatever is in tool_urls.json.
-            string effectiveUrl;
-            if (cachedCliVersion != this.CLI_VERSION)
-            {
-                effectiveUrl = SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
-                if (this.debug) Console.WriteLine($"DEBUG: CLI version changed — using built-in transpilers url: {effectiveUrl}");
-            }
-            else
-            {
-                effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
-                if (this.debug) Console.WriteLine($"DEBUG: using transpilers url from tool_urls.json: {effectiveUrl}");
-            }
+            // Use the stored bridge URL from tool_urls.json. Falls back to the bootstrap URL
+            // only if nothing is stored yet. The bridge's list response includes latestBridgeVersion
+            // which auto-updates tool_urls.json, so CLI version changes no longer force a URL reset.
+            var effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
+            if (this.debug) Console.WriteLine($"DEBUG: using bridge url: {effectiveUrl}");
 
             // Write the URL to tool_urls.json so the transpiler handler can resolve it.
             this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
@@ -2586,6 +2581,35 @@ Seed Url: ");
                             File.WriteAllText(updateAvailablePath, updateAvailable.ToString());
                         else if (File.Exists(updateAvailablePath))
                             File.Delete(updateAvailablePath);
+
+                        // Auto-discover newer bridge versions. The bridge includes
+                        // latestBridgeVersion: { name, version, url, versionIndex }
+                        // in the list response. If its versionIndex is higher than what
+                        // we have stored, update tool_urls.json so the next CLI invocation
+                        // uses the new bridge automatically.
+                        var bridgeInfo = root["latestBridgeVersion"];
+                        if (bridgeInfo != null && bridgeInfo.Type == Newtonsoft.Json.Linq.JTokenType.Object)
+                        {
+                            var newUrl = bridgeInfo["url"]?.Value<string>();
+                            var newIdx = bridgeInfo["versionIndex"]?.Value<long>() ?? -1;
+                            if (!String.IsNullOrEmpty(newUrl) && newIdx >= 0)
+                            {
+                                // Read the stored bridge version index (persisted alongside tool_urls.json)
+                                var bridgeIdxPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "bridge_version_index");
+                                long storedIdx = -1;
+                                if (File.Exists(bridgeIdxPath))
+                                    long.TryParse(File.ReadAllText(bridgeIdxPath).Trim(), out storedIdx);
+
+                                if (newIdx > storedIdx)
+                                {
+                                    // Ensure URL ends with /
+                                    if (!newUrl.EndsWith("/")) newUrl += "/";
+                                    this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, newUrl);
+                                    File.WriteAllText(bridgeIdxPath, newIdx.ToString());
+                                    if (this.debug) Console.WriteLine($"DEBUG: Bridge auto-updated to v{bridgeInfo["version"]?.Value<string>()} (idx {newIdx}): {newUrl}");
+                                }
+                            }
+                        }
                     }
                     catch { /* best-effort */ }
                 }
