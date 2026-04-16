@@ -275,11 +275,10 @@ namespace SSoTme.OST.Lib.Services
 
         /// <summary>
         /// Checks if a project exists in the remote DB, and registers it if not.
-        /// Requires the user to be logged in (JWT).
+        /// Caller must pass the effective JWT (may be project-level from effortless.env or global).
         /// </summary>
-        public bool RegisterProject(string projectUuid, string projectName)
+        public bool RegisterProject(string jwt, string projectUuid, string projectName)
         {
-            var jwt = GetStoredJWTToken();
             if (string.IsNullOrEmpty(jwt))
                 return false;
 
@@ -309,11 +308,11 @@ namespace SSoTme.OST.Lib.Services
 
         /// <summary>
         /// Fetches the account's quota state plus this (project, transpiler)'s previous unit count.
+        /// Caller must pass the effective JWT (may be project-level from effortless.env or global).
         /// Returns null if we aren't logged in or the call fails — callers should treat that as "no quota enforcement".
         /// </summary>
-        public QuotaResult GetQuota(string projectUuid, string transpilerKey)
+        public QuotaResult GetQuota(string jwt, string projectUuid, string transpilerKey)
         {
-            var jwt = GetStoredJWTToken();
             if (string.IsNullOrEmpty(jwt)) return null;
             if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
 
@@ -336,10 +335,10 @@ namespace SSoTme.OST.Lib.Services
         /// Reports the post-transpile native count (e.g. function count for rulebook-to-postgres)
         /// back to the bridge so it can apply the weight, update the project's JSON blob, and
         /// adjust the account's current_monthly_quota_used / peak_monthly_quota_used.
+        /// Caller must pass the effective JWT (may be project-level from effortless.env or global).
         /// </summary>
-        public QuotaResult UpdateQuota(string projectUuid, string transpilerKey, decimal newNativeCount)
+        public QuotaResult UpdateQuota(string jwt, string projectUuid, string transpilerKey, decimal newNativeCount)
         {
-            var jwt = GetStoredJWTToken();
             if (string.IsNullOrEmpty(jwt)) return null;
             if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
 

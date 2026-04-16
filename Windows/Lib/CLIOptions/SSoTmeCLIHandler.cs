@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-15.13.37";
+        public string CLI_VERSION = "2026-04-15.13.38";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-15-1353-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -1753,7 +1753,7 @@ Seed Url: ");
                     try
                     {
                         new MyEffortlessAPIService().RegisterProject(
-                            this.AICaptureProject.SSoTmeProjectId, this.AICaptureProject.Name);
+                            this.jwt, this.AICaptureProject.SSoTmeProjectId, this.AICaptureProject.Name);
                     }
                     catch (Exception ex) { if (this.debug) Console.WriteLine($"DEBUG: RegisterProject failed: {ex.Message}"); }
                 }
@@ -3695,6 +3695,10 @@ Seed Url: ");
             string quotaTranspilerKey = null;
             string quotaProjectUuid = null;
             bool quotaAttempted = false;
+            if (this.debug)
+            {
+                Console.WriteLine($"DEBUG: Quota guard check: jwt={!String.IsNullOrEmpty(this.jwt)}, ResolvedToolName={(this.ResolvedToolName ?? "<null>")}, AICaptureProject={(this.AICaptureProject != null ? "set" : "null")}, SSoTmeProjectId={(this.AICaptureProject?.SSoTmeProjectId ?? "<null>")}, skipRemoteToolsLookup={this.skipRemoteToolsLookup}");
+            }
             if (!String.IsNullOrEmpty(this.jwt)
                 && !String.IsNullOrEmpty(this.ResolvedToolName)
                 && this.AICaptureProject != null
@@ -3707,7 +3711,7 @@ Seed Url: ");
                 try
                 {
                     var quotaInfo = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
-                        .GetQuota(quotaProjectUuid, quotaTranspilerKey);
+                        .GetQuota(this.jwt, quotaProjectUuid, quotaTranspilerKey);
                     if (quotaInfo != null && quotaInfo.Success)
                     {
                         quotaAttempted = true;
@@ -3720,9 +3724,9 @@ Seed Url: ");
                         if (this.debug)
                             Console.WriteLine($"DEBUG: Quota for {quotaTranspilerKey}: {quotaInfo.CurrentUsed}/{quotaInfo.Limit} (peak {quotaInfo.Peak}), project prev {quotaInfo.ThisProjectTranspilerPrevious}, available native {quotaInfo.AvailableNativeCount}");
                     }
-                    else if (this.debug && quotaInfo != null)
+                    else if (this.debug)
                     {
-                        Console.WriteLine($"DEBUG: getQuota failed: {quotaInfo.Error}");
+                        Console.WriteLine($"DEBUG: getQuota returned null/failed (success={quotaInfo?.Success}, error={quotaInfo?.Error ?? "<null result>"})");
                     }
                 }
                 catch (Exception ex)
@@ -4171,7 +4175,7 @@ Seed Url: ");
                                         {
                                             var newNativeCount = functionCountToken.Value<decimal>();
                                             var updateResult = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
-                                                .UpdateQuota(quotaProjectUuid, quotaTranspilerKey, newNativeCount);
+                                                .UpdateQuota(this.jwt, quotaProjectUuid, quotaTranspilerKey, newNativeCount);
                                             if (this.debug && updateResult != null)
                                                 Console.WriteLine($"DEBUG: updateQuota {(updateResult.Success ? "ok" : "failed")}: delta={updateResult.Delta}, newUsed={updateResult.NewUsed}, newPeak={updateResult.NewPeak}, error={updateResult.Error}");
 
