@@ -52,7 +52,7 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string CLI_VERSION = "2026-04-15.13.38";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-15-1353-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-0948-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 

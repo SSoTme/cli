@@ -106,19 +106,20 @@ class Installer:
         # Already valid or unknown format — return with hyphens replaced by dots
         return version.replace("-", ".")
 
-    def get_transpiler_lister_url(self):
+    @staticmethod
+    def get_transpiler_lister_url():
         print("Fetching transpiler lister URL from package.json")
         try:
             with open("package.json") as f:
                 j = json.loads(f.read())
-                url = j.get("transpiler_lister_url")
+                url = j.get("cloud_bridge_url")
                 if url:
                     print(f"Transpiler lister URL is '{url}'")
                     return url
                 else:
-                    print("No transpiler_lister_url found in package.json")
+                    print("No cloud_bridge_url found in package.json")
         except Exception as e:
-            print(f"Error reading transpiler_lister_url: {type(e).__name__}: {str(e)}")
+            print(f"Error reading cloud_bridge_url: {type(e).__name__}: {str(e)}")
         return None
 
     def get_supported_dotnet_version(self):
@@ -378,12 +379,12 @@ class Installer:
                 replacement = f'public string CLI_VERSION = "{self.get_package_version()}";'
                 new_contents = re.sub(pattern, replacement, contents)
 
-                transpiler_lister_url = self.get_transpiler_lister_url()
-                if transpiler_lister_url:
+                cloud_bridge_url = self.get_transpiler_lister_url()
+                if cloud_bridge_url:
                     pattern = r'public static readonly string LATEST_TRANSPILERS_LISTER_URL = ".*?";'
-                    replacement = f'public static readonly string LATEST_TRANSPILERS_LISTER_URL = "{transpiler_lister_url}";'
+                    replacement = f'public static readonly string LATEST_TRANSPILERS_LISTER_URL = "{cloud_bridge_url}";'
                     new_contents = re.sub(pattern, replacement, new_contents)
-                    print(f"Transpiler lister URL set to '{transpiler_lister_url}'")
+                    print(f"Transpiler lister URL set to '{cloud_bridge_url}'")
 
                 with open(fp, "w") as f:
                     f.write(new_contents)
