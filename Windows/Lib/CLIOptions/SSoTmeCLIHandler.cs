@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-15.13.38";
+        public string CLI_VERSION = "2026-04-16.10.00";
 
         // url to the latest version of the transpiler-lister service
         public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-0948-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
@@ -555,7 +555,20 @@ namespace SSoTme.OST.Lib.CLIOptions
                             this.targetUrl = urlFromFile;
                             this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
-                        else if (this.transpiler.Contains("/"))
+
+                        // tool_urls.json override: if the raw transpiler name has a local URL override,
+                        // use it instead of the remote URL. ResolvedToolName stays set from remote_tools.
+                        if (!this.legacy && !String.IsNullOrEmpty(this._rawTranspilerArg))
+                        {
+                            var localOverride = this.TryGetUrlFromFileUrls(this._rawTranspilerArg);
+                            if (!String.IsNullOrEmpty(localOverride))
+                            {
+                                if (this.debug) Console.WriteLine($"DEBUG: tool_urls.json override for '{this._rawTranspilerArg}': {localOverride}");
+                                this.targetUrl = localOverride;
+                                this.ResolvedVersionLabel = $"{this._rawTranspilerArg} [user-set]";
+                            }
+                        }
+                        if (String.IsNullOrEmpty(this.targetUrl) && this.transpiler.Contains("/"))
                         {
                             if (!this.IsHttpUrl(this.transpiler))
                             {
@@ -625,7 +638,20 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 this.targetUrl = urlFromFile;
                                 this.transpiler = urlFromFile.SanitizeUrlForFilename();
                             }
-                            else if (this.transpiler.Contains("/"))
+
+                            // tool_urls.json override: if the raw transpiler name has a local URL override,
+                            // use it instead of the remote URL. ResolvedToolName stays set from remote_tools.
+                            if (!this.legacy && !String.IsNullOrEmpty(this._rawTranspilerArg))
+                            {
+                                var localOverride = this.TryGetUrlFromFileUrls(this._rawTranspilerArg);
+                                if (!String.IsNullOrEmpty(localOverride))
+                                {
+                                    if (this.debug) Console.WriteLine($"DEBUG: tool_urls.json override for '{this._rawTranspilerArg}': {localOverride}");
+                                    this.targetUrl = localOverride;
+                                    this.ResolvedVersionLabel = $"{this._rawTranspilerArg} [user-set]";
+                                }
+                            }
+                            if (String.IsNullOrEmpty(this.targetUrl) && this.transpiler.Contains("/"))
                             {
                                 if (this.IsHttpUrl(this.transpiler))
                                 {
