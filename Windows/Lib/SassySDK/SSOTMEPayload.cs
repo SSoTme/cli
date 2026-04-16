@@ -186,14 +186,17 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             // transpilers go through StartTranspile's polling path (the polled payload
             // is a freshly deserialized instance whose CleanFileSet was never called).
             string extractToDir = this.SSoTmeProject?.RootPath ?? workingDir;
+            string relPathDiag = "(no project)";
             if (this.SSoTmeProject != null)
             {
                 var relPath = GetCurrentRelativePath();
+                relPathDiag = $"relPath='{relPath}' cwd='{Environment.CurrentDirectory}' root='{this.SSoTmeProject.RootPath}'";
                 if (!string.IsNullOrEmpty(relPath))
                 {
                     extractToDir = Path.Combine(this.SSoTmeProject.RootPath, relPath);
                 }
             }
+            Console.WriteLine($"[SaveFileSet-DIAG] extractToDir={extractToDir} | {relPathDiag}");
             SSoTme.OST.Lib.Extensions.SSOTMEExtensions.SplitFileSetFile(tempFI.FullName, extractToDir);
             tempFI.Delete();
 
