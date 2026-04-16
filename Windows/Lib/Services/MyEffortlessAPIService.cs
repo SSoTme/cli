@@ -315,18 +315,20 @@ namespace SSoTme.OST.Lib.Services
         {
             if (string.IsNullOrEmpty(jwt)) return null;
             if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
+            if (!IsValidCliParam(projectUuid) || !IsValidCliParam(transpilerKey) || !IsValidCliParam(jwt))
+            {
+                Console.WriteLine("[quota] GetQuota: invalid characters in parameters, skipping");
+                return null;
+            }
 
             try
             {
-                var safeUuid = projectUuid.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
-                var safeKey = transpilerKey.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
-                var safeJwt = jwt.Replace("\"", "").Replace("'", "").Replace(" ", "");
-
                 return InvokeQuotaCall(
-                    $"-p mode=getQuota -p jwt=\"{safeJwt}\" -p project_uuid=\"{safeUuid}\" -p transpiler_key=\"{safeKey}\"");
+                    $"-p mode=getQuota -p jwt={jwt} -p project_uuid={projectUuid} -p transpiler_key={transpilerKey}");
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[quota] GetQuota error: {ex.Message}");
                 return null;
             }
         }
@@ -341,22 +343,35 @@ namespace SSoTme.OST.Lib.Services
         {
             if (string.IsNullOrEmpty(jwt)) return null;
             if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
+            if (!IsValidCliParam(projectUuid) || !IsValidCliParam(transpilerKey) || !IsValidCliParam(jwt))
+            {
+                Console.WriteLine("[quota] UpdateQuota: invalid characters in parameters, skipping");
+                return null;
+            }
 
             try
             {
-                var safeUuid = projectUuid.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
-                var safeKey = transpilerKey.Replace("\"", "").Replace(" ", "").Replace("-p ", "");
-                var safeJwt = jwt.Replace("\"", "").Replace("'", "").Replace(" ", "");
-                // Format invariantly so decimals don't get culture-localized (e.g. "," vs ".").
                 var countStr = newNativeCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
-
                 return InvokeQuotaCall(
-                    $"-p mode=updateQuota -p jwt=\"{safeJwt}\" -p project_uuid=\"{safeUuid}\" -p transpiler_key=\"{safeKey}\" -p new_native_count={countStr}");
+                    $"-p mode=updateQuota -p jwt={jwt} -p project_uuid={projectUuid} -p transpiler_key={transpilerKey} -p new_native_count={countStr}");
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[quota] UpdateQuota error: {ex.Message}");
                 return null;
             }
+        }
+
+        // Validates that a CLI param value won't corrupt ParseCommand's -p key=value parsing.
+        // Rejects whitespace, quotes, and the -p token rather than silently mutating.
+        private static bool IsValidCliParam(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return false;
+            // No spaces (would split the token), no quotes (would corrupt parsing),
+            // no -p prefix (would be interpreted as a new parameter).
+            if (value.Contains(' ') || value.Contains('"') || value.Contains('\'')) return false;
+            if (value.Contains("-p ")) return false;
+            return true;
         }
 
         private QuotaResult InvokeQuotaCall(string paramString)
@@ -368,8 +383,9 @@ namespace SSoTme.OST.Lib.Services
                 if (string.IsNullOrEmpty(output)) return null;
                 return JsonConvert.DeserializeObject<QuotaResult>(output);
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[quota] InvokeQuotaCall error: {ex.Message}");
                 return null;
             }
         }
