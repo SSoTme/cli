@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-16.10.00";
+        public string CLI_VERSION = "2026-04-16.10.32";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-0948-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "http://localhost:4422";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 
@@ -3738,9 +3738,20 @@ Seed Url: ");
                 {
                     var quotaInfo = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
                         .GetQuota(this.jwt, quotaProjectUuid, quotaTranspilerKey);
-                    if (quotaInfo != null && quotaInfo.Success)
+                    if (quotaInfo != null && quotaInfo.Success && !quotaInfo.Free)
                     {
                         quotaAttempted = true;
+
+                        // If the bridge says this transpile isn't allowed (no headroom even after
+                        // subtracting this project's share), warn the user but still proceed
+                        // per the warn-only enforcement policy.
+                        if (!quotaInfo.IsAllowedToTranspile)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"WARNING: Your account is over its quota limit ({quotaInfo.CurrentUsed}/{quotaInfo.Limit} units). This transpile will proceed but may incur overage charges. Please upgrade your plan.");
+                            Console.ResetColor();
+                        }
+
                         // Inject params so the transpiler can check itself and surface a warning
                         // in its output if it exceeds the available headroom.
                         if (payload.CLIParams == null) payload.CLIParams = new List<string>();
@@ -3748,7 +3759,7 @@ Seed Url: ");
                         payload.CLIParams.Add($"project_uuid={quotaProjectUuid}");
                         payload.CLIParams.Add($"has_unlimited_quota={(quotaInfo.HasUnlimitedQuota ? "true" : "false")}");
                         if (this.debug)
-                            Console.WriteLine($"DEBUG: Quota for {quotaTranspilerKey}: {quotaInfo.CurrentUsed}/{quotaInfo.Limit} (peak {quotaInfo.Peak}), project prev {quotaInfo.ThisProjectTranspilerPrevious}, available native {quotaInfo.AvailableNativeCount}");
+                            Console.WriteLine($"DEBUG: Quota for {quotaTranspilerKey}: {quotaInfo.CurrentUsed}/{quotaInfo.Limit} (peak {quotaInfo.Peak}), project prev {quotaInfo.ThisProjectTranspilerPrevious}, available native {quotaInfo.AvailableNativeCount}, allowed={quotaInfo.IsAllowedToTranspile}");
                     }
                     else if (this.debug)
                     {
@@ -4210,7 +4221,7 @@ Seed Url: ");
                                             if (exceededToken != null && exceededToken.Type == Newtonsoft.Json.Linq.JTokenType.Boolean && exceededToken.Value<bool>())
                                             {
                                                 Console.ForegroundColor = ConsoleColor.Yellow;
-                                                Console.WriteLine($"WARNING: This transpile exceeded your quota ({newNativeCount} units generated). Transpile succeeded — please upgrade your plan to avoid future overage charges.");
+                                                Console.WriteLine($"WARNING: This transpile exceeded your quota ({newNativeCount} units generated). Transpile succeeded; please upgrade your plan to avoid future overage charges https://effortlessapi.com/rulebook/waitlist.");
                                                 Console.ResetColor();
                                             }
                                         }

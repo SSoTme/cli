@@ -1201,6 +1201,10 @@ namespace SSoTme.OST.Lib.Services
         [JsonProperty("error")]
         public string Error { get; set; }
 
+        // True when the transpiler is not in the paid weights dict (free, no quota tracking).
+        [JsonProperty("free")]
+        public bool Free { get; set; }
+
         [JsonProperty("transpilerKey")]
         public string TranspilerKey { get; set; }
 
@@ -1223,6 +1227,11 @@ namespace SSoTme.OST.Lib.Services
         // (e.g. "functions" for rulebook-to-postgres). Pass this as available_quota to the transpiler.
         [JsonProperty("availableNativeCount")]
         public decimal AvailableNativeCount { get; set; }
+
+        // True if the transpile should proceed. False if account is over quota and this project's
+        // share doesn't free up enough headroom (availableNativeCount <= 0).
+        [JsonProperty("isAllowedToTranspile")]
+        public bool IsAllowedToTranspile { get; set; }
 
         [JsonProperty("hasUnlimitedQuota")]
         public bool HasUnlimitedQuota { get; set; }
