@@ -323,13 +323,14 @@ namespace SSoTme.OST.Lib.Services
 
             try
             {
+                // Safe to interpolate unquoted: IsValidCliParam above guarantees no spaces, quotes,
+                // or -p tokens in any value. If the validator is ever loosened, these must be quoted.
                 return InvokeQuotaCall(
                     $"-p mode=getQuota -p jwt={jwt} -p project_uuid={projectUuid} -p transpiler_key={transpilerKey}");
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[quota] GetQuota error: {ex.Message}");
-                return null;
+                return null; // caller logs via debug gate
             }
         }
 
@@ -351,14 +352,15 @@ namespace SSoTme.OST.Lib.Services
 
             try
             {
+                // Safe to interpolate unquoted: IsValidCliParam above guarantees no spaces, quotes,
+                // or -p tokens in any value. If the validator is ever loosened, these must be quoted.
                 var countStr = newNativeCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 return InvokeQuotaCall(
                     $"-p mode=updateQuota -p jwt={jwt} -p project_uuid={projectUuid} -p transpiler_key={transpilerKey} -p new_native_count={countStr}");
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[quota] UpdateQuota error: {ex.Message}");
-                return null;
+                return null; // caller logs via debug gate
             }
         }
 
@@ -367,8 +369,6 @@ namespace SSoTme.OST.Lib.Services
         private static bool IsValidCliParam(string value)
         {
             if (string.IsNullOrEmpty(value)) return false;
-            // No spaces (would split the token), no quotes (would corrupt parsing),
-            // no -p prefix (would be interpreted as a new parameter).
             if (value.Contains(' ') || value.Contains('"') || value.Contains('\'')) return false;
             if (value.Contains("-p ")) return false;
             return true;
@@ -383,10 +383,9 @@ namespace SSoTme.OST.Lib.Services
                 if (string.IsNullOrEmpty(output)) return null;
                 return JsonConvert.DeserializeObject<QuotaResult>(output);
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[quota] InvokeQuotaCall error: {ex.Message}");
-                return null;
+                return null; // caller logs via debug gate
             }
         }
 
