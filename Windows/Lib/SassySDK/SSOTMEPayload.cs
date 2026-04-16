@@ -181,11 +181,18 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             var tempFI = new FileInfo(Path.Combine(workingDir, String.Format("tempFileSet_{0}.xml", Guid.NewGuid())));
             File.WriteAllText(tempFI.FullName, fileSetXml);
 
-            // Use the stored relative path to determine where files should be extracted
+            // Compute extraction target fresh from current CWD rather than relying on
+            // _cleanFileSetRelativePath, which isn't reliably populated when async
+            // transpilers go through StartTranspile's polling path (the polled payload
+            // is a freshly deserialized instance whose CleanFileSet was never called).
             string extractToDir = this.SSoTmeProject?.RootPath ?? workingDir;
-            if (!string.IsNullOrEmpty(_cleanFileSetRelativePath))
+            if (this.SSoTmeProject != null)
             {
-                extractToDir = Path.Combine(this.SSoTmeProject.RootPath, _cleanFileSetRelativePath);
+                var relPath = GetCurrentRelativePath();
+                if (!string.IsNullOrEmpty(relPath))
+                {
+                    extractToDir = Path.Combine(this.SSoTmeProject.RootPath, relPath);
+                }
             }
             SSoTme.OST.Lib.Extensions.SSOTMEExtensions.SplitFileSetFile(tempFI.FullName, extractToDir);
             tempFI.Delete();
