@@ -1,7 +1,7 @@
 {
   "name": "ssotme",
   "version": "2026-04-16.10.32",
-  "cloud_bridge_url": "http://localhost:4422",
+  "cloud_bridge_url": "http://host.docker.internal:4422",
   "dotnet": "8.0.410",
   "description": "",
   "bin": {
