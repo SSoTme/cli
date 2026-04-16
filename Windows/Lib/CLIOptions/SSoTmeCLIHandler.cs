@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-16.17.15";
+        public string CLI_VERSION = "2026-04-16.17.57";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -4199,9 +4199,15 @@ Seed Url: ");
 
                     // Preserve CLI debug flag from request to response
                     responsePayload.CLIDebug = this.debug;
-                    this.result = responsePayload;
 
                     // -------- QUOTA: post-transpile update --------
+                    // MUST run BEFORE `this.result = responsePayload`. Setting `this.result`
+                    // unblocks the main thread's waitForCook.Wait() and it immediately runs
+                    // SaveFileSet, which reads Environment.CurrentDirectory. UpdateQuota calls
+                    // InvokeToolAndGetOutput which mutates that process-global CWD to a temp
+                    // dir. If we set result first, the main thread races in and writes files
+                    // to the wrong location while this thread is still inside the temp-dir
+                    // try block.
                     // If we sent quota context on the way in, look for quota-report.json in the
                     // returned FileSet, read the functionCount, and tell the bridge so it can
                     // apply the weight + update the account's current/peak usage.
@@ -4251,6 +4257,11 @@ Seed Url: ");
                         }
                     }
                     // -------- end QUOTA: post-transpile update --------
+
+                    // Set result LAST — this unblocks waitForCook.Wait() on the main thread.
+                    // Any work that mutates process-global state (CWD, env vars) must run
+                    // before this assignment to avoid a race with SaveFileSet on the main thread.
+                    this.result = responsePayload;
                 }
                 catch (JsonException ex)
                 {
