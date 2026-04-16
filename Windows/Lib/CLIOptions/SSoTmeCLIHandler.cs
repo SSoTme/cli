@@ -49,10 +49,10 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-16.10.32";
+        public string CLI_VERSION = "2026-04-16.11.37";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "http://localhost:4422";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-1132-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 
@@ -3748,7 +3748,7 @@ Seed Url: ");
                         if (!quotaInfo.IsAllowedToTranspile)
                         {
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"WARNING: Your account is over its quota limit ({quotaInfo.CurrentUsed}/{quotaInfo.Limit} units). This transpile will proceed but may incur overage charges. Please upgrade your plan.");
+                            Console.WriteLine($"WARNING: Your account is over its quota limit ({quotaInfo.CurrentUsed}/{quotaInfo.Limit} units). This transpile will proceed but may incur overage charges. Please contact us to upgrade your plan: https://effortlessapi.com/rulebook/waitlist");
                             Console.ResetColor();
                         }
 
@@ -4221,7 +4221,7 @@ Seed Url: ");
                                             if (exceededToken != null && exceededToken.Type == Newtonsoft.Json.Linq.JTokenType.Boolean && exceededToken.Value<bool>())
                                             {
                                                 Console.ForegroundColor = ConsoleColor.Yellow;
-                                                Console.WriteLine($"WARNING: This transpile exceeded your quota ({newNativeCount} units generated). Transpile succeeded; please upgrade your plan to avoid future overage charges https://effortlessapi.com/rulebook/waitlist.");
+                                                Console.WriteLine($"WARNING: This transpile exceeded your quota ({newNativeCount} units generated). Transpile succeeded; to avoid future overage charges please contact us to upgrade your plan: https://effortlessapi.com/rulebook/waitlist.");
                                                 Console.ResetColor();
                                             }
                                         }
