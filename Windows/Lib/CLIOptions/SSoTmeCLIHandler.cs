@@ -49,10 +49,13 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.04.03.1718";
+        public string CLI_VERSION = "2026-04-16.17.57";
 
         // url to the latest version of the transpiler-lister service
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-03-1641-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
+        // The bridge's list response includes latestBridgeVersion which auto-updates tool_urls.json,
+        // so this URL only needs to point to ANY working bridge — it doesn't need to be the latest.
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-1332-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 
@@ -555,7 +558,9 @@ namespace SSoTme.OST.Lib.CLIOptions
                             this.targetUrl = urlFromFile;
                             this.transpiler = urlFromFile.SanitizeUrlForFilename();
                         }
-                        else if (this.transpiler.Contains("/"))
+
+                        this.TryApplyLocalToolUrlOverride();
+                        if (String.IsNullOrEmpty(this.targetUrl) && this.transpiler.Contains("/"))
                         {
                             if (!this.IsHttpUrl(this.transpiler))
                             {
@@ -625,7 +630,9 @@ namespace SSoTme.OST.Lib.CLIOptions
                                 this.targetUrl = urlFromFile;
                                 this.transpiler = urlFromFile.SanitizeUrlForFilename();
                             }
-                            else if (this.transpiler.Contains("/"))
+
+                            this.TryApplyLocalToolUrlOverride();
+                            if (String.IsNullOrEmpty(this.targetUrl) && this.transpiler.Contains("/"))
                             {
                                 if (this.IsHttpUrl(this.transpiler))
                                 {
@@ -879,9 +886,9 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.WriteLine("\nERROR: Tool '{0}' does not exist.", this.transpiler);
                     Console.WriteLine("\nThe tool was not found locally or on the tools server.");
                     Console.WriteLine("\nTo see available tools, run:");
-                    Console.WriteLine("  effortless -list-tool-urls");
+                    Console.WriteLine("  effortless listToolUrls");
                     Console.WriteLine("\nTo add a new tool URL mapping, run:");
-                    Console.WriteLine("  effortless -set-tool-url <tool-name>=<url>");
+                    Console.WriteLine("  effortless setToolUrl <tool-name>=<url>");
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                     return;
@@ -1753,7 +1760,7 @@ Seed Url: ");
                     try
                     {
                         new MyEffortlessAPIService().RegisterProject(
-                            this.AICaptureProject.SSoTmeProjectId, this.AICaptureProject.Name);
+                            this.jwt, this.AICaptureProject.SSoTmeProjectId, this.AICaptureProject.Name);
                     }
                     catch (Exception ex) { if (this.debug) Console.WriteLine($"DEBUG: RegisterProject failed: {ex.Message}"); }
                 }
@@ -2094,9 +2101,9 @@ Seed Url: ");
                             ShowError("\nERROR: Tool '" + this.transpiler + "' does not exist.");
                             ShowError("\nThe tool was not found locally or on the tools server.");
                             ShowError("\nTo see available tools, run:");
-                            ShowError("  effortless -list-tool-urls");
+                            ShowError("  effortless listToolUrls");
                             ShowError("\nTo add a new tool URL mapping, run:");
-                            ShowError("  effortless -set-tool-url <tool-name>=<url>");
+                            ShowError("  effortless setToolUrl <tool-name>=<url>");
                             return -1;
                         }
                         else if (isTranspilerNotFound && this._suppressGenericToolNotFoundError)
@@ -2440,6 +2447,20 @@ Seed Url: ");
             Console.ForegroundColor = curColor;
         }
 
+        // Checks tool_urls.json for a local URL override for _rawTranspilerArg.
+        // If found, overrides targetUrl and sets the version label to [user-set].
+        // ResolvedToolName (from remote_tools) is preserved for quota tracking.
+        private void TryApplyLocalToolUrlOverride()
+        {
+            if (this.legacy || String.IsNullOrEmpty(this._rawTranspilerArg)) return;
+            var localOverride = this.TryGetUrlFromFileUrls(this._rawTranspilerArg);
+            if (String.IsNullOrEmpty(localOverride)) return;
+
+            if (this.debug) Console.WriteLine($"DEBUG: tool_urls.json override for '{this._rawTranspilerArg}': {localOverride}");
+            this.targetUrl = localOverride;
+            this.ResolvedVersionLabel = $"{this._rawTranspilerArg} [user-set]";
+        }
+
         private string TryGetUrlFromFileUrls(string transpilerName)
         {
             try
@@ -2506,19 +2527,11 @@ Seed Url: ");
             // that guarantee immediate restoration. This method is called from CheckForUpdateNotice
             // which must be purely presentational with zero lasting impact on CLI flow.
 
-            // Determine the effective transpilers URL: on version change use the built-in default,
-            // otherwise prefer whatever is in tool_urls.json.
-            string effectiveUrl;
-            if (cachedCliVersion != this.CLI_VERSION)
-            {
-                effectiveUrl = SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
-                if (this.debug) Console.WriteLine($"DEBUG: CLI version changed — using built-in transpilers url: {effectiveUrl}");
-            }
-            else
-            {
-                effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
-                if (this.debug) Console.WriteLine($"DEBUG: using transpilers url from tool_urls.json: {effectiveUrl}");
-            }
+            // Use the stored bridge URL from tool_urls.json. Falls back to the bootstrap URL
+            // only if nothing is stored yet. The bridge's list response includes latestBridgeVersion
+            // which auto-updates tool_urls.json, so CLI version changes no longer force a URL reset.
+            var effectiveUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
+            if (this.debug) Console.WriteLine($"DEBUG: using bridge url: {effectiveUrl}");
 
             // Write the URL to tool_urls.json so the transpiler handler can resolve it.
             this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, effectiveUrl);
@@ -2582,6 +2595,35 @@ Seed Url: ");
                             File.WriteAllText(updateAvailablePath, updateAvailable.ToString());
                         else if (File.Exists(updateAvailablePath))
                             File.Delete(updateAvailablePath);
+
+                        // Auto-discover newer bridge versions. The bridge includes
+                        // latestBridgeVersion: { name, version, url, versionIndex }
+                        // in the list response. If its versionIndex is higher than what
+                        // we have stored, update tool_urls.json so the next CLI invocation
+                        // uses the new bridge automatically.
+                        var bridgeInfo = root["latestBridgeVersion"];
+                        if (bridgeInfo != null && bridgeInfo.Type == Newtonsoft.Json.Linq.JTokenType.Object)
+                        {
+                            var newUrl = bridgeInfo["url"]?.Value<string>();
+                            var newIdx = bridgeInfo["versionIndex"]?.Value<long>() ?? -1;
+                            if (!String.IsNullOrEmpty(newUrl) && newIdx >= 0)
+                            {
+                                // Read the stored bridge version index (persisted alongside tool_urls.json)
+                                var bridgeIdxPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "bridge_version_index");
+                                long storedIdx = -1;
+                                if (File.Exists(bridgeIdxPath))
+                                    long.TryParse(File.ReadAllText(bridgeIdxPath).Trim(), out storedIdx);
+
+                                if (newIdx > storedIdx)
+                                {
+                                    // Ensure URL ends with /
+                                    if (!newUrl.EndsWith("/")) newUrl += "/";
+                                    this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, newUrl);
+                                    File.WriteAllText(bridgeIdxPath, newIdx.ToString());
+                                    if (this.debug) Console.WriteLine($"DEBUG: Bridge auto-updated to v{bridgeInfo["version"]?.Value<string>()} (idx {newIdx}): {newUrl}");
+                                }
+                            }
+                        }
                     }
                     catch { /* best-effort */ }
                 }
@@ -3757,6 +3799,66 @@ Seed Url: ");
             payload.SaveCLIOptions(this);
             this.conditionallyPopulateTranspiler(payload, this.transpiler);
 
+            // -------- QUOTA: pre-transpile fetch --------
+            // Only attempt when this is an HTTP-direct transpiler we resolved from the remote registry
+            // (ResolvedToolName holds the canonical "author/package/tool" key). RabbitMQ-path and
+            // unresolved tools get no quota enforcement — the transpiler just runs.
+            // Null-safe: if any of these are missing, we skip silently.
+            string quotaTranspilerKey = null;
+            string quotaProjectUuid = null;
+            bool quotaAttempted = false;
+            if (this.debug)
+            {
+                Console.WriteLine($"DEBUG: Quota guard check: jwt={!String.IsNullOrEmpty(this.jwt)}, ResolvedToolName={(this.ResolvedToolName ?? "<null>")}, AICaptureProject={(this.AICaptureProject != null ? "set" : "null")}, SSoTmeProjectId={(this.AICaptureProject?.SSoTmeProjectId ?? "<null>")}, skipRemoteToolsLookup={this.skipRemoteToolsLookup}");
+            }
+            if (!String.IsNullOrEmpty(this.jwt)
+                && !String.IsNullOrEmpty(this.ResolvedToolName)
+                && this.AICaptureProject != null
+                && !String.IsNullOrEmpty(this.AICaptureProject.SSoTmeProjectId)
+                && this.AICaptureProject.SSoTmeProjectId != Guid.Empty.ToString()
+                && !this.skipRemoteToolsLookup)
+            {
+                quotaTranspilerKey = this.ResolvedToolName;
+                quotaProjectUuid = this.AICaptureProject.SSoTmeProjectId;
+                try
+                {
+                    var quotaInfo = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
+                        .GetQuota(this.jwt, quotaProjectUuid, quotaTranspilerKey);
+                    if (quotaInfo != null && quotaInfo.Success && !quotaInfo.Free)
+                    {
+                        quotaAttempted = true;
+
+                        // If the bridge says this transpile isn't allowed (no headroom even after
+                        // subtracting this project's share), warn the user but still proceed
+                        // per the warn-only enforcement policy.
+                        if (!quotaInfo.IsAllowedToTranspile)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;
+                            Console.WriteLine($"WARNING: Your account is over its quota limit ({quotaInfo.CurrentUsed}/{quotaInfo.Limit} units). This transpile will proceed but may incur overage charges. Please contact us to upgrade your plan: https://effortlessapi.com/rulebook/waitlist");
+                            Console.ResetColor();
+                        }
+
+                        // Inject params so the transpiler can check itself and surface a warning
+                        // in its output if it exceeds the available headroom.
+                        if (payload.CLIParams == null) payload.CLIParams = new List<string>();
+                        payload.CLIParams.Add($"available_quota={quotaInfo.AvailableNativeCount.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+                        payload.CLIParams.Add($"project_uuid={quotaProjectUuid}");
+                        payload.CLIParams.Add($"has_unlimited_quota={(quotaInfo.HasUnlimitedQuota ? "true" : "false")}");
+                        if (this.debug)
+                            Console.WriteLine($"DEBUG: Quota for {quotaTranspilerKey}: {quotaInfo.CurrentUsed}/{quotaInfo.Limit} (peak {quotaInfo.Peak}), project prev {quotaInfo.ThisProjectTranspilerPrevious}, available native {quotaInfo.AvailableNativeCount}, allowed={quotaInfo.IsAllowedToTranspile}");
+                    }
+                    else if (this.debug)
+                    {
+                        Console.WriteLine($"DEBUG: getQuota returned null/failed (success={quotaInfo?.Success}, error={quotaInfo?.Error ?? "<null result>"})");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (this.debug) Console.WriteLine($"DEBUG: getQuota threw: {ex.Message}");
+                }
+            }
+            // -------- end QUOTA: pre-transpile fetch --------
+
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
             {
@@ -4167,6 +4269,68 @@ Seed Url: ");
 
                     // Preserve CLI debug flag from request to response
                     responsePayload.CLIDebug = this.debug;
+
+                    // -------- QUOTA: post-transpile update --------
+                    // MUST run BEFORE `this.result = responsePayload`. Setting `this.result`
+                    // unblocks the main thread's waitForCook.Wait() and it immediately runs
+                    // SaveFileSet, which reads Environment.CurrentDirectory. UpdateQuota calls
+                    // InvokeToolAndGetOutput which mutates that process-global CWD to a temp
+                    // dir. If we set result first, the main thread races in and writes files
+                    // to the wrong location while this thread is still inside the temp-dir
+                    // try block.
+                    // If we sent quota context on the way in, look for quota-report.json in the
+                    // returned FileSet, read the functionCount, and tell the bridge so it can
+                    // apply the weight + update the account's current/peak usage.
+                    if (quotaAttempted && !String.IsNullOrEmpty(quotaProjectUuid) && !String.IsNullOrEmpty(quotaTranspilerKey))
+                    {
+                        try
+                        {
+                            byte[] zippedOutput = responsePayload?.TranspileRequest?.ZippedOutputFileSet;
+                            if (zippedOutput != null && zippedOutput.Length > 0)
+                            {
+                                var outputFsXml = zippedOutput.UnzipToString();
+                                var outputFs = outputFsXml.ToFileSet();
+                                var report = outputFs?.FileSetFiles?.FirstOrDefault(f =>
+                                    f.RelativePath != null &&
+                                    f.RelativePath.Trim('/', '\\').Equals("quota-report.json", StringComparison.OrdinalIgnoreCase));
+                                if (report != null)
+                                {
+                                    var json = report.GetFileSetFileContents();
+                                    if (!String.IsNullOrWhiteSpace(json))
+                                    {
+                                        var parsed = Newtonsoft.Json.Linq.JObject.Parse(json);
+                                        var functionCountToken = parsed["functionCount"];
+                                        if (functionCountToken != null && functionCountToken.Type != Newtonsoft.Json.Linq.JTokenType.Null)
+                                        {
+                                            var newNativeCount = functionCountToken.Value<decimal>();
+                                            var updateResult = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
+                                                .UpdateQuota(this.jwt, quotaProjectUuid, quotaTranspilerKey, newNativeCount);
+                                            if (this.debug && updateResult != null)
+                                                Console.WriteLine($"DEBUG: updateQuota {(updateResult.Success ? "ok" : "failed")}: delta={updateResult.Delta}, newUsed={updateResult.NewUsed}, newPeak={updateResult.NewPeak}, error={updateResult.Error}");
+
+                                            // Surface a user-visible warning if the transpiler flagged this transpile as over-quota.
+                                            var exceededToken = parsed["quotaExceeded"];
+                                            if (exceededToken != null && exceededToken.Type == Newtonsoft.Json.Linq.JTokenType.Boolean && exceededToken.Value<bool>())
+                                            {
+                                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                                Console.WriteLine($"WARNING: This transpile exceeded your quota ({newNativeCount} units generated). Transpile succeeded; to avoid future overage charges please contact us to upgrade your plan: https://effortlessapi.com/rulebook/waitlist.");
+                                                Console.ResetColor();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            if (this.debug) Console.WriteLine($"DEBUG: updateQuota post-processing threw: {ex.Message}");
+                        }
+                    }
+                    // -------- end QUOTA: post-transpile update --------
+
+                    // Set result LAST — this unblocks waitForCook.Wait() on the main thread.
+                    // Any work that mutates process-global state (CWD, env vars) must run
+                    // before this assignment to avoid a race with SaveFileSet on the main thread.
                     this.result = responsePayload;
                 }
                 catch (JsonException ex)
