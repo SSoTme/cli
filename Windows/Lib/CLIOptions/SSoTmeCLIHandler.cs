@@ -2772,6 +2772,7 @@ Seed Url: ");
             var remoteToolsDir = GetRemoteToolsDir();
             var toolsJsonPath = Path.Combine(remoteToolsDir, "ssotme-tools.json");
             var cliVersionPath = Path.Combine(remoteToolsDir, "cli_version");
+            var cachedCliVersion = File.Exists(cliVersionPath) ? File.ReadAllText(cliVersionPath).Trim() : null;
 
             if (File.Exists(toolsJsonPath))
             {
@@ -2787,9 +2788,8 @@ Seed Url: ");
             _hasRunRemoteToolsUpdate = false;
 
             CliLog.LogLine("Refreshing remote tools index...");
-            // Trigger a fresh fetch by calling TryGetUrlFromRemoteTools with a dummy name.
-            // The real result doesn't matter — we just want the refresh side-effect.
-            TryGetUrlFromRemoteTools("__refresh__");
+            EnsureRemoteToolsInitialized();
+            RunRemoteToolsRefresh(remoteToolsDir, cliVersionPath, cachedCliVersion);
             CliLog.LogLine("Remote tools index refreshed.");
         }
 
@@ -3173,6 +3173,13 @@ Seed Url: ");
             {
                 var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
                 if (String.IsNullOrEmpty(cmdTool)) continue;
+
+                // Skip -exec commands — they are local scripts, not remote tools
+                if (cmdTool.Equals("-exec", StringComparison.OrdinalIgnoreCase) ||
+                    cmdTool.Equals("-execute", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
 
                 var url = TryGetUrlFromRemoteToolsJson(cmdTool, remoteToolsDir, pinnedVersion: null);
                 if (url == null)
