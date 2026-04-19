@@ -208,7 +208,8 @@ namespace SSoTme.OST.Lib.DataClasses
                     }
                     else
                     {
-                        throw new Exception("Error RE-Transpiling");
+                        var errorMsg = cliHandler.result?.Exception?.Message ?? "unknown error";
+                        throw new Exception($"Transpiler '{this.Name}' failed: {errorMsg}");
                     }
                 }
             }

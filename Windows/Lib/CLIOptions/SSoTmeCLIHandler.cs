@@ -78,7 +78,7 @@ namespace SSoTme.OST.Lib.CLIOptions
             Console.WriteLine();
         }
 
-        private SSOTMEPayload result;
+        internal SSOTMEPayload result;
         private System.Collections.Concurrent.ConcurrentDictionary<string, byte> isTargetUrlProcessing = new System.Collections.Concurrent.ConcurrentDictionary<string, byte>();
 
         public SMQAccountHolder AccountHolder { get; private set; }
@@ -2129,9 +2129,23 @@ Seed Url: ");
                         while (!(nextException is null))
                         {
                             ShowError("ERROR: " + nextException.Message);
-                            ShowError(nextException.StackTrace);
+                            if (!string.IsNullOrEmpty(nextException.StackTrace))
+                                ShowError(nextException.StackTrace);
                             nextException = nextException.InnerException;
                         };
+
+                        // Provide diagnostic hints for common errors
+                        var errMsg = result.Exception?.Message ?? "";
+                        if (errMsg.Contains("SSL connection could not be established"))
+                        {
+                            ShowError("\nHINT: The transpiler could not establish a secure connection to an external API.", ConsoleColor.Cyan);
+                            ShowError("  Possible causes:", ConsoleColor.Cyan);
+                            ShowError("  - The remote API may be temporarily down or unreachable", ConsoleColor.Cyan);
+                            ShowError("  - Your network may be blocking the connection (firewall, proxy, VPN)", ConsoleColor.Cyan);
+                            ShowError("  - The remote API's SSL certificate may have expired", ConsoleColor.Cyan);
+                            ShowError("  Try again in a few minutes, or check your network connectivity.\n", ConsoleColor.Cyan);
+                        }
+
                         return -1;
                     }
                     else
@@ -3046,16 +3060,34 @@ Seed Url: ");
 
         /// <summary>
         /// Handles `ssotme {toolName} -upgrade`: resolves head version, updates PinnedVersion in ssotme.json.
+        /// When no toolName is given, upgrades all tools in the project to the latest version.
+        /// Always refreshes the remote tools index first.
         /// </summary>
         private void HandleUpgradeCommand()
         {
+            // Always refresh the remote tools index before upgrading
+            this.RefreshRemoteTools();
+
             var toolName = this._rawTranspilerArg ?? this.transpiler;
-            if (String.IsNullOrEmpty(toolName))
+            var project = this.AICaptureProject ?? SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
+            if (project == null)
             {
-                ShowError("Usage: ssotme <toolName> -upgrade");
+                ShowError("No effortless.json project found in this directory.");
                 return;
             }
-            EnsureRemoteToolsInitialized();
+
+            if (String.IsNullOrEmpty(toolName))
+            {
+                // Upgrade all tools in the project
+                UpgradeAllTools(project);
+                return;
+            }
+
+            UpgradeSingleTool(toolName, project);
+        }
+
+        private void UpgradeSingleTool(string toolName, SSoTmeProject project)
+        {
             var remoteToolsDir = GetRemoteToolsDir();
             // Force head version lookup (no pin)
             var url = TryGetUrlFromRemoteToolsJson(toolName, remoteToolsDir, pinnedVersion: null);
@@ -3065,12 +3097,6 @@ Seed Url: ");
                 return;
             }
             var newVersion = this.ResolvedVersionKey;
-            var project = this.AICaptureProject ?? SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
-            if (project == null)
-            {
-                ShowError("No effortless.json project found in this directory.");
-                return;
-            }
             var allMatches = project.ProjectTranspilers?
                 .Where(pt => {
                     var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
@@ -3082,10 +3108,54 @@ Seed Url: ");
                 ShowError($"No installed transpiler matching '{toolName}' found in effortless.json.");
                 return;
             }
-            var oldVersion = matched.PinnedVersion ?? "(unpinned)";
+            var oldVersion = matched.PinnedVersion ?? matched.LastVersionUsed ?? "(unpinned)";
             matched.PinnedVersion = newVersion;
             project.Save();
-            Console.WriteLine($"Updated {toolName}: {oldVersion} → {newVersion}");
+            Console.WriteLine($"Upgraded {toolName}: {oldVersion} → {newVersion}");
+        }
+
+        private void UpgradeAllTools(SSoTmeProject project)
+        {
+            var transpilers = project.ProjectTranspilers;
+            if (transpilers == null || !transpilers.Any())
+            {
+                Console.WriteLine("No transpilers found in effortless.json.");
+                return;
+            }
+
+            var remoteToolsDir = GetRemoteToolsDir();
+            int upgraded = 0;
+            int skipped = 0;
+
+            foreach (var pt in transpilers)
+            {
+                var cmdTool = pt.CommandLine?.Split(' ').FirstOrDefault() ?? "";
+                if (String.IsNullOrEmpty(cmdTool)) continue;
+
+                var url = TryGetUrlFromRemoteToolsJson(cmdTool, remoteToolsDir, pinnedVersion: null);
+                if (url == null)
+                {
+                    Console.WriteLine($"  SKIP {cmdTool} — not found in remote tools index");
+                    skipped++;
+                    continue;
+                }
+
+                var newVersion = this.ResolvedVersionKey;
+                var oldVersion = pt.PinnedVersion ?? pt.LastVersionUsed ?? "(unpinned)";
+
+                if (String.Equals(oldVersion, newVersion))
+                {
+                    Console.WriteLine($"  OK   {cmdTool} — already at {newVersion}");
+                    continue;
+                }
+
+                pt.PinnedVersion = newVersion;
+                Console.WriteLine($"  UP   {cmdTool}: {oldVersion} → {newVersion}");
+                upgraded++;
+            }
+
+            project.Save();
+            Console.WriteLine($"\nUpgraded {upgraded} tool(s)" + (skipped > 0 ? $", skipped {skipped}" : "") + ".");
         }
 
         private string TryGetUrlFromRemoteTools(string transpilerName)
