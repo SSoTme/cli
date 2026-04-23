@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-16.17.57";
+        public string CLI_VERSION = "2026-04-23.13.03";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -726,7 +726,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.listVersions || this.refreshTools || this.authenticate || this.projectLogin || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || this.upgradeCli || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
+                else if (this.listVersions || this.refreshTools || this.authenticate || this.projectLogin || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || this.upgradeCli || this.upgradeAll || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
                 {
                     continueToLoad = false;
                 }
@@ -1588,6 +1588,10 @@ Seed Url: ");
                     this.uninstall = true;
                     break;
 
+                case "upgradeall":
+                    this.upgradeAll = true;
+                    break;
+
                 case "cloneseed":
                 case "clone":
                     this.cloneSeed = true;
@@ -1650,6 +1654,10 @@ Seed Url: ");
                 case "lu":
                 case "lt":
                     this.listUrls = true;
+                    break;
+
+                case "refreshtools":
+                    this.refreshTools = true;
                     break;
 
                 case "viewtoolurl":
@@ -1891,6 +1899,11 @@ Seed Url: ");
                 else if (this.upgrade)
                 {
                     this.HandleUpgradeCommand();
+                    this.SuppressTranspile = true;
+                }
+                else if (this.upgradeAll)
+                {
+                    this.HandleUpgradeAllCommand();
                     this.SuppressTranspile = true;
                 }
                 else if (this.upgradeCli)
@@ -2571,6 +2584,20 @@ Seed Url: ");
             // for ParseCommand/TranspileProject, but is tightly scoped in a try/finally to guarantee restoration.
             bool RunRefresh()
             {
+                // Fail-fast DNS pre-check so a dead cached bridge URL doesn't burn 60s of retries
+                // inside StartTranspile before the outer catch can swap it for the bootstrap URL.
+                var currentUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
+                try
+                {
+                    var host = new Uri(currentUrl).Host;
+                    System.Net.Dns.GetHostEntry(host);
+                }
+                catch (System.Net.Sockets.SocketException dnsEx) when (dnsEx.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound)
+                {
+                    throw new System.Net.Http.HttpRequestException($"No such host is known ({currentUrl})", dnsEx);
+                }
+                catch { /* non-DNS errors (e.g. malformed URI) — let the normal path handle it */ }
+
                 var savedDir = Environment.CurrentDirectory;
                 try
                 {
@@ -2642,8 +2669,30 @@ Seed Url: ");
             catch (Exception refreshEx) when (refreshEx.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
                                                || refreshEx.Message.Contains("No such host"))
             {
-                Console.WriteLine($"Warning: Could not refresh remote tool list (host not found). Continuing...");
-                if (this.debug) Console.WriteLine($"DEBUG: refresh exception: {refreshEx}");
+                // The stored bridge URL in tool_urls.json points to a dead host.
+                // Reset it to the bootstrap URL and retry once so the user isn't stuck
+                // with a permanently broken cache.
+                if (effectiveUrl != SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL)
+                {
+                    Console.WriteLine($"Stored bridge URL is unreachable ({effectiveUrl}). Resetting to bootstrap URL and retrying...");
+                    this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL);
+                    var bridgeIdxPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "bridge_version_index");
+                    try { if (File.Exists(bridgeIdxPath)) File.Delete(bridgeIdxPath); } catch { }
+                    try
+                    {
+                        RunRefresh();
+                    }
+                    catch (Exception retryEx)
+                    {
+                        Console.WriteLine($"Warning: Could not refresh remote tool list after reset ({retryEx.Message}). Continuing...");
+                        if (this.debug) Console.WriteLine($"DEBUG: retry exception: {retryEx}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Could not refresh remote tool list (host not found: {effectiveUrl}). Continuing...");
+                    if (this.debug) Console.WriteLine($"DEBUG: refresh exception: {refreshEx}");
+                }
             }
             catch (Exception refreshEx)
             {
@@ -2955,7 +3004,7 @@ Seed Url: ");
 
         private bool IsManagementCommand =>
             this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.uninstall ||
-            this.authenticate || this.projectLogin || this.logout || this.subscription || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || this.upgradeCli ||
+            this.authenticate || this.projectLogin || this.logout || this.subscription || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || this.upgradeCli || this.upgradeAll ||
             !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || !String.IsNullOrEmpty(this.removeUrl);
 
         private bool ListTranspilerVersions(string transpilerName)
@@ -3161,6 +3210,24 @@ Seed Url: ");
             matched.PinnedVersion = newVersion;
             project.Save();
             Console.WriteLine($"Upgraded {toolName}: {oldVersion} → {newVersion}");
+        }
+
+        /// <summary>
+        /// Handles `ssotme -upgradeAll`: refreshes the remote tools index, then upgrades every
+        /// transpiler in the current project to the latest version.
+        /// </summary>
+        private void HandleUpgradeAllCommand()
+        {
+            this.RefreshRemoteTools();
+
+            var project = this.AICaptureProject ?? SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
+            if (project == null)
+            {
+                ShowError("No effortless.json project found in this directory.");
+                return;
+            }
+
+            UpgradeAllTools(project);
         }
 
         private void UpgradeAllTools(SSoTmeProject project)
@@ -4177,7 +4244,9 @@ Seed Url: ");
                     || ex.Message.Contains("No such host"))
                 {
                     retryCount++;
-                    CliLog.LogLine($"Host not found. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
+                    string failedHost;
+                    try { failedHost = new Uri(postUrl).Host; } catch { failedHost = postUrl; }
+                    CliLog.LogLine($"Host not found: {failedHost}. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }

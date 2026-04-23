@@ -204,8 +204,11 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "View your account's EffortlessAPI subscription plan", MinOccurs = 0, Aliases = "plan")]
         public bool subscription { get; set; }
 
-        [CommandLineOption(Description = "Upgrade the effortless CLI itself to the latest version", MinOccurs = 0, Aliases = "uc")]
+        [CommandLineOption(Description = "Upgrade the effortless CLI to the latest version", MinOccurs = 0, Aliases = "uc,update")]
         public bool upgradeCli { get; set; }
+
+        [CommandLineOption(Description = "Upgrade all transpilers in the project to the latest version", MinOccurs = 0, Aliases = "ua")]
+        public bool upgradeAll { get; set; }
 
     }
 }
