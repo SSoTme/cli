@@ -1588,7 +1588,7 @@ Seed Url: ");
                     this.uninstall = true;
                     break;
 
-                case "upgradeAll":
+                case "upgradeall":
                     this.upgradeAll = true;
                     break;
 
