@@ -1,0 +1,49 @@
+---
+  Task: Continue debugging the ssotme cli-cloud-bridge. Logs are in bridge-logs/.
+
+  Repo paths:
+  - Bridge code: /mnt/y/GitHub/api.effortlessapi.com/Versioned-Stable-SSoTme-Tools/tools/ssotme/cli-cloud-bridge/workload/Program.cs
+  - CLI code: /mnt/y/cli/Windows/
+  - Bases DB schema (target): /mnt/c/Users/mmh/Documents/GitHub/bases.effortlessapi.com/postgres/01-drop-and-create-tables.sql
+
+  What was done in the previous session:
+  1. Rewrote all bridge handlers to point at the bases DB (bases.effortlessapi.com:5432) instead of the legacy
+  account_holders/account_plans/account_subscriptions schema. Handlers now target app_users and bases tables.
+  2. HandleVerifyMode — rejects magic-link verify with "Account not found. Sign up at bases.effortlessapi.com/signup" if the email has no app_users
+  row.
+  3. checkProject and registerProject — JWT-validated no-ops (CLI-originated bases are not persisted in the bases table).
+  4. getQuota / updateQuota — when project_uuid starts with BASES_ (website-spawned builds), read/write bases.last_unit_count_json +
+  full_base_quota_taken, and update app_users.current_monthly_quota_used / peak_monthly_quota_used. For laptop CLI (no BASES_ prefix), updateQuota is a
+   no-op.
+  5. Added a process-wide NpgsqlDataSource (lazy singleton) with Keepalive=30;Tcp Keepalive=true — meant to fix recurring getQuota failed: Exception
+  while reading from stream errors caused by idle pooled connections.
+  6. Rewrote the URL parser in GetDataSource() to handle passwords with unescaped @ characters (splits at the LastIndexOf('@') for the userinfo/host
+  boundary, splits at first ':' for user/password). Uses NpgsqlConnectionStringBuilder for safe escaping of the final Npgsql keyword string.
+  7. On CLI side: RefreshRemoteTools in SSoTmeCLIHandler.cs now also deletes ~/.ssotme/bridge_version_index so ssotme -refreshTools picks up any
+  advertised latestBridgeVersion.versionIndex unconditionally.
+
+  Current blocker: After redeploying the cpln workload ssotme-cli-cloud-bridge-v2026-04-24-1554, the "Exception while reading from stream" failure is
+  still showing up in the first getQuota call ~1 minute after a fresh container start. That's before any connection would be stale enough for
+  keepalives to matter. Strong suspicion: the image running in cpln was NOT rebuilt with the latest code, so the keepalive/parser fix never actually
+  got deployed. The workload has been redeployed five times (replica -00005-deployment-...) but the tag name hasn't changed.
+
+  What to do next:
+  1. Confirm whether the running image actually has the latest code. The user hasn't set up a cpln CLI profile; ask them to run ! cpln profile login
+  once, then run cpln workload get ssotme-cli-cloud-bridge-v2026-04-24-1554 --gvc ssotme-tools --org <org> -o yaml and inspect spec.containers[0].image
+   + the status block. Compare the image SHA against what was built locally.
+  2. If the image is stale, walk the user through rebuilding and pushing. The build context is at
+  /mnt/y/GitHub/api.effortlessapi.com/Versioned-Stable-SSoTme-Tools/tools/ssotme/cli-cloud-bridge/ (Dockerfile + docker-compose.yml). The workload spec
+   is in cpln/workload.yaml.
+  3. If the image IS fresh and flakes persist, the problem isn't idle sockets — it's network-path or Postgres-server-side. In that case, add a one-shot
+   retry wrapper around dataSource.OpenConnectionAsync() in each handler, catching NpgsqlException / IOException and retrying once before returning the
+   error.
+  4. There's also a secondary issue: Airtable lookup failed: UriFormatException: Invalid URI: The hostname could not be parsed. firing in the default
+  list handler. Likely a row in Airtable's CliBridgeVersions or CliVersions has a malformed/blank URL. Non-fatal but pollutes the list response. Either
+   fix the Airtable data or make the bridge defensive (skip rows where new Uri(url) throws).
+
+  Pending product work (not blocking): The bases website sets effortless.env during build with a short-lived EFFORTLESS_JWT and the project repo's
+  effortless.json carries SSoTmeProjectId="BASES_<base_id>". The bridge already recognizes the BASES_ prefix via TryGetBasesBaseId in Program.cs. No
+  CLI or website change is required for the cutover — just need working connectivity to verify the bases-run quota path end-to-end.
+
+  Report in under 500 words per iteration. Don't make code edits until you've confirmed the deployed image is actually running the latest
+  GetDataSource() / HandleGetQuotaMode / HandleUpdateQuotaMode code from Program.cs.
