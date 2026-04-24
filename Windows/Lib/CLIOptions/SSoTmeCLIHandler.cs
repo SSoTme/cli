@@ -62,6 +62,10 @@ namespace SSoTme.OST.Lib.CLIOptions
         private bool _hasRunRemoteToolsUpdate = false;
         internal bool skipRemoteToolsLookup = false;
         internal bool suppressVersionLabel = false;
+        // Set by InvokeToolAndGetOutput for best-effort cloud-bridge calls (quota/project check/register).
+        // Failures there are not user-actionable — they silently degrade. Don't print the TRANSPILER ERROR
+        // box, don't relay remote log lines, and don't promote error-level logs to exceptions.
+        internal bool suppressTranspilerErrorOutput = false;
         internal string jwt = null;
         private string _rawTranspilerArg = null;
         public string ResolvedVersionLabel { get; private set; } // e.g. "effortless/common/airtable-to-rulebook v2026.03.13.1534 [latest]"
@@ -899,30 +903,33 @@ namespace SSoTme.OST.Lib.CLIOptions
                     return;
                 }
 
-                // For other transpiler errors, show the full warning box
-                // Provide helpful context about the error
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("\n=======================================================");
-                Console.WriteLine("*** TRANSPILER ERROR ***");
-                Console.WriteLine("=======================================================");
-                Console.WriteLine(!String.IsNullOrEmpty(transpiler)
-                    ? $"This is likely an issue with the transpiler '{transpiler}', not with SSoTme."
-                    : "This is likely an issue with the transpiler, not with SSoTme.");
-                Console.WriteLine("The transpiler may have received invalid input or encountered an internal error.");
-                Console.WriteLine("=======================================================\n");
-                Console.ForegroundColor = curColor;
-
-                Console.ForegroundColor = ConsoleColor.Red;
-                var currentException = ex;
-                while (!(currentException is null))
+                // For other transpiler errors, show the full warning box — unless the caller has
+                // opted out (best-effort cloud-bridge calls that degrade silently on failure).
+                if (!this.suppressTranspilerErrorOutput)
                 {
-                    Console.WriteLine("\n********************************\nERROR: {0}\n********************************\n\n", currentException.Message);
-                    Console.WriteLine(currentException.StackTrace);
-                    Console.WriteLine("\n\n");
-                    if (currentException == ex.InnerException) break;
-                    currentException = ex.InnerException;
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("\n=======================================================");
+                    Console.WriteLine("*** TRANSPILER ERROR ***");
+                    Console.WriteLine("=======================================================");
+                    Console.WriteLine(!String.IsNullOrEmpty(transpiler)
+                        ? $"This is likely an issue with the transpiler '{transpiler}', not with SSoTme."
+                        : "This is likely an issue with the transpiler, not with SSoTme.");
+                    Console.WriteLine("The transpiler may have received invalid input or encountered an internal error.");
+                    Console.WriteLine("=======================================================\n");
+                    Console.ForegroundColor = curColor;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    var currentException = ex;
+                    while (!(currentException is null))
+                    {
+                        Console.WriteLine("\n********************************\nERROR: {0}\n********************************\n\n", currentException.Message);
+                        Console.WriteLine(currentException.StackTrace);
+                        Console.WriteLine("\n\n");
+                        if (currentException == ex.InnerException) break;
+                        currentException = ex.InnerException;
+                    }
+                    Console.ForegroundColor = curColor;
                 }
-                Console.ForegroundColor = curColor;
                 this.SuppressTranspile = true;
             }
         }
@@ -1174,12 +1181,14 @@ Seed Url: ");
             return candidates.OrderBy(c => c, StringComparer.OrdinalIgnoreCase).First();
         }
 
-        // Matches the format produced by ExtractVersionFromUrl.
+        // Accepts both the ExtractVersionFromUrl format (v2026.04.03.1718 — 4 dotted parts, time is HHMM)
+        // and the package.json / CLI_VERSION format (2026-04-19.23.12 — date uses hyphens, time is split HH.MM).
+        // Returns (year, month, day, timeAsHHMM) for comparable ordering.
         private (int, int, int, int) ParseVersionKey(string key, bool debug)
         {
             try
             {
-                var s = key.TrimStart('v');
+                var s = key.TrimStart('v').Replace('-', '.');
                 var parts = s.Split('.');
                 if (parts.Length == 4 &&
                     int.TryParse(parts[0], out int y) &&
@@ -1188,6 +1197,15 @@ Seed Url: ");
                     int.TryParse(parts[3], out int t))
                 {
                     return (y, mo, d, t);
+                }
+                if (parts.Length == 5 &&
+                    int.TryParse(parts[0], out int y5) &&
+                    int.TryParse(parts[1], out int mo5) &&
+                    int.TryParse(parts[2], out int d5) &&
+                    int.TryParse(parts[3], out int h5) &&
+                    int.TryParse(parts[4], out int m5))
+                {
+                    return (y5, mo5, d5, h5 * 100 + m5);
                 }
             }
             catch {
@@ -2747,10 +2765,12 @@ Seed Url: ");
                 var handler = new SSoTmeCLIHandler();
                 handler.skipRemoteToolsLookup = true;
                 handler.suppressVersionLabel = true;
+                handler.suppressTranspilerErrorOutput = true;
                 handler.commandLine = commandLine;
                 handler.ParseCommand();
                 CliLog.SuppressFileLog = true;
                 try { handler.TranspileProject(); }
+                catch { /* best-effort — caller treats null as "skip quota / skip project registration" */ }
                 finally { CliLog.SuppressFileLog = false; }
 
                 // Read the output file
@@ -4249,7 +4269,10 @@ Seed Url: ");
                                     {
                                         if (log != null && log is SassyMQ.SSOTME.Lib.RMQActors.LogEntry logEntry)
                                         {
-                                            DisplayLogEntry(logEntry, this.debug, transpilerName);
+                                            if (!this.suppressTranspilerErrorOutput)
+                                            {
+                                                DisplayLogEntry(logEntry, this.debug, transpilerName);
+                                            }
                                             if (firstErrorMessage == null && string.Equals(logEntry.Level, "error", StringComparison.OrdinalIgnoreCase))
                                             {
                                                 firstErrorMessage = logEntry.Text?.Trim();
@@ -4258,7 +4281,7 @@ Seed Url: ");
                                     }
                                 }
 
-                                if (firstErrorMessage != null && ReferenceEquals(responsePayload.Exception, null))
+                                if (firstErrorMessage != null && ReferenceEquals(responsePayload.Exception, null) && !this.suppressTranspilerErrorOutput)
                                 {
                                     responsePayload.Exception = new Exception(firstErrorMessage);
                                 }
