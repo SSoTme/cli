@@ -49,13 +49,13 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-23.13.03";
+        public string CLI_VERSION = "2026-04-24.18.54";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
         // The bridge's list response includes latestBridgeVersion which auto-updates tool_urls.json,
         // so this URL only needs to point to ANY working bridge — it doesn't need to be the latest.
-        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-16-1332-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/";
+        public static readonly string LATEST_TRANSPILERS_LISTER_URL = "https://ssotme-cli-cloud-bridge-v2026-04-24-1853-cmvbd4phczmeg.7pktzg2z971j0.cpln.app";
         // name of the transpiler-lister tool that resolves to LATEST_TRANSPILERS_LISTER_URL. This tool also handles auth (sending request to magiclinks)
         public static readonly string TRANSPILERS_LISTER_TOOL_NAME = "cli-cloud-bridge";
 
@@ -74,12 +74,13 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string ResolvedToolName { get; private set; }    // e.g. "effortless/effortless/rulebook-to-xlsx"
         private bool _suppressGenericToolNotFoundError = false;
         private bool _showedBootMessage = false;
+        private int _bootMessageLength = 0;
 
         private void ClearBootLine()
         {
             if (!_showedBootMessage) return;
             _showedBootMessage = false;
-            var clearLine = "\r" + new string(' ', "Waiting for the remote transpiler to boot up ...".Length) + "\r";
+            var clearLine = "\r" + new string(' ', _bootMessageLength) + "\r";
             Console.Write(clearLine);
             Console.WriteLine();
             Console.WriteLine();
@@ -2670,7 +2671,7 @@ Seed Url: ");
                                     if (!newUrl.EndsWith("/")) newUrl += "/";
                                     this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, newUrl);
                                     File.WriteAllText(bridgeIdxPath, newIdx.ToString());
-                                    if (this.debug) Console.WriteLine($"DEBUG: Bridge auto-updated to v{bridgeInfo["version"]?.Value<string>()} (idx {newIdx}): {newUrl}");
+                                    if (this.debug) Console.WriteLine($"DEBUG: Bridge auto-updated to {bridgeInfo["version"]?.Value<string>()} (idx {newIdx}): {newUrl}");
                                 }
                             }
                         }
@@ -2859,6 +2860,15 @@ Seed Url: ");
             {
                 File.Delete(cliVersionPath);
                 if (this.debug) Console.WriteLine($"DEBUG: deleted {cliVersionPath}");
+            }
+            // Also reset the bridge version index so -refreshTools picks up the
+            // current latestBridgeVersion from Airtable unconditionally, not only
+            // when versionIndex has advanced past the locally-cached value.
+            var bridgeIdxPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "bridge_version_index");
+            if (File.Exists(bridgeIdxPath))
+            {
+                File.Delete(bridgeIdxPath);
+                if (this.debug) Console.WriteLine($"DEBUG: deleted {bridgeIdxPath}");
             }
 
             _hasRunRemoteToolsUpdate = false;
@@ -3733,7 +3743,9 @@ Seed Url: ");
                         {
                             if (!_showedBootMessage)
                             {
-                                Console.Write("Waiting for the remote transpiler to boot up    ");
+                                var bootMessage = $"Waiting for the remote transpiler '{this.transpiler}' to boot up    ";
+                                Console.Write(bootMessage);
+                                _bootMessageLength = bootMessage.Length;
                                 _showedBootMessage = true;
                             }
                             Console.Write("\b\b\b" + dots[dotIndex % 4]);
@@ -4241,6 +4253,11 @@ Seed Url: ");
                 ? "DEBUG: POST https://proxy.effortlessapi.com/ (via RabbitMQ proxy)"
                 : $"DEBUG: POST {this.targetUrl}");
             var postUrl = $"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}";
+            // Friendly identifier for retry log lines — prefer the raw user-supplied name,
+            // fall back to the sanitized transpiler name, then the POST URL.
+            var transpilerLabel = !String.IsNullOrEmpty(this._rawTranspilerArg)
+                ? this._rawTranspilerArg
+                : (!String.IsNullOrEmpty(this.transpiler) ? this.transpiler : postUrl);
             System.Net.Http.HttpResponseMessage response = null;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             const int maxRetries = 10;
@@ -4266,7 +4283,7 @@ Seed Url: ");
                     retryCount++;
                     string failedHost;
                     try { failedHost = new Uri(postUrl).Host; } catch { failedHost = postUrl; }
-                    CliLog.LogLine($"Host not found: {failedHost}. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
+                    CliLog.LogLine($"[{transpilerLabel}] Host not found: {failedHost}. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
@@ -4290,7 +4307,7 @@ Seed Url: ");
                             return;
                         }
                     }
-                    CliLog.LogLine($"Connection error ({se2.SocketErrorCode}). Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
+                    CliLog.LogLine($"[{transpilerLabel}] Connection error ({se2.SocketErrorCode}). Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
@@ -4299,7 +4316,7 @@ Seed Url: ");
                     ex.Message.Contains("SSL"))
                 {
                     retryCount++;
-                    CliLog.LogLine($"SSL connection error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
+                    CliLog.LogLine($"[{transpilerLabel}] SSL connection error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                     if (this.debug) Console.WriteLine($"DEBUG: {ex.Message}");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
@@ -4312,7 +4329,7 @@ Seed Url: ");
                 {
                     retryCount++;
                     var retryContent = await response.Content.ReadAsStringAsync();
-                    CliLog.LogLine($"Remote transpiler not ready ({response.StatusCode}). Retrying... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
+                    CliLog.LogLine($"[{transpilerLabel}] Remote transpiler not ready ({response.StatusCode}). Retrying... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                     if (this.debug) Console.WriteLine($"DEBUG: Response body: {retryContent}");
                     await System.Threading.Tasks.Task.Delay(5000);
                     continue;
@@ -4326,7 +4343,7 @@ Seed Url: ");
                         badRequestContent.Contains("SSL") && badRequestContent.Contains("error"))
                     {
                         retryCount++;
-                        CliLog.LogLine($"Remote transpiler SSL error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
+                        CliLog.LogLine($"[{transpilerLabel}] Remote transpiler SSL error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                         if (this.debug) Console.WriteLine($"DEBUG: Response body: {badRequestContent}");
                         await System.Threading.Tasks.Task.Delay(6000);
                         continue;
@@ -4590,6 +4607,10 @@ Seed Url: ");
                             if (logs != null)
                             {
                                 var transpilerName = responsePayload.Transpiler?.Name ?? this.transpiler;
+                                if (!string.IsNullOrEmpty(this.ResolvedVersionKey))
+                                {
+                                    transpilerName = $"{transpilerName} {this.ResolvedVersionKey}";
+                                }
                                 string firstErrorMessage = null;
 
                                 // Try to enumerate logs (could be array or list)

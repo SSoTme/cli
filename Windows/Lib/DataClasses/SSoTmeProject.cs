@@ -1456,7 +1456,19 @@ effortless.env";
 
             if (!cleanDI.Exists) return;
 
-            var cleanChildDirs = cleanDI.GetDirectories().ToList();
+            // Never follow symlinks/junctions — their targets may live outside the project
+            // (e.g. pnpm's content-addressed store) or be broken, which throws
+            // DirectoryNotFoundException on enumeration and crashes the build's cleanup step.
+            if ((cleanDI.Attributes & FileAttributes.ReparsePoint) != 0) return;
+
+            List<DirectoryInfo> cleanChildDirs;
+            try
+            {
+                cleanChildDirs = cleanDI.GetDirectories().ToList();
+            }
+            catch (DirectoryNotFoundException) { return; }
+            catch (UnauthorizedAccessException) { return; }
+            catch (IOException) { return; }
 
             foreach (var childDir in cleanChildDirs)
             {
@@ -1465,11 +1477,22 @@ effortless.env";
                 childDir.Refresh();
                 if (!childDir.Exists) continue;
 
-                var dirs = childDir.GetDirectories();
-                if (dirs.Any()) continue;
+                // Skip reparse points at the child level too — we won't try to inspect or delete them.
+                if ((childDir.Attributes & FileAttributes.ReparsePoint) != 0) continue;
 
-                var files = childDir.GetFiles();
-                if (files.Any()) continue;
+                DirectoryInfo[] dirs;
+                FileInfo[] files;
+                try
+                {
+                    dirs = childDir.GetDirectories();
+                    if (dirs.Any()) continue;
+
+                    files = childDir.GetFiles();
+                    if (files.Any()) continue;
+                }
+                catch (DirectoryNotFoundException) { continue; }
+                catch (UnauthorizedAccessException) { continue; }
+                catch (IOException) { continue; }
 
                 // Safety check: Never delete the project root
                 if (String.Equals(childDir.FullName, this.RootPath, StringComparison.OrdinalIgnoreCase))
@@ -1502,8 +1525,14 @@ effortless.env";
             }
 
             cleanDI.Refresh();
-            if (cleanDI.GetDirectories().Any()) return;
-            if (cleanDI.GetFiles().Any()) return;
+            try
+            {
+                if (cleanDI.GetDirectories().Any()) return;
+                if (cleanDI.GetFiles().Any()) return;
+            }
+            catch (DirectoryNotFoundException) { return; }
+            catch (UnauthorizedAccessException) { return; }
+            catch (IOException) { return; }
 
             // Safety check: Never delete the project root
             if (String.Equals(cleanDI.FullName, this.RootPath, StringComparison.OrdinalIgnoreCase))
