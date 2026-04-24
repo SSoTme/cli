@@ -4602,6 +4602,10 @@ Seed Url: ");
                             if (logs != null)
                             {
                                 var transpilerName = responsePayload.Transpiler?.Name ?? this.transpiler;
+                                if (!string.IsNullOrEmpty(this.ResolvedVersionKey))
+                                {
+                                    transpilerName = $"{transpilerName} {this.ResolvedVersionKey}";
+                                }
                                 string firstErrorMessage = null;
 
                                 // Try to enumerate logs (could be array or list)
