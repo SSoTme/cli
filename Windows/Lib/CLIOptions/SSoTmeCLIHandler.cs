@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-16.17.57";
+        public string CLI_VERSION = "2026-04-23.13.03";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -730,7 +730,7 @@ namespace SSoTme.OST.Lib.CLIOptions
                     Console.ForegroundColor = curColor;
                     this.SuppressTranspile = true;
                 }
-                else if (this.listVersions || this.refreshTools || this.authenticate || this.projectLogin || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
+                else if (this.listVersions || this.refreshTools || this.authenticate || this.projectLogin || this.discuss || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || this.upgradeCli || this.upgradeAll || !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || this.listUrls || !String.IsNullOrEmpty(this.removeUrl) || this.updateUrls)
                 {
                     continueToLoad = false;
                 }
@@ -1606,6 +1606,10 @@ Seed Url: ");
                     this.uninstall = true;
                     break;
 
+                case "upgradeall":
+                    this.upgradeAll = true;
+                    break;
+
                 case "cloneseed":
                 case "clone":
                     this.cloneSeed = true;
@@ -1668,6 +1672,10 @@ Seed Url: ");
                 case "lu":
                 case "lt":
                     this.listUrls = true;
+                    break;
+
+                case "refreshtools":
+                    this.refreshTools = true;
                     break;
 
                 case "viewtoolurl":
@@ -1909,6 +1917,16 @@ Seed Url: ");
                 else if (this.upgrade)
                 {
                     this.HandleUpgradeCommand();
+                    this.SuppressTranspile = true;
+                }
+                else if (this.upgradeAll)
+                {
+                    this.HandleUpgradeAllCommand();
+                    this.SuppressTranspile = true;
+                }
+                else if (this.upgradeCli)
+                {
+                    this.HandleUpgradeCliCommand();
                     this.SuppressTranspile = true;
                 }
                 else if (this.listVersions)
@@ -2584,6 +2602,20 @@ Seed Url: ");
             // for ParseCommand/TranspileProject, but is tightly scoped in a try/finally to guarantee restoration.
             bool RunRefresh()
             {
+                // Fail-fast DNS pre-check so a dead cached bridge URL doesn't burn 60s of retries
+                // inside StartTranspile before the outer catch can swap it for the bootstrap URL.
+                var currentUrl = TryGetUrlFromFileUrls(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME) ?? SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL;
+                try
+                {
+                    var host = new Uri(currentUrl).Host;
+                    System.Net.Dns.GetHostEntry(host);
+                }
+                catch (System.Net.Sockets.SocketException dnsEx) when (dnsEx.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound)
+                {
+                    throw new System.Net.Http.HttpRequestException($"No such host is known ({currentUrl})", dnsEx);
+                }
+                catch { /* non-DNS errors (e.g. malformed URI) — let the normal path handle it */ }
+
                 var savedDir = Environment.CurrentDirectory;
                 try
                 {
@@ -2655,8 +2687,30 @@ Seed Url: ");
             catch (Exception refreshEx) when (refreshEx.InnerException is System.Net.Sockets.SocketException se && se.SocketErrorCode == System.Net.Sockets.SocketError.HostNotFound
                                                || refreshEx.Message.Contains("No such host"))
             {
-                Console.WriteLine($"Warning: Could not refresh remote tool list (host not found). Continuing...");
-                if (this.debug) Console.WriteLine($"DEBUG: refresh exception: {refreshEx}");
+                // The stored bridge URL in tool_urls.json points to a dead host.
+                // Reset it to the bootstrap URL and retry once so the user isn't stuck
+                // with a permanently broken cache.
+                if (effectiveUrl != SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL)
+                {
+                    Console.WriteLine($"Stored bridge URL is unreachable ({effectiveUrl}). Resetting to bootstrap URL and retrying...");
+                    this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, SSoTmeCLIHandler.LATEST_TRANSPILERS_LISTER_URL);
+                    var bridgeIdxPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "bridge_version_index");
+                    try { if (File.Exists(bridgeIdxPath)) File.Delete(bridgeIdxPath); } catch { }
+                    try
+                    {
+                        RunRefresh();
+                    }
+                    catch (Exception retryEx)
+                    {
+                        Console.WriteLine($"Warning: Could not refresh remote tool list after reset ({retryEx.Message}). Continuing...");
+                        if (this.debug) Console.WriteLine($"DEBUG: retry exception: {retryEx}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Could not refresh remote tool list (host not found: {effectiveUrl}). Continuing...");
+                    if (this.debug) Console.WriteLine($"DEBUG: refresh exception: {refreshEx}");
+                }
             }
             catch (Exception refreshEx)
             {
@@ -2701,6 +2755,8 @@ Seed Url: ");
                     File.Delete(updateAvailablePath);
             }
             catch { /* best-effort */ }
+
+            CheckForGitHubUpdate();
         }
 
         private SSoTmeCLIHandler CreateInternalHandler()
@@ -2968,7 +3024,7 @@ Seed Url: ");
 
         private bool IsManagementCommand =>
             this.listVersions || this.refreshTools || this.listUrls || this.version || this.updateUrls || this.init || this.uninstall ||
-            this.authenticate || this.projectLogin || this.logout || this.subscription || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade ||
+            this.authenticate || this.projectLogin || this.logout || this.subscription || this.info || this.help || this.listSeeds || this.cloneSeed || this.localGuide || this.upgrade || this.upgradeCli || this.upgradeAll ||
             !String.IsNullOrEmpty(this.viewUrl) || !String.IsNullOrEmpty(this.setUrl) || !String.IsNullOrEmpty(this.removeUrl);
 
         private bool ListTranspilerVersions(string transpilerName)
@@ -3176,6 +3232,24 @@ Seed Url: ");
             Console.WriteLine($"Upgraded {toolName}: {oldVersion} → {newVersion}");
         }
 
+        /// <summary>
+        /// Handles `ssotme -upgradeAll`: refreshes the remote tools index, then upgrades every
+        /// transpiler in the current project to the latest version.
+        /// </summary>
+        private void HandleUpgradeAllCommand()
+        {
+            this.RefreshRemoteTools();
+
+            var project = this.AICaptureProject ?? SSoTmeProject.TryToLoad(new DirectoryInfo(Environment.CurrentDirectory));
+            if (project == null)
+            {
+                ShowError("No effortless.json project found in this directory.");
+                return;
+            }
+
+            UpgradeAllTools(project);
+        }
+
         private void UpgradeAllTools(SSoTmeProject project)
         {
             var transpilers = project.ProjectTranspilers;
@@ -3225,6 +3299,260 @@ Seed Url: ");
 
             project.Save();
             Console.WriteLine($"\nUpgraded {upgraded} tool(s)" + (skipped > 0 ? $", skipped {skipped}" : "") + ".");
+        }
+
+        private void HandleUpgradeCliCommand()
+        {
+            Console.WriteLine("Checking GitHub for the latest CLI version...");
+
+            string latestTag = null;
+            string downloadUrl = null;
+            try
+            {
+                (latestTag, downloadUrl) = FetchLatestGitHubRelease();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not reach GitHub: {ex.Message}");
+                Console.WriteLine($"Download manually: https://github.com/EffortlessAPI/cli/releases/latest");
+                return;
+            }
+
+            if (String.IsNullOrEmpty(latestTag))
+            {
+                Console.WriteLine("Could not determine the latest version from GitHub.");
+                return;
+            }
+
+            var latestVersion = ParseCliVersion(latestTag);
+            var currentVersion = ParseCliVersion(this.CLI_VERSION);
+
+            if (latestVersion.CompareTo(currentVersion) <= 0)
+            {
+                Console.WriteLine($"Already on the latest version ({this.CLI_VERSION}).");
+                return;
+            }
+
+            Console.WriteLine($"New version available: {latestTag}  (you have {this.CLI_VERSION})");
+
+            // First attempt: download and launch the platform-native installer from GitHub
+            if (!String.IsNullOrEmpty(downloadUrl))
+            {
+                string installerPath = null;
+                try
+                {
+                    Console.Write("Downloading installer from GitHub...");
+                    installerPath = DownloadInstallerToTemp(downloadUrl);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"\nDownload failed: {ex.Message}");
+                }
+
+                if (installerPath != null)
+                {
+                    try
+                    {
+                        LaunchInstaller(installerPath);
+                        Console.WriteLine("Installer launched — follow the prompts to complete the upgrade.");
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Could not launch installer: {ex.Message}");
+                        Console.WriteLine($"Installer saved to: {installerPath}");
+                        return;
+                    }
+                }
+            }
+
+            // Fallback: npm (for platforms without a native installer)
+            var npmPath = FindExecutableOnPath(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "npm.cmd" : "npm")
+                       ?? FindExecutableOnPath("npm");
+            if (npmPath != null)
+                Console.WriteLine($"To upgrade:  npm install -g ssotme@latest");
+            else
+                Console.WriteLine($"Download from: https://github.com/EffortlessAPI/cli/releases/latest");
+        }
+
+        private (string tag, string downloadUrl) FetchLatestGitHubRelease()
+        {
+            using var client = new System.Net.Http.HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("User-Agent", "ssotme-cli");
+            var json = client.GetStringAsync("https://api.github.com/repos/EffortlessAPI/cli/releases/latest").GetAwaiter().GetResult();
+            var root = Newtonsoft.Json.Linq.JObject.Parse(json);
+            var tag = root["tag_name"]?.Value<string>();
+
+            var assetName = GetPlatformInstallerName();
+            if (assetName == null) return (tag, null);
+
+            var assets = root["assets"] as Newtonsoft.Json.Linq.JArray;
+            var match = assets?.FirstOrDefault(a => String.Equals(a["name"]?.Value<string>(), assetName, StringComparison.OrdinalIgnoreCase));
+            return (tag, match?["browser_download_url"]?.Value<string>());
+        }
+
+        private string GetPlatformInstallerName()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                    ? "SSoTme-Installer_win-arm64.msi"
+                    : "SSoTme-Installer_win-x64.msi";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                    ? "SSoTme-Installer-arm64.pkg"
+                    : "SSoTme-Installer-x86_64.pkg";
+            return null;
+        }
+
+        private string DownloadInstallerToTemp(string url)
+        {
+            var ext = Path.GetExtension(new Uri(url).AbsolutePath);
+            var tempPath = Path.Combine(Path.GetTempPath(), $"ssotme-installer{ext}");
+            using var client = new System.Net.Http.HttpClient();
+            client.Timeout = TimeSpan.FromMinutes(5);
+            client.DefaultRequestHeaders.Add("User-Agent", "ssotme-cli");
+            using var response = client.GetAsync(url, System.Net.Http.HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+
+            var totalBytes = response.Content.Headers.ContentLength;
+            if (totalBytes.HasValue)
+                Console.Write($" ({totalBytes.Value / 1024 / 1024} MB)");
+            Console.Write(" ");
+
+            using var stream = response.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
+            using var file = File.Create(tempPath);
+            var buffer = new byte[81920];
+            long downloaded = 0;
+            int lastPct = -1;
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                file.Write(buffer, 0, read);
+                downloaded += read;
+                if (totalBytes.HasValue)
+                {
+                    var pct = (int)(downloaded * 100 / totalBytes.Value);
+                    if (pct / 10 != lastPct / 10) { Console.Write($"{pct}% "); lastPct = pct; }
+                }
+            }
+            Console.WriteLine("done.");
+            return tempPath;
+        }
+
+        private void LaunchInstaller(string installerPath)
+        {
+            var ext = Path.GetExtension(installerPath).ToLowerInvariant();
+            if (ext == ".msi")
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    UseShellExecute = true
+                });
+            }
+            else if (ext == ".pkg")
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "open",
+                    Arguments = $"\"{installerPath}\"",
+                    UseShellExecute = false
+                });
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unknown installer type: {ext}");
+            }
+        }
+
+        private string FindExecutableOnPath(string name)
+        {
+            var pathVar = Environment.GetEnvironmentVariable("PATH") ?? "";
+            foreach (var dir in pathVar.Split(Path.PathSeparator))
+            {
+                try
+                {
+                    var candidate = Path.Combine(dir, name);
+                    if (File.Exists(candidate)) return candidate;
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private string FetchLatestGitHubTag()
+        {
+            using var client = new System.Net.Http.HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.Add("User-Agent", "ssotme-cli");
+            var json = client.GetStringAsync("https://api.github.com/repos/EffortlessAPI/cli/releases/latest").GetAwaiter().GetResult();
+            var root = Newtonsoft.Json.Linq.JObject.Parse(json);
+            return root["tag_name"]?.Value<string>();
+        }
+
+        // Parses both "2026-04-16.17.57" (CLI_VERSION) and "v2026.04.16.1757" (bridge) into a comparable tuple.
+        private (int, int, int, int) ParseCliVersion(string version)
+        {
+            try
+            {
+                var s = (version ?? "").TrimStart('v');
+                var m = Regex.Match(s, @"^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{2})$");
+                if (m.Success)
+                {
+                    int hhmm = int.Parse(m.Groups[4].Value) * 100 + int.Parse(m.Groups[5].Value);
+                    return (int.Parse(m.Groups[1].Value), int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value), hhmm);
+                }
+                return ParseVersionKey(s, false);
+            }
+            catch { return (0, 0, 0, 0); }
+        }
+
+        private void CheckForGitHubUpdate()
+        {
+            try
+            {
+                var ssotmeDir = SSOTMEKey.SSoTmeDir.FullName;
+                var cachePath = Path.Combine(ssotmeDir, "github_version_check.json");
+
+                string latestTag = null;
+                if (File.Exists(cachePath))
+                {
+                    try
+                    {
+                        var cached = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(cachePath));
+                        var lastCheck = cached["lastCheck"]?.Value<DateTime>();
+                        if (lastCheck.HasValue && (DateTime.UtcNow - lastCheck.Value).TotalHours < 24)
+                            latestTag = cached["latestVersion"]?.Value<string>();
+                    }
+                    catch { }
+                }
+
+                if (latestTag == null)
+                {
+                    latestTag = FetchLatestGitHubTag();
+                    var cacheJson = new Newtonsoft.Json.Linq.JObject
+                    {
+                        ["lastCheck"] = DateTime.UtcNow,
+                        ["latestVersion"] = latestTag
+                    };
+                    File.WriteAllText(cachePath, cacheJson.ToString());
+                }
+
+                if (String.IsNullOrEmpty(latestTag)) return;
+
+                var latestVersion = ParseCliVersion(latestTag);
+                var currentVersion = ParseCliVersion(this.CLI_VERSION);
+
+                if (latestVersion.CompareTo(currentVersion) > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"A new version of the effortless CLI is available: {latestTag}  (you have {this.CLI_VERSION})");
+                    Console.WriteLine($"Run `effortless -upgradeCli` to see upgrade instructions.");
+                    Console.ResetColor();
+                }
+            }
+            catch { /* best-effort */ }
         }
 
         private string TryGetUrlFromRemoteTools(string transpilerName)
@@ -3936,7 +4264,9 @@ Seed Url: ");
                     || ex.Message.Contains("No such host"))
                 {
                     retryCount++;
-                    CliLog.LogLine($"Host not found. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
+                    string failedHost;
+                    try { failedHost = new Uri(postUrl).Host; } catch { failedHost = postUrl; }
+                    CliLog.LogLine($"Host not found: {failedHost}. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
