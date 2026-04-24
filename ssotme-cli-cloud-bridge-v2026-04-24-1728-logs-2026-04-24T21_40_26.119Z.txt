@@ -1,0 +1,251 @@
+Common Labels: {"location":"aws-us-east-2","workload":"ssotme-cli-cloud-bridge-v2026-04-24-1728","gvc":"ssotme-tools","provider":"aws","stream":"stdout","version":"2"}
+Line limit: 1000 (248 returned)
+
+2026-04-24T21:40:12.066Z [2026-04-24T21:40:11.261Z] "POST / HTTP/1.1" 200 - via_upstream - "-" 4440 663 2 2 "172.56.26.137" "-" "7b7f9a3a-e70f-4944-b32e-53629083556d" "ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app" "172.56.26.137:0" "10.0.95.147:8012"
+2026-04-24T21:40:12.066Z [2026-04-24T21:40:11.888Z] "- - -" 0 NC - - "-" 0 0 0 - "-" "-" "-" "-" "-"
+2026-04-24T21:40:12.066Z [2026-04-24T21:40:11.993Z] "- - -" 0 NC - - "-" 0 0 0 - "-" "-" "-" "-" "-"
+2026-04-24T21:40:12.066Z [2026-04-24T21:40:11.734Z] "POST / HTTP/1.1" 200 - via_upstream - "-" 4476 1385 268 267 "172.56.26.137" "-" "801b9dfe-4a6f-4aca-a28b-844044c71ead" "ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app" "172.56.26.137:0" "10.0.95.147:8012"
+2026-04-24T21:40:12.002Z info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+2026-04-24T21:40:12.002Z       Write content with HTTP Response ContentType of application/json
+2026-04-24T21:40:12.002Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+2026-04-24T21:40:12.002Z       Executed endpoint 'HTTP: POST /'
+2026-04-24T21:40:12.002Z info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+2026-04-24T21:40:12.002Z       Request finished HTTP/1.1 POST https://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - 200 1385 application/json 266.9494ms
+2026-04-24T21:40:12.001Z [FileSetService] AddFile called with relativePath: auth-result.json, overwriteMode: Always
+2026-04-24T21:40:12.001Z [FileSetService] File contents length: 88
+2026-04-24T21:40:12.001Z [FileSetService] Adding new file with path: auth-result.json
+2026-04-24T21:40:12.001Z [FileSetService] ToXml called
+2026-04-24T21:40:12.001Z [FileSetService] FileSet is null: False
+2026-04-24T21:40:12.001Z [FileSetService] FileSet.FileSetId: aee6a458-1f30-4903-a2ac-39ffb394aa79
+2026-04-24T21:40:12.001Z [FileSetService] FileSet.Name: 
+2026-04-24T21:40:12.001Z [FileSetService] FileSet.FileSetFiles is null: False
+2026-04-24T21:40:12.001Z [FileSetService] FileSet.FileSetFiles count: 1
+2026-04-24T21:40:12.001Z [FileSetService] FileSetFile[0]: RelativePath=auth-result.json, ContentLength=88
+2026-04-24T21:40:12.001Z [FileSetService] Creating XmlSerializer for FileSet type
+2026-04-24T21:40:12.001Z [FileSetService] Starting XML serialization
+2026-04-24T21:40:12.001Z [FileSetService] XML serialization complete. Result length: 744
+2026-04-24T21:40:12.001Z [FileSetService] XML first 500 chars: <?xml version="1.0" encoding="utf-16"?>
+2026-04-24T21:40:12.001Z <FileSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+2026-04-24T21:40:12.001Z   <FileSetId>aee6a458-1f30-4903-a2ac-39ffb394aa79</FileSetId>
+2026-04-24T21:40:12.001Z   <CreatedOn>2026-04-24T21:40:12.0013449Z</CreatedOn>
+2026-04-24T21:40:12.001Z   <FileSetFiles>
+2026-04-24T21:40:12.001Z     <FileSetFile>
+2026-04-24T21:40:12.001Z       <FileSetFileId>aa56dde7-d07c-4116-a3a5-442221cc57f0</FileSetFileId>
+2026-04-24T21:40:12.001Z       <FileSetId>aee6a458-1f30-4903-a2ac-39ffb394aa79</FileSetId>
+2026-04-24T21:40:12.001Z       <RelativePath>auth-result.json</RelativePath>
+2026-04-24T21:40:12.001Z       <F
+2026-04-24T21:40:11.999Z getQuota failed: Exception while reading from stream
+2026-04-24T21:40:11.998Z DB connection attempt 2 failed in 6ms during open (outer=NpgsqlException, root=SocketException, transient=True): Exception while reading from stream
+2026-04-24T21:40:11.991Z DB connection attempt 1 failed in 201ms during open (outer=NpgsqlException, root=EndOfStreamException, transient=True): Exception while reading from stream
+2026-04-24T21:40:11.735Z info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+2026-04-24T21:40:11.735Z       Request starting HTTP/1.1 POST http://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - application/json;+charset=utf-8 -
+2026-04-24T21:40:11.735Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+2026-04-24T21:40:11.735Z       Executing endpoint 'HTTP: POST /'
+2026-04-24T21:40:11.264Z info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+2026-04-24T21:40:11.264Z       Write content with HTTP Response ContentType of application/json
+2026-04-24T21:40:11.264Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+2026-04-24T21:40:11.264Z       Executed endpoint 'HTTP: POST /'
+2026-04-24T21:40:11.264Z info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+2026-04-24T21:40:11.264Z       Request finished HTTP/1.1 POST https://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - 200 663 application/json 1.3369ms
+2026-04-24T21:40:11.263Z info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+2026-04-24T21:40:11.263Z       Request starting HTTP/1.1 POST http://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - application/json;+charset=utf-8 -
+2026-04-24T21:40:11.263Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+2026-04-24T21:40:11.263Z       Executing endpoint 'HTTP: POST /'
+2026-04-24T21:40:11.263Z [FileSetService] AddFile called with relativePath: auth-result.json, overwriteMode: Always
+2026-04-24T21:40:11.263Z [FileSetService] File contents length: 39
+2026-04-24T21:40:11.263Z [FileSetService] Adding new file with path: auth-result.json
+2026-04-24T21:40:11.263Z [FileSetService] ToXml called
+2026-04-24T21:40:11.263Z [FileSetService] FileSet is null: False
+2026-04-24T21:40:11.263Z [FileSetService] FileSet.FileSetId: 099d909a-1dfc-4e6d-a15c-8222fa4229cf
+2026-04-24T21:40:11.263Z [FileSetService] FileSet.Name: 
+2026-04-24T21:40:11.263Z [FileSetService] FileSet.FileSetFiles is null: False
+2026-04-24T21:40:11.263Z [FileSetService] FileSet.FileSetFiles count: 1
+2026-04-24T21:40:11.263Z [FileSetService] FileSetFile[0]: RelativePath=auth-result.json, ContentLength=39
+2026-04-24T21:40:11.263Z [FileSetService] Creating XmlSerializer for FileSet type
+2026-04-24T21:40:11.263Z [FileSetService] Starting XML serialization
+2026-04-24T21:40:11.263Z [FileSetService] XML serialization complete. Result length: 695
+2026-04-24T21:40:11.263Z [FileSetService] XML first 500 chars: <?xml version="1.0" encoding="utf-16"?>
+2026-04-24T21:40:11.263Z <FileSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+2026-04-24T21:40:11.263Z   <FileSetId>099d909a-1dfc-4e6d-a15c-8222fa4229cf</FileSetId>
+2026-04-24T21:40:11.263Z   <CreatedOn>2026-04-24T21:40:11.2633285Z</CreatedOn>
+2026-04-24T21:40:11.263Z   <FileSetFiles>
+2026-04-24T21:40:11.263Z     <FileSetFile>
+2026-04-24T21:40:11.263Z       <FileSetFileId>4f3cdeba-2a22-490c-988f-e1f43e7ac31a</FileSetFileId>
+2026-04-24T21:40:11.263Z       <FileSetId>099d909a-1dfc-4e6d-a15c-8222fa4229cf</FileSetId>
+2026-04-24T21:40:11.263Z       <RelativePath>auth-result.json</RelativePath>
+2026-04-24T21:40:11.263Z       <F
+2026-04-24T21:40:01.022Z [2026-04-24T21:40:00.083Z] "POST / HTTP/1.1" 200 - via_upstream - "-" 4444 667 3 3 "172.56.26.137" "-" "d11f13c3-3b29-4d91-8d58-dc6215680ae2" "172.20.46.101:80" "127.0.0.6:0" "10.0.95.147:8012"
+2026-04-24T21:40:01.022Z [2026-04-24T21:40:00.528Z] "POST / HTTP/1.1" 200 - via_upstream - "-" 4476 715 10 9 "172.56.26.137" "-" "6b13088b-42e4-4f06-93b2-6152cf709015" "172.20.46.101:80" "127.0.0.6:0" "10.0.95.147:8012"
+2026-04-24T21:40:00.538Z       Request finished HTTP/1.1 POST https://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - 200 715 application/json 9.0789ms
+2026-04-24T21:40:00.538Z info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+2026-04-24T21:40:00.538Z       Write content with HTTP Response ContentType of application/json
+2026-04-24T21:40:00.538Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+2026-04-24T21:40:00.538Z       Executed endpoint 'HTTP: POST /'
+2026-04-24T21:40:00.538Z info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+2026-04-24T21:40:00.537Z [FileSetService] AddFile called with relativePath: auth-result.json, overwriteMode: Always
+2026-04-24T21:40:00.537Z [FileSetService] File contents length: 102
+2026-04-24T21:40:00.537Z [FileSetService] Adding new file with path: auth-result.json
+2026-04-24T21:40:00.537Z [FileSetService] ToXml called
+2026-04-24T21:40:00.537Z [FileSetService] FileSet is null: False
+2026-04-24T21:40:00.537Z [FileSetService] FileSet.FileSetId: 5700bc11-3a08-4664-96b7-3a854585ebb1
+2026-04-24T21:40:00.537Z [FileSetService] FileSet.Name: 
+2026-04-24T21:40:00.537Z [FileSetService] FileSet.FileSetFiles is null: False
+2026-04-24T21:40:00.537Z [FileSetService] FileSet.FileSetFiles count: 1
+2026-04-24T21:40:00.537Z [FileSetService] FileSetFile[0]: RelativePath=auth-result.json, ContentLength=102
+2026-04-24T21:40:00.537Z [FileSetService] Creating XmlSerializer for FileSet type
+2026-04-24T21:40:00.537Z [FileSetService] Starting XML serialization
+2026-04-24T21:40:00.537Z [FileSetService] XML serialization complete. Result length: 758
+2026-04-24T21:40:00.537Z [FileSetService] XML first 500 chars: <?xml version="1.0" encoding="utf-16"?>
+2026-04-24T21:40:00.537Z <FileSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+2026-04-24T21:40:00.537Z   <FileSetId>5700bc11-3a08-4664-96b7-3a854585ebb1</FileSetId>
+2026-04-24T21:40:00.537Z   <CreatedOn>2026-04-24T21:40:00.5375324Z</CreatedOn>
+2026-04-24T21:40:00.537Z   <FileSetFiles>
+2026-04-24T21:40:00.537Z     <FileSetFile>
+2026-04-24T21:40:00.537Z       <FileSetFileId>a0a8f45e-0b5b-4169-9c8d-a3e65deb7793</FileSetFileId>
+2026-04-24T21:40:00.537Z       <FileSetId>5700bc11-3a08-4664-96b7-3a854585ebb1</FileSetId>
+2026-04-24T21:40:00.537Z       <RelativePath>auth-result.json</RelativePath>
+2026-04-24T21:40:00.537Z       <F
+2026-04-24T21:40:00.529Z info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+2026-04-24T21:40:00.529Z       Request starting HTTP/1.1 POST http://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - application/json;+charset=utf-8 -
+2026-04-24T21:40:00.529Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+2026-04-24T21:40:00.529Z       Executing endpoint 'HTTP: POST /'
+2026-04-24T21:40:00.086Z info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+2026-04-24T21:40:00.086Z       Write content with HTTP Response ContentType of application/json
+2026-04-24T21:40:00.086Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+2026-04-24T21:40:00.086Z       Executed endpoint 'HTTP: POST /'
+2026-04-24T21:40:00.086Z info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+2026-04-24T21:40:00.086Z       Request finished HTTP/1.1 POST https://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - 200 667 application/json 2.3819ms
+2026-04-24T21:40:00.085Z [FileSetService] AddFile called with relativePath: auth-result.json, overwriteMode: Always
+2026-04-24T21:40:00.085Z [FileSetService] File contents length: 39
+2026-04-24T21:40:00.085Z [FileSetService] Adding new file with path: auth-result.json
+2026-04-24T21:40:00.085Z [FileSetService] ToXml called
+2026-04-24T21:40:00.085Z [FileSetService] FileSet is null: False
+2026-04-24T21:40:00.085Z [FileSetService] FileSet.FileSetId: 5feb38a0-f9df-450d-bf47-0690f491335c
+2026-04-24T21:40:00.085Z [FileSetService] FileSet.Name: 
+2026-04-24T21:40:00.085Z [FileSetService] FileSet.FileSetFiles is null: False
+2026-04-24T21:40:00.085Z [FileSetService] FileSet.FileSetFiles count: 1
+2026-04-24T21:40:00.085Z [FileSetService] FileSetFile[0]: RelativePath=auth-result.json, ContentLength=39
+2026-04-24T21:40:00.085Z [FileSetService] Creating XmlSerializer for FileSet type
+2026-04-24T21:40:00.085Z [FileSetService] Starting XML serialization
+2026-04-24T21:40:00.085Z [FileSetService] XML serialization complete. Result length: 695
+2026-04-24T21:40:00.085Z [FileSetService] XML first 500 chars: <?xml version="1.0" encoding="utf-16"?>
+2026-04-24T21:40:00.085Z <FileSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+2026-04-24T21:40:00.085Z   <FileSetId>5feb38a0-f9df-450d-bf47-0690f491335c</FileSetId>
+2026-04-24T21:40:00.085Z   <CreatedOn>2026-04-24T21:40:00.0855617Z</CreatedOn>
+2026-04-24T21:40:00.085Z   <FileSetFiles>
+2026-04-24T21:40:00.085Z     <FileSetFile>
+2026-04-24T21:40:00.085Z       <FileSetFileId>6c70eb3c-c12c-4e5c-bc41-b7c2be057a10</FileSetFileId>
+2026-04-24T21:40:00.085Z       <FileSetId>5feb38a0-f9df-450d-bf47-0690f491335c</FileSetId>
+2026-04-24T21:40:00.085Z       <RelativePath>auth-result.json</RelativePath>
+2026-04-24T21:40:00.085Z       <F
+2026-04-24T21:40:00.084Z info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+2026-04-24T21:40:00.084Z       Request starting HTTP/1.1 POST http://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - application/json;+charset=utf-8 -
+2026-04-24T21:40:00.084Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+2026-04-24T21:40:00.084Z       Executing endpoint 'HTTP: POST /'
+2026-04-24T21:40:00.018Z [2026-04-24T21:39:58.924Z] "- - -" 0 - - - "-" 855 7556 121 - "-" "-" "-" "-" "44.220.97.199:443"
+2026-04-24T21:40:00.018Z [2026-04-24T21:39:55.454Z] "POST / HTTP/1.1" 200 - via_upstream - "-" 3354 65240 3832 3832 "172.56.26.137" "-" "7c24d640-1727-4a66-bc75-ed8945a58b69" "172.20.46.101:80" "127.0.0.6:0" "10.0.95.147:8012"
+2026-04-24T21:39:59.201Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+2026-04-24T21:39:59.201Z       Executed endpoint 'HTTP: POST /'
+2026-04-24T21:39:59.201Z info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+2026-04-24T21:39:59.201Z       Request finished HTTP/1.1 POST https://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - 200 65240 application/json 3745.1003ms
+2026-04-24T21:39:59.200Z info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+2026-04-24T21:39:59.200Z       Write content with HTTP Response ContentType of application/json
+2026-04-24T21:39:59.188Z [FileSetService] XML serialization complete. Result length: 448689
+2026-04-24T21:39:59.188Z [FileSetService] XML first 500 chars: <?xml version="1.0" encoding="utf-16"?>
+2026-04-24T21:39:59.188Z <FileSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+2026-04-24T21:39:59.188Z   <FileSetId>ebf26920-1328-4b57-b3b0-db5dfc2cabbf</FileSetId>
+2026-04-24T21:39:59.188Z   <CreatedOn>2026-04-24T21:39:59.1050052Z</CreatedOn>
+2026-04-24T21:39:59.188Z   <FileSetFiles>
+2026-04-24T21:39:59.188Z     <FileSetFile>
+2026-04-24T21:39:59.188Z       <FileSetFileId>84704715-825f-472c-9db5-418d9a29bbe5</FileSetFileId>
+2026-04-24T21:39:59.188Z       <FileSetId>ebf26920-1328-4b57-b3b0-db5dfc2cabbf</FileSetId>
+2026-04-24T21:39:59.188Z       <RelativePath>ssotme-tools.json</RelativePath>
+2026-04-24T21:39:59.188Z       <
+2026-04-24T21:39:59.105Z [FileSetService] AddFile called with relativePath: ssotme-tools.json, overwriteMode: Always
+2026-04-24T21:39:59.105Z [FileSetService] File contents length: 448032
+2026-04-24T21:39:59.105Z [FileSetService] Adding new file with path: ssotme-tools.json
+2026-04-24T21:39:59.105Z [FileSetService] ToXml called
+2026-04-24T21:39:59.105Z [FileSetService] FileSet is null: False
+2026-04-24T21:39:59.105Z [FileSetService] FileSet.FileSetId: ebf26920-1328-4b57-b3b0-db5dfc2cabbf
+2026-04-24T21:39:59.105Z [FileSetService] FileSet.Name: 
+2026-04-24T21:39:59.105Z [FileSetService] FileSet.FileSetFiles is null: False
+2026-04-24T21:39:59.105Z [FileSetService] FileSet.FileSetFiles count: 1
+2026-04-24T21:39:59.105Z [FileSetService] FileSetFile[0]: RelativePath=ssotme-tools.json, ContentLength=448032
+2026-04-24T21:39:59.105Z [FileSetService] Creating XmlSerializer for FileSet type
+2026-04-24T21:39:59.105Z [FileSetService] Starting XML serialization
+2026-04-24T21:39:59.015Z [2026-04-24T21:39:55.492Z] "- - -" 0 - - - "-" 8487 7305610 3244 - "-" "-" "-" "-" "35.168.3.118:443"
+2026-04-24T21:39:59.015Z [2026-04-24T21:39:58.792Z] "- - -" 0 - - - "-" 855 52195 138 - "-" "-" "-" "-" "100.29.198.243:443"
+2026-04-24T21:39:58.922Z Version comparison: latest=v2026-04-23.13.03 (ri=20260423190756), current=2026-04-24.17.33 (ri=0)
+2026-04-24T21:39:58.922Z CLI update available! Current version: 2026-04-24.17.33; latest version: v2026-04-23.13.03
+2026-04-24T21:39:55.457Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+2026-04-24T21:39:55.457Z       Executing endpoint 'HTTP: POST /'
+2026-04-24T21:39:55.456Z info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+2026-04-24T21:39:55.456Z       Request starting HTTP/1.1 POST http://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - application/json;+charset=utf-8 -
+2026-04-24T21:39:54.998Z [2026-04-24T21:39:54.019Z] "POST / HTTP/1.1" 200 - via_upstream - "-" 4444 667 886 886 "172.56.26.137" "-" "e0d62886-7a17-4de8-8cbb-4109e242bb49" "172.20.46.101:80" "127.0.0.6:0" "10.0.95.147:8012"
+2026-04-24T21:39:54.987Z info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+2026-04-24T21:39:54.987Z       Request finished HTTP/1.1 POST https://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - 200 667 application/json 898.3971ms
+2026-04-24T21:39:54.905Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+2026-04-24T21:39:54.905Z       Executed endpoint 'HTTP: POST /'
+2026-04-24T21:39:54.904Z info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+2026-04-24T21:39:54.904Z       Write content with HTTP Response ContentType of application/json
+2026-04-24T21:39:54.592Z [FileSetService] XML serialization complete. Result length: 695
+2026-04-24T21:39:54.592Z [FileSetService] XML first 500 chars: <?xml version="1.0" encoding="utf-16"?>
+2026-04-24T21:39:54.592Z <FileSet xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+2026-04-24T21:39:54.592Z   <FileSetId>53cdee35-141f-4cc3-b3eb-a2b615107d18</FileSetId>
+2026-04-24T21:39:54.592Z   <CreatedOn>2026-04-24T21:39:54.3992361Z</CreatedOn>
+2026-04-24T21:39:54.592Z   <FileSetFiles>
+2026-04-24T21:39:54.592Z     <FileSetFile>
+2026-04-24T21:39:54.592Z       <FileSetFileId>f469f7ee-c974-4bf3-b779-07dd279bb114</FileSetFileId>
+2026-04-24T21:39:54.592Z       <FileSetId>53cdee35-141f-4cc3-b3eb-a2b615107d18</FileSetId>
+2026-04-24T21:39:54.592Z       <RelativePath>auth-result.json</RelativePath>
+2026-04-24T21:39:54.592Z       <F
+2026-04-24T21:39:54.588Z [FileSetService] Starting XML serialization
+2026-04-24T21:39:54.486Z [FileSetService] FileSet.FileSetId: 53cdee35-141f-4cc3-b3eb-a2b615107d18
+2026-04-24T21:39:54.486Z [FileSetService] FileSet.Name: 
+2026-04-24T21:39:54.486Z [FileSetService] FileSet.FileSetFiles is null: False
+2026-04-24T21:39:54.486Z [FileSetService] FileSet.FileSetFiles count: 1
+2026-04-24T21:39:54.486Z [FileSetService] FileSetFile[0]: RelativePath=auth-result.json, ContentLength=39
+2026-04-24T21:39:54.486Z [FileSetService] Creating XmlSerializer for FileSet type
+2026-04-24T21:39:54.401Z [FileSetService] ToXml called
+2026-04-24T21:39:54.401Z [FileSetService] FileSet is null: False
+2026-04-24T21:39:54.399Z [FileSetService] AddFile called with relativePath: auth-result.json, overwriteMode: Always
+2026-04-24T21:39:54.399Z [FileSetService] File contents length: 39
+2026-04-24T21:39:54.399Z [FileSetService] Adding new file with path: auth-result.json
+2026-04-24T21:39:54.208Z info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+2026-04-24T21:39:54.208Z       Executing endpoint 'HTTP: POST /'
+2026-04-24T21:39:54.089Z info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+2026-04-24T21:39:54.089Z       Request starting HTTP/1.1 POST http://ssotme-cli-cloud-bridge-v2026-04-24-1728-cmvbd4phczmeg.cpln.app/ - application/json;+charset=utf-8 -
+2026-04-24T21:38:26.891Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:38:26.891Z       Application is shutting down...
+2026-04-24T21:37:42.280Z info: Microsoft.Hosting.Lifetime[14]
+2026-04-24T21:37:42.280Z       Now listening on: http://0.0.0.0:30000
+2026-04-24T21:37:42.280Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:37:42.280Z       Application started. Press Ctrl+C to shut down.
+2026-04-24T21:37:42.280Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:37:42.280Z       Hosting environment: Production
+2026-04-24T21:37:42.280Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:37:42.280Z       Content root path: /app
+2026-04-24T21:37:41.997Z warn: Microsoft.AspNetCore.Hosting.Diagnostics[15]
+2026-04-24T21:37:41.997Z       Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://0.0.0.0:30000'.
+2026-04-24T21:37:34.086Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:37:34.086Z       Application is shutting down...
+2026-04-24T21:37:25.397Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:37:25.397Z       Application started. Press Ctrl+C to shut down.
+2026-04-24T21:37:25.397Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:37:25.397Z       Hosting environment: Production
+2026-04-24T21:37:25.397Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:37:25.397Z       Content root path: /app
+2026-04-24T21:37:25.396Z info: Microsoft.Hosting.Lifetime[14]
+2026-04-24T21:37:25.396Z       Now listening on: http://0.0.0.0:30000
+2026-04-24T21:37:25.190Z warn: Microsoft.AspNetCore.Hosting.Diagnostics[15]
+2026-04-24T21:37:25.190Z       Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://0.0.0.0:30000'.
+2026-04-24T21:30:31.088Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:30:31.088Z       Application started. Press Ctrl+C to shut down.
+2026-04-24T21:30:31.088Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:30:31.088Z       Hosting environment: Production
+2026-04-24T21:30:31.088Z info: Microsoft.Hosting.Lifetime[0]
+2026-04-24T21:30:31.088Z       Content root path: /app
+2026-04-24T21:30:31.087Z info: Microsoft.Hosting.Lifetime[14]
+2026-04-24T21:30:31.087Z       Now listening on: http://0.0.0.0:30000
+2026-04-24T21:30:30.799Z warn: Microsoft.AspNetCore.Hosting.Diagnostics[15]
+2026-04-24T21:30:30.799Z       Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://0.0.0.0:30000'.
