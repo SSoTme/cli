@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-23.13.03";
+        public string CLI_VERSION = "2026-04-24.13.06";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -74,12 +74,13 @@ namespace SSoTme.OST.Lib.CLIOptions
         public string ResolvedToolName { get; private set; }    // e.g. "effortless/effortless/rulebook-to-xlsx"
         private bool _suppressGenericToolNotFoundError = false;
         private bool _showedBootMessage = false;
+        private int _bootMessageLength = 0;
 
         private void ClearBootLine()
         {
             if (!_showedBootMessage) return;
             _showedBootMessage = false;
-            var clearLine = "\r" + new string(' ', "Waiting for the remote transpiler to boot up ...".Length) + "\r";
+            var clearLine = "\r" + new string(' ', _bootMessageLength) + "\r";
             Console.Write(clearLine);
             Console.WriteLine();
             Console.WriteLine();
@@ -2670,7 +2671,7 @@ Seed Url: ");
                                     if (!newUrl.EndsWith("/")) newUrl += "/";
                                     this.SetToolUrl(SSoTmeCLIHandler.TRANSPILERS_LISTER_TOOL_NAME, newUrl);
                                     File.WriteAllText(bridgeIdxPath, newIdx.ToString());
-                                    if (this.debug) Console.WriteLine($"DEBUG: Bridge auto-updated to v{bridgeInfo["version"]?.Value<string>()} (idx {newIdx}): {newUrl}");
+                                    if (this.debug) Console.WriteLine($"DEBUG: Bridge auto-updated to {bridgeInfo["version"]?.Value<string>()} (idx {newIdx}): {newUrl}");
                                 }
                             }
                         }
@@ -2859,6 +2860,15 @@ Seed Url: ");
             {
                 File.Delete(cliVersionPath);
                 if (this.debug) Console.WriteLine($"DEBUG: deleted {cliVersionPath}");
+            }
+            // Also reset the bridge version index so -refreshTools picks up the
+            // current latestBridgeVersion from Airtable unconditionally, not only
+            // when versionIndex has advanced past the locally-cached value.
+            var bridgeIdxPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "bridge_version_index");
+            if (File.Exists(bridgeIdxPath))
+            {
+                File.Delete(bridgeIdxPath);
+                if (this.debug) Console.WriteLine($"DEBUG: deleted {bridgeIdxPath}");
             }
 
             _hasRunRemoteToolsUpdate = false;
@@ -3733,7 +3743,9 @@ Seed Url: ");
                         {
                             if (!_showedBootMessage)
                             {
-                                Console.Write("Waiting for the remote transpiler to boot up    ");
+                                var bootMessage = $"Waiting for the remote transpiler '{this.transpiler}' to boot up    ";
+                                Console.Write(bootMessage);
+                                _bootMessageLength = bootMessage.Length;
                                 _showedBootMessage = true;
                             }
                             Console.Write("\b\b\b" + dots[dotIndex % 4]);
