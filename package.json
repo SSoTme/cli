@@ -1,7 +1,7 @@
 {
   "name": "ssotme",
-  "version": "2026-04-23.13.03",
-  "cloud_bridge_url": "https://ssotme-cli-cloud-bridge-v2026-04-16-1332-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/",
+  "version": "2026-04-24.18.12",
+  "cloud_bridge_url": "https://ssotme-cli-cloud-bridge-v2026-04-24-1812-cmvbd4phczmeg.7pktzg2z971j0.cpln.app/",
   "dotnet": "8.0.410",
   "description": "",
   "bin": {
