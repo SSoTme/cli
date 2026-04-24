@@ -4253,6 +4253,11 @@ Seed Url: ");
                 ? "DEBUG: POST https://proxy.effortlessapi.com/ (via RabbitMQ proxy)"
                 : $"DEBUG: POST {this.targetUrl}");
             var postUrl = $"{this.targetUrl ?? "https://proxy.effortlessapi.com/"}";
+            // Friendly identifier for retry log lines — prefer the raw user-supplied name,
+            // fall back to the sanitized transpiler name, then the POST URL.
+            var transpilerLabel = !String.IsNullOrEmpty(this._rawTranspilerArg)
+                ? this._rawTranspilerArg
+                : (!String.IsNullOrEmpty(this.transpiler) ? this.transpiler : postUrl);
             System.Net.Http.HttpResponseMessage response = null;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             const int maxRetries = 10;
@@ -4278,7 +4283,7 @@ Seed Url: ");
                     retryCount++;
                     string failedHost;
                     try { failedHost = new Uri(postUrl).Host; } catch { failedHost = postUrl; }
-                    CliLog.LogLine($"Host not found: {failedHost}. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
+                    CliLog.LogLine($"[{transpilerLabel}] Host not found: {failedHost}. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
@@ -4302,7 +4307,7 @@ Seed Url: ");
                             return;
                         }
                     }
-                    CliLog.LogLine($"Connection error ({se2.SocketErrorCode}). Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
+                    CliLog.LogLine($"[{transpilerLabel}] Connection error ({se2.SocketErrorCode}). Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
                 }
@@ -4311,7 +4316,7 @@ Seed Url: ");
                     ex.Message.Contains("SSL"))
                 {
                     retryCount++;
-                    CliLog.LogLine($"SSL connection error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
+                    CliLog.LogLine($"[{transpilerLabel}] SSL connection error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                     if (this.debug) Console.WriteLine($"DEBUG: {ex.Message}");
                     await System.Threading.Tasks.Task.Delay(6000);
                     continue;
@@ -4324,7 +4329,7 @@ Seed Url: ");
                 {
                     retryCount++;
                     var retryContent = await response.Content.ReadAsStringAsync();
-                    CliLog.LogLine($"Remote transpiler not ready ({response.StatusCode}). Retrying... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
+                    CliLog.LogLine($"[{transpilerLabel}] Remote transpiler not ready ({response.StatusCode}). Retrying... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                     if (this.debug) Console.WriteLine($"DEBUG: Response body: {retryContent}");
                     await System.Threading.Tasks.Task.Delay(5000);
                     continue;
@@ -4338,7 +4343,7 @@ Seed Url: ");
                         badRequestContent.Contains("SSL") && badRequestContent.Contains("error"))
                     {
                         retryCount++;
-                        CliLog.LogLine($"Remote transpiler SSL error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
+                        CliLog.LogLine($"[{transpilerLabel}] Remote transpiler SSL error. Retrying in 6 seconds... (attempt {retryCount}/{maxRetries})", ConsoleColor.Yellow);
                         if (this.debug) Console.WriteLine($"DEBUG: Response body: {badRequestContent}");
                         await System.Threading.Tasks.Task.Delay(6000);
                         continue;
