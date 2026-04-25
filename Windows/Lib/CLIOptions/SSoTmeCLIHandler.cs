@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-25.21.11";
+        public string CLI_VERSION = "2026-04-25.21.22";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -1778,21 +1778,12 @@ Seed Url: ");
                     }
                 }
 
-                // Register project with remote DB (FIRE-AND-FORGET telemetry only).
-                // The build never waits for cli-cloud-bridge — it's stats data for our benefit, not a gate.
-                // Deduped per-process so a multi-step build doesn't re-register on every transpile.
-                if (!string.IsNullOrEmpty(this.jwt) && this.AICaptureProject != null
-                    && !string.IsNullOrEmpty(this.AICaptureProject.SSoTmeProjectId)
-                    && this.AICaptureProject.SSoTmeProjectId != Guid.Empty.ToString()
-                    && !this.skipRemoteToolsLookup
-                    && MyEffortlessAPIService.ShouldRegisterProject(this.AICaptureProject.SSoTmeProjectId))
-                {
-                    var jwtSnap = this.jwt;
-                    var uuidSnap = this.AICaptureProject.SSoTmeProjectId;
-                    var nameSnap = this.AICaptureProject.Name;
-                    FireAndForgetTelemetry(() =>
-                        new MyEffortlessAPIService().RegisterProject(jwtSnap, uuidSnap, nameSnap));
-                }
+                // RegisterProject telemetry was REMOVED from the build path on 2026-04-25.
+                // It mutated process state (CurrentDirectory) and leaked exceptions to the
+                // user's terminal even with stdout/stderr redirection, because downstream
+                // build steps observed the temp-dir CWD AFTER our finally restored it (race),
+                // or the empty-folder cleanup walked the deleted tempDir. Telemetry must
+                // NEVER run in the build path. If we ever re-add it, do it out-of-process.
 
                 if (this.authenticate)
                 {
@@ -4258,27 +4249,11 @@ Seed Url: ");
             payload.SaveCLIOptions(this);
             this.conditionallyPopulateTranspiler(payload, this.transpiler);
 
-            // -------- QUOTA: pre-transpile telemetry (FIRE-AND-FORGET) --------
-            // cli-cloud-bridge is purely usage telemetry. The build NEVER waits for it.
-            // Earlier versions of this code injected available_quota/project_uuid/has_unlimited_quota
-            // params and showed an over-quota warning before the transpile — that path made the
-            // build dependent on a stats endpoint and added cpln cold-start latency to every step.
-            // Telemetry has no business gating the build. If we ever bring quota enforcement back,
-            // it has to live on a hot cache the bridge updates async, not in this critical path.
-            string quotaTranspilerKey = this.ResolvedToolName;
-            string quotaProjectUuid = this.AICaptureProject?.SSoTmeProjectId;
-            if (!String.IsNullOrEmpty(this.jwt)
-                && !String.IsNullOrEmpty(quotaTranspilerKey)
-                && !String.IsNullOrEmpty(quotaProjectUuid)
-                && quotaProjectUuid != Guid.Empty.ToString()
-                && !this.skipRemoteToolsLookup
-                && SSoTme.OST.Lib.Services.MyEffortlessAPIService.ShouldFetchQuota(quotaProjectUuid, quotaTranspilerKey))
-            {
-                var jwtSnap = this.jwt;
-                FireAndForgetTelemetry(() =>
-                    new SSoTme.OST.Lib.Services.MyEffortlessAPIService().GetQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey));
-            }
-            // -------- end QUOTA: pre-transpile telemetry --------
+            // QUOTA telemetry (pre- and post-transpile) was REMOVED from the build path on
+            // 2026-04-25. The cli-cloud-bridge call mutated process state and leaked
+            // exceptions to the terminal even with stdout/stderr redirection. NOTHING gets
+            // to run on the build path that talks to the bridge. Quota enforcement, if
+            // needed, must live entirely out-of-process.
 
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
@@ -4705,50 +4680,8 @@ Seed Url: ");
                     // Preserve CLI debug flag from request to response
                     responsePayload.CLIDebug = this.debug;
 
-                    // -------- QUOTA: post-transpile telemetry (FIRE-AND-FORGET) --------
-                    // If the transpiler emitted quota-report.json (legacy/optional), fire the
-                    // UpdateQuota call on a background thread. The main thread does NOT wait —
-                    // setting this.result below proceeds immediately. Telemetry never gates
-                    // SaveFileSet or any subsequent build step.
-                    if (!String.IsNullOrEmpty(this.jwt) && !String.IsNullOrEmpty(quotaProjectUuid) && !String.IsNullOrEmpty(quotaTranspilerKey))
-                    {
-                        try
-                        {
-                            byte[] zippedOutput = responsePayload?.TranspileRequest?.ZippedOutputFileSet;
-                            if (zippedOutput != null && zippedOutput.Length > 0)
-                            {
-                                var outputFsXml = zippedOutput.UnzipToString();
-                                var outputFs = outputFsXml.ToFileSet();
-                                var report = outputFs?.FileSetFiles?.FirstOrDefault(f =>
-                                    f.RelativePath != null &&
-                                    f.RelativePath.Trim('/', '\\').Equals("quota-report.json", StringComparison.OrdinalIgnoreCase));
-                                if (report != null)
-                                {
-                                    var json = report.GetFileSetFileContents();
-                                    if (!String.IsNullOrWhiteSpace(json))
-                                    {
-                                        var parsed = Newtonsoft.Json.Linq.JObject.Parse(json);
-                                        var functionCountToken = parsed["functionCount"];
-                                        if (functionCountToken != null && functionCountToken.Type != Newtonsoft.Json.Linq.JTokenType.Null)
-                                        {
-                                            var newNativeCount = functionCountToken.Value<decimal>();
-                                            if (SSoTme.OST.Lib.Services.MyEffortlessAPIService.ShouldUpdateQuota(quotaProjectUuid, quotaTranspilerKey, newNativeCount))
-                                            {
-                                                var jwtSnap = this.jwt;
-                                                FireAndForgetTelemetry(() =>
-                                                    new SSoTme.OST.Lib.Services.MyEffortlessAPIService().UpdateQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey, newNativeCount));
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            if (this.debug) Console.WriteLine($"DEBUG: updateQuota post-processing threw: {ex.Message}");
-                        }
-                    }
-                    // -------- end QUOTA: post-transpile telemetry --------
+                    // QUOTA post-transpile telemetry was REMOVED on 2026-04-25 — see notes
+                    // at the pre-transpile block above. NO bridge calls run in the build path.
 
                     // Set result LAST — this unblocks waitForCook.Wait() on the main thread.
                     // Any work that mutates process-global state (CWD, env vars) must run
