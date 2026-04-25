@@ -220,7 +220,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 File.WriteAllText(envFI.FullName, envTemplate);
             }
 
-            var ssotFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "SSoT", "single-source-of-truth.json"));
+            var ssotFI = new FileInfo(Path.Combine(Environment.CurrentDirectory, "effortless-rulebook", "effortless-rulebook.json"));
             if (!ssotFI.Directory.Exists) ssotFI.Directory.Create();
             if (!ssotFI.Exists) File.WriteAllText(ssotFI.FullName, $"{{\"project\":\n  {{\n    \"name\":\"{projectName}\"\n  }}\n}}");
         }
