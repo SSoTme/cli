@@ -20,6 +20,27 @@ namespace SSoTme.OST.Lib.Services
     /// </summary>
     public class MyEffortlessAPIService
     {
+        // cli-cloud-bridge is purely usage telemetry and must never block the build.
+        // These caches dedupe per-process so we don't re-register the same project / re-quota
+        // the same transpiler key on every transpile in a multi-step build.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _registeredProjectsThisProcess = new();
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _quotaSentThisProcess = new();
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _quotaUpdatedThisProcess = new();
+
+        // True the first time a session marks the project as registered. Returns false on
+        // subsequent calls so the caller can skip the network hop entirely.
+        public static bool ShouldRegisterProject(string projectUuid)
+            => !string.IsNullOrEmpty(projectUuid) && _registeredProjectsThisProcess.TryAdd(projectUuid, 0);
+
+        public static bool ShouldFetchQuota(string projectUuid, string transpilerKey)
+            => !string.IsNullOrEmpty(projectUuid) && !string.IsNullOrEmpty(transpilerKey)
+               && _quotaSentThisProcess.TryAdd($"{projectUuid}|{transpilerKey}", 0);
+
+        public static bool ShouldUpdateQuota(string projectUuid, string transpilerKey, decimal nativeCount)
+            => !string.IsNullOrEmpty(projectUuid) && !string.IsNullOrEmpty(transpilerKey)
+               && _quotaUpdatedThisProcess.TryAdd($"{projectUuid}|{transpilerKey}|{nativeCount}", 0);
+
+
         /// <summary>
         /// Handles global user authentication via email magic link through list-transpilers tool.
         /// Stores the JWT in ~/.ssotme/

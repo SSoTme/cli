@@ -1778,18 +1778,24 @@ Seed Url: ");
                     }
                 }
 
-                // Register project with remote DB (best effort, requires JWT + loaded project)
+                // Register project with remote DB (FIRE-AND-FORGET telemetry only).
+                // The build never waits for cli-cloud-bridge — it's stats data for our benefit, not a gate.
+                // Deduped per-process so a multi-step build doesn't re-register on every transpile.
                 if (!string.IsNullOrEmpty(this.jwt) && this.AICaptureProject != null
                     && !string.IsNullOrEmpty(this.AICaptureProject.SSoTmeProjectId)
                     && this.AICaptureProject.SSoTmeProjectId != Guid.Empty.ToString()
-                    && !this.skipRemoteToolsLookup)
+                    && !this.skipRemoteToolsLookup
+                    && MyEffortlessAPIService.ShouldRegisterProject(this.AICaptureProject.SSoTmeProjectId))
                 {
-                    try
+                    var jwtSnap = this.jwt;
+                    var uuidSnap = this.AICaptureProject.SSoTmeProjectId;
+                    var nameSnap = this.AICaptureProject.Name;
+                    var debugSnap = this.debug;
+                    System.Threading.Tasks.Task.Run(() =>
                     {
-                        new MyEffortlessAPIService().RegisterProject(
-                            this.jwt, this.AICaptureProject.SSoTmeProjectId, this.AICaptureProject.Name);
-                    }
-                    catch (Exception ex) { if (this.debug) Console.WriteLine($"DEBUG: RegisterProject failed: {ex.Message}"); }
+                        try { new MyEffortlessAPIService().RegisterProject(jwtSnap, uuidSnap, nameSnap); }
+                        catch (Exception ex) { if (debugSnap) Console.WriteLine($"DEBUG: RegisterProject (background) failed: {ex.Message}"); }
+                    });
                 }
 
                 if (this.authenticate)
@@ -2769,11 +2775,46 @@ Seed Url: ");
             return handler;
         }
 
+        // Set once per process: if the cached cli-cloud-bridge URL fails, we delete it and
+        // retry on the hardcoded fallback ONCE. After that, no more recovery attempts this run —
+        // the bridge is genuinely down and we just degrade silently.
+        private static int _cloudBridgeRecoveryAttempted = 0;
+
         /// <summary>
         /// Invokes a tool via the transpiler mechanism and returns the content of a specific output file.
-        /// Used by MyEffortlessAPIService to call cli-cloud-bridge for auth operations.
+        /// Used by MyEffortlessAPIService to call cli-cloud-bridge for auth/quota/registration.
+        /// On failure, if the cached URL differs from the hardcoded fallback, deletes the cache
+        /// entry and retries once with the fallback (self-heals when the cached URL goes stale).
         /// </summary>
         public static string InvokeToolAndGetOutput(string commandLine, string outputFileName)
+        {
+            var result = InvokeToolAndGetOutputOnce(commandLine, outputFileName);
+            if (!String.IsNullOrEmpty(result)) return result;
+
+            // First failure of this process — try recovering by clearing a stale cached URL.
+            if (System.Threading.Interlocked.CompareExchange(ref _cloudBridgeRecoveryAttempted, 1, 0) == 0)
+            {
+                try
+                {
+                    var globalToolUrlsPath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "tool_urls.json");
+                    if (File.Exists(globalToolUrlsPath))
+                    {
+                        var urlMappings = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(globalToolUrlsPath)) ?? new Dictionary<string, string>();
+                        if (urlMappings.TryGetValue(TRANSPILERS_LISTER_TOOL_NAME, out var cachedUrl)
+                            && !String.Equals(cachedUrl?.TrimEnd('/'), LATEST_TRANSPILERS_LISTER_URL?.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+                        {
+                            urlMappings[TRANSPILERS_LISTER_TOOL_NAME] = LATEST_TRANSPILERS_LISTER_URL;
+                            File.WriteAllText(globalToolUrlsPath, JsonConvert.SerializeObject(urlMappings, Formatting.Indented));
+                            return InvokeToolAndGetOutputOnce(commandLine, outputFileName);
+                        }
+                    }
+                }
+                catch { /* recovery is best-effort */ }
+            }
+            return null;
+        }
+
+        private static string InvokeToolAndGetOutputOnce(string commandLine, string outputFileName)
         {
             var tempDir = Path.Combine(Path.GetTempPath(), $"ssotme_auth_{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDir);
@@ -4166,65 +4207,31 @@ Seed Url: ");
             payload.SaveCLIOptions(this);
             this.conditionallyPopulateTranspiler(payload, this.transpiler);
 
-            // -------- QUOTA: pre-transpile fetch --------
-            // Only attempt when this is an HTTP-direct transpiler we resolved from the remote registry
-            // (ResolvedToolName holds the canonical "author/package/tool" key). RabbitMQ-path and
-            // unresolved tools get no quota enforcement — the transpiler just runs.
-            // Null-safe: if any of these are missing, we skip silently.
-            string quotaTranspilerKey = null;
-            string quotaProjectUuid = null;
-            bool quotaAttempted = false;
-            if (this.debug)
-            {
-                Console.WriteLine($"DEBUG: Quota guard check: jwt={!String.IsNullOrEmpty(this.jwt)}, ResolvedToolName={(this.ResolvedToolName ?? "<null>")}, AICaptureProject={(this.AICaptureProject != null ? "set" : "null")}, SSoTmeProjectId={(this.AICaptureProject?.SSoTmeProjectId ?? "<null>")}, skipRemoteToolsLookup={this.skipRemoteToolsLookup}");
-            }
+            // -------- QUOTA: pre-transpile telemetry (FIRE-AND-FORGET) --------
+            // cli-cloud-bridge is purely usage telemetry. The build NEVER waits for it.
+            // Earlier versions of this code injected available_quota/project_uuid/has_unlimited_quota
+            // params and showed an over-quota warning before the transpile — that path made the
+            // build dependent on a stats endpoint and added cpln cold-start latency to every step.
+            // Telemetry has no business gating the build. If we ever bring quota enforcement back,
+            // it has to live on a hot cache the bridge updates async, not in this critical path.
+            string quotaTranspilerKey = this.ResolvedToolName;
+            string quotaProjectUuid = this.AICaptureProject?.SSoTmeProjectId;
             if (!String.IsNullOrEmpty(this.jwt)
-                && !String.IsNullOrEmpty(this.ResolvedToolName)
-                && this.AICaptureProject != null
-                && !String.IsNullOrEmpty(this.AICaptureProject.SSoTmeProjectId)
-                && this.AICaptureProject.SSoTmeProjectId != Guid.Empty.ToString()
-                && !this.skipRemoteToolsLookup)
+                && !String.IsNullOrEmpty(quotaTranspilerKey)
+                && !String.IsNullOrEmpty(quotaProjectUuid)
+                && quotaProjectUuid != Guid.Empty.ToString()
+                && !this.skipRemoteToolsLookup
+                && SSoTme.OST.Lib.Services.MyEffortlessAPIService.ShouldFetchQuota(quotaProjectUuid, quotaTranspilerKey))
             {
-                quotaTranspilerKey = this.ResolvedToolName;
-                quotaProjectUuid = this.AICaptureProject.SSoTmeProjectId;
-                try
+                var jwtSnap = this.jwt;
+                var debugSnap = this.debug;
+                System.Threading.Tasks.Task.Run(() =>
                 {
-                    var quotaInfo = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
-                        .GetQuota(this.jwt, quotaProjectUuid, quotaTranspilerKey);
-                    if (quotaInfo != null && quotaInfo.Success && !quotaInfo.Free)
-                    {
-                        quotaAttempted = true;
-
-                        // If the bridge says this transpile isn't allowed (no headroom even after
-                        // subtracting this project's share), warn the user but still proceed
-                        // per the warn-only enforcement policy.
-                        if (!quotaInfo.IsAllowedToTranspile)
-                        {
-                            Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"WARNING: Your account is over its quota limit ({quotaInfo.CurrentUsed}/{quotaInfo.Limit} units). This transpile will proceed but may incur overage charges. Please contact us to upgrade your plan: https://effortlessapi.com/rulebook/waitlist");
-                            Console.ResetColor();
-                        }
-
-                        // Inject params so the transpiler can check itself and surface a warning
-                        // in its output if it exceeds the available headroom.
-                        if (payload.CLIParams == null) payload.CLIParams = new List<string>();
-                        payload.CLIParams.Add($"available_quota={quotaInfo.AvailableNativeCount.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
-                        payload.CLIParams.Add($"project_uuid={quotaProjectUuid}");
-                        payload.CLIParams.Add($"has_unlimited_quota={(quotaInfo.HasUnlimitedQuota ? "true" : "false")}");
-                        if (this.debug)
-                            Console.WriteLine($"DEBUG: Quota for {quotaTranspilerKey}: {quotaInfo.CurrentUsed}/{quotaInfo.Limit} (peak {quotaInfo.Peak}), project prev {quotaInfo.ThisProjectTranspilerPrevious}, available native {quotaInfo.AvailableNativeCount}, allowed={quotaInfo.IsAllowedToTranspile}");
-                    }
-                    else if (this.debug)
-                    {
-                        Console.WriteLine($"DEBUG: getQuota returned null/failed (success={quotaInfo?.Success}, error={quotaInfo?.Error ?? "<null result>"})");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (this.debug) Console.WriteLine($"DEBUG: getQuota threw: {ex.Message}");
-                }
+                    try { new SSoTme.OST.Lib.Services.MyEffortlessAPIService().GetQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey); }
+                    catch (Exception ex) { if (debugSnap) Console.WriteLine($"DEBUG: getQuota (background) threw: {ex.Message}"); }
+                });
             }
-            // -------- end QUOTA: pre-transpile fetch --------
+            // -------- end QUOTA: pre-transpile telemetry --------
 
             // Set LowerHyphenName for .zfs file creation after transpiler is populated
             if (payload.Transpiler != null && !string.IsNullOrEmpty(payload.Transpiler.Name))
@@ -4651,18 +4658,12 @@ Seed Url: ");
                     // Preserve CLI debug flag from request to response
                     responsePayload.CLIDebug = this.debug;
 
-                    // -------- QUOTA: post-transpile update --------
-                    // MUST run BEFORE `this.result = responsePayload`. Setting `this.result`
-                    // unblocks the main thread's waitForCook.Wait() and it immediately runs
-                    // SaveFileSet, which reads Environment.CurrentDirectory. UpdateQuota calls
-                    // InvokeToolAndGetOutput which mutates that process-global CWD to a temp
-                    // dir. If we set result first, the main thread races in and writes files
-                    // to the wrong location while this thread is still inside the temp-dir
-                    // try block.
-                    // If we sent quota context on the way in, look for quota-report.json in the
-                    // returned FileSet, read the functionCount, and tell the bridge so it can
-                    // apply the weight + update the account's current/peak usage.
-                    if (quotaAttempted && !String.IsNullOrEmpty(quotaProjectUuid) && !String.IsNullOrEmpty(quotaTranspilerKey))
+                    // -------- QUOTA: post-transpile telemetry (FIRE-AND-FORGET) --------
+                    // If the transpiler emitted quota-report.json (legacy/optional), fire the
+                    // UpdateQuota call on a background thread. The main thread does NOT wait —
+                    // setting this.result below proceeds immediately. Telemetry never gates
+                    // SaveFileSet or any subsequent build step.
+                    if (!String.IsNullOrEmpty(this.jwt) && !String.IsNullOrEmpty(quotaProjectUuid) && !String.IsNullOrEmpty(quotaTranspilerKey))
                     {
                         try
                         {
@@ -4684,18 +4685,15 @@ Seed Url: ");
                                         if (functionCountToken != null && functionCountToken.Type != Newtonsoft.Json.Linq.JTokenType.Null)
                                         {
                                             var newNativeCount = functionCountToken.Value<decimal>();
-                                            var updateResult = new SSoTme.OST.Lib.Services.MyEffortlessAPIService()
-                                                .UpdateQuota(this.jwt, quotaProjectUuid, quotaTranspilerKey, newNativeCount);
-                                            if (this.debug && updateResult != null)
-                                                Console.WriteLine($"DEBUG: updateQuota {(updateResult.Success ? "ok" : "failed")}: delta={updateResult.Delta}, newUsed={updateResult.NewUsed}, newPeak={updateResult.NewPeak}, error={updateResult.Error}");
-
-                                            // Surface a user-visible warning if the transpiler flagged this transpile as over-quota.
-                                            var exceededToken = parsed["quotaExceeded"];
-                                            if (exceededToken != null && exceededToken.Type == Newtonsoft.Json.Linq.JTokenType.Boolean && exceededToken.Value<bool>())
+                                            if (SSoTme.OST.Lib.Services.MyEffortlessAPIService.ShouldUpdateQuota(quotaProjectUuid, quotaTranspilerKey, newNativeCount))
                                             {
-                                                Console.ForegroundColor = ConsoleColor.Yellow;
-                                                Console.WriteLine($"WARNING: This transpile exceeded your quota ({newNativeCount} units generated). Transpile succeeded; to avoid future overage charges please contact us to upgrade your plan: https://effortlessapi.com/rulebook/waitlist.");
-                                                Console.ResetColor();
+                                                var jwtSnap = this.jwt;
+                                                var debugSnap = this.debug;
+                                                System.Threading.Tasks.Task.Run(() =>
+                                                {
+                                                    try { new SSoTme.OST.Lib.Services.MyEffortlessAPIService().UpdateQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey, newNativeCount); }
+                                                    catch (Exception bgEx) { if (debugSnap) Console.WriteLine($"DEBUG: updateQuota (background) threw: {bgEx.Message}"); }
+                                                });
                                             }
                                         }
                                     }
@@ -4707,7 +4705,7 @@ Seed Url: ");
                             if (this.debug) Console.WriteLine($"DEBUG: updateQuota post-processing threw: {ex.Message}");
                         }
                     }
-                    // -------- end QUOTA: post-transpile update --------
+                    // -------- end QUOTA: post-transpile telemetry --------
 
                     // Set result LAST — this unblocks waitForCook.Wait() on the main thread.
                     // Any work that mutates process-global state (CWD, env vars) must run
