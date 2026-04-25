@@ -338,7 +338,7 @@ namespace SSoTme.OST.Lib.Services
             if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
             if (!IsValidCliParam(projectUuid) || !IsValidCliParam(transpilerKey) || !IsValidCliParam(jwt))
             {
-                Console.WriteLine("[quota] GetQuota: invalid characters in parameters, skipping");
+                // Silently skip — telemetry must never print noise to the user.
                 return null;
             }
 
@@ -367,7 +367,7 @@ namespace SSoTme.OST.Lib.Services
             if (string.IsNullOrEmpty(projectUuid) || string.IsNullOrEmpty(transpilerKey)) return null;
             if (!IsValidCliParam(projectUuid) || !IsValidCliParam(transpilerKey) || !IsValidCliParam(jwt))
             {
-                Console.WriteLine("[quota] UpdateQuota: invalid characters in parameters, skipping");
+                // Silently skip — telemetry must never print noise to the user.
                 return null;
             }
 

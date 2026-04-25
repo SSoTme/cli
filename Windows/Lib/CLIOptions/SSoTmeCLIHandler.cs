@@ -1790,12 +1790,8 @@ Seed Url: ");
                     var jwtSnap = this.jwt;
                     var uuidSnap = this.AICaptureProject.SSoTmeProjectId;
                     var nameSnap = this.AICaptureProject.Name;
-                    var debugSnap = this.debug;
-                    System.Threading.Tasks.Task.Run(() =>
-                    {
-                        try { new MyEffortlessAPIService().RegisterProject(jwtSnap, uuidSnap, nameSnap); }
-                        catch (Exception ex) { if (debugSnap) Console.WriteLine($"DEBUG: RegisterProject (background) failed: {ex.Message}"); }
-                    });
+                    FireAndForgetTelemetry(() =>
+                        new MyEffortlessAPIService().RegisterProject(jwtSnap, uuidSnap, nameSnap));
                 }
 
                 if (this.authenticate)
@@ -2781,6 +2777,33 @@ Seed Url: ");
         private static int _cloudBridgeRecoveryAttempted = 0;
 
         /// <summary>
+        /// Runs a best-effort telemetry action on a background thread. Guaranteed non-blocking,
+        /// non-printing, non-throwing. ANY cli-cloud-bridge call that isn't an explicit
+        /// user-driven auth flow MUST go through this — telemetry must never gate or noise up a build.
+        /// </summary>
+        public static void FireAndForgetTelemetry(Action action)
+        {
+            if (action == null) return;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                var origOut = Console.Out;
+                var origErr = Console.Error;
+                try
+                {
+                    Console.SetOut(System.IO.TextWriter.Null);
+                    Console.SetError(System.IO.TextWriter.Null);
+                    try { action(); } catch { /* swallow — telemetry must never throw */ }
+                }
+                catch { /* swallow */ }
+                finally
+                {
+                    try { Console.SetOut(origOut); } catch { }
+                    try { Console.SetError(origErr); } catch { }
+                }
+            });
+        }
+
+        /// <summary>
         /// Invokes a tool via the transpiler mechanism and returns the content of a specific output file.
         /// Used by MyEffortlessAPIService to call cli-cloud-bridge for auth/quota/registration.
         /// On failure, if the cached URL differs from the hardcoded fallback, deletes the cache
@@ -2816,9 +2839,30 @@ Seed Url: ");
 
         private static string InvokeToolAndGetOutputOnce(string commandLine, string outputFileName)
         {
-            var tempDir = Path.Combine(Path.GetTempPath(), $"ssotme_auth_{Guid.NewGuid():N}");
-            Directory.CreateDirectory(tempDir);
-            var savedDir = Environment.CurrentDirectory;
+            // Best-effort cloud-bridge call — must NEVER leak exceptions or noise to the
+            // user's terminal. The actual command (e.g. airtable-to-rulebook) has already
+            // succeeded by the time we get here for quota/registration; any failure below
+            // should silently degrade.
+            string tempDir = null;
+            string savedDir = null;
+            var origOut = Console.Out;
+            var origErr = Console.Error;
+            try
+            {
+                tempDir = Path.Combine(Path.GetTempPath(), $"ssotme_auth_{Guid.NewGuid():N}");
+                Directory.CreateDirectory(tempDir);
+                savedDir = Environment.CurrentDirectory;
+            }
+            catch
+            {
+                // If we can't even set up the temp dir, just give up silently.
+                return null;
+            }
+
+            // Swallow any stdout/stderr produced inside the bridge call so transient
+            // path/IO errors from the inner pipeline don't reach the user.
+            Console.SetOut(System.IO.TextWriter.Null);
+            Console.SetError(System.IO.TextWriter.Null);
 
             try
             {
@@ -2878,10 +2922,17 @@ Seed Url: ");
 
                 return null;
             }
+            catch
+            {
+                // Absolute backstop — a best-effort bridge call must never throw.
+                return null;
+            }
             finally
             {
-                Environment.CurrentDirectory = savedDir;
-                try { Directory.Delete(tempDir, true); } catch { }
+                try { Console.SetOut(origOut); } catch { }
+                try { Console.SetError(origErr); } catch { }
+                try { if (savedDir != null) Environment.CurrentDirectory = savedDir; } catch { }
+                try { if (tempDir != null) Directory.Delete(tempDir, true); } catch { }
             }
         }
 
@@ -4224,12 +4275,8 @@ Seed Url: ");
                 && SSoTme.OST.Lib.Services.MyEffortlessAPIService.ShouldFetchQuota(quotaProjectUuid, quotaTranspilerKey))
             {
                 var jwtSnap = this.jwt;
-                var debugSnap = this.debug;
-                System.Threading.Tasks.Task.Run(() =>
-                {
-                    try { new SSoTme.OST.Lib.Services.MyEffortlessAPIService().GetQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey); }
-                    catch (Exception ex) { if (debugSnap) Console.WriteLine($"DEBUG: getQuota (background) threw: {ex.Message}"); }
-                });
+                FireAndForgetTelemetry(() =>
+                    new SSoTme.OST.Lib.Services.MyEffortlessAPIService().GetQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey));
             }
             // -------- end QUOTA: pre-transpile telemetry --------
 
@@ -4688,12 +4735,8 @@ Seed Url: ");
                                             if (SSoTme.OST.Lib.Services.MyEffortlessAPIService.ShouldUpdateQuota(quotaProjectUuid, quotaTranspilerKey, newNativeCount))
                                             {
                                                 var jwtSnap = this.jwt;
-                                                var debugSnap = this.debug;
-                                                System.Threading.Tasks.Task.Run(() =>
-                                                {
-                                                    try { new SSoTme.OST.Lib.Services.MyEffortlessAPIService().UpdateQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey, newNativeCount); }
-                                                    catch (Exception bgEx) { if (debugSnap) Console.WriteLine($"DEBUG: updateQuota (background) threw: {bgEx.Message}"); }
-                                                });
+                                                FireAndForgetTelemetry(() =>
+                                                    new SSoTme.OST.Lib.Services.MyEffortlessAPIService().UpdateQuota(jwtSnap, quotaProjectUuid, quotaTranspilerKey, newNativeCount));
                                             }
                                         }
                                     }
