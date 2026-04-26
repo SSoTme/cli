@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-25.21.22";
+        public string CLI_VERSION = "2026-04-25.21.50";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -136,7 +136,11 @@ namespace SSoTme.OST.Lib.CLIOptions
             var cliOptions = new SSoTmeCLIHandler();
             cliOptions.args = args;
             cliOptions.ParseCommand();
-            cliOptions.CheckForUpdateNotice();
+            // 2026-04-25: CheckForUpdateNotice DISABLED. It made an HTTP call to
+            // cli-cloud-bridge (RunRemoteToolsRefresh) and a GitHub API call
+            // (CheckForGitHubUpdate) on EVERY invocation, including builds. Both
+            // could block startup. Update checks must not run inline with builds.
+            // cliOptions.CheckForUpdateNotice();
             return cliOptions;
         }
 
@@ -1733,48 +1737,24 @@ Seed Url: ");
                 var zfsFileSetFile = this.ZFSFileSetFile;
                 if (!this.authenticate && !this.projectLogin && !this.logout && !this.skipRemoteToolsLookup)
                 {
-                    // Check project-level EFFORTLESS_JWT first (takes priority over global login)
+                    // 2026-04-25: NO synchronous bridge calls on the build startup path.
+                    // Previously this block did expiry checks, RefreshProjectToken, and
+                    // CheckLoginStatus → all of which printed "Refreshing session..." and
+                    // blocked on a flaky cli-cloud-bridge HTTP call before any build work
+                    // could start. Now we just use whatever JWT is on disk, expired or not.
+                    // Downstream transpilers can fail with a clear "token expired, run
+                    // `effortless login`" if they actually need a fresh token. Build path
+                    // never blocks on auth.
                     var envFile = SsotmeEnvFile.TryLoadFromNearestProject(this.debug);
                     var projectJwt = envFile?.GetValue("EFFORTLESS_JWT");
                     if (!string.IsNullOrEmpty(projectJwt))
                     {
-                        if (this.debug) Console.WriteLine("DEBUG: Found EFFORTLESS_JWT in effortless.env");
-                        if (MyEffortlessAPIService.IsJwtExpired(projectJwt))
-                        {
-                            if (this.debug) Console.WriteLine("DEBUG: Project JWT is expired, attempting refresh...");
-                            var projectRoot = FindNearestProjectRoot();
-                            if (projectRoot != null)
-                            {
-                                var envFilePath = Path.Combine(projectRoot, "effortless.env");
-                                var refreshed = new MyEffortlessAPIService().RefreshProjectToken(envFilePath, projectJwt);
-                                if (!string.IsNullOrEmpty(refreshed))
-                                {
-                                    this.jwt = refreshed;
-                                    var refreshedEmail = MyEffortlessAPIService.GetEmailFromJwt(refreshed);
-                                    Console.WriteLine(string.IsNullOrEmpty(refreshedEmail)
-                                        ? "Using effortless project credentials."
-                                        : $"Using effortless project credentials, logged in as: {refreshedEmail}");
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Warning: Project EFFORTLESS_JWT expired and refresh failed. Falling back to global login.");
-                                    this.jwt = new MyEffortlessAPIService().CheckLoginStatus();
-                                }
-                            }
-                        }
-                        else
-                        {
-                            this.jwt = projectJwt;
-                            var projectEmail = MyEffortlessAPIService.GetEmailFromJwt(projectJwt);
-                            Console.WriteLine(string.IsNullOrEmpty(projectEmail)
-                                ? "Using effortless project credentials."
-                                : $"Using effortless project credentials, logged in as: {projectEmail}");
-                        }
+                        this.jwt = projectJwt;
                     }
                     else
                     {
-                        // No project JWT — fall back to global login
-                        this.jwt = new MyEffortlessAPIService().CheckLoginStatus();
+                        // Use stored global JWT as-is. No expiry check, no refresh.
+                        this.jwt = new MyEffortlessAPIService().GetStoredJWTToken();
                     }
                 }
 
@@ -2802,6 +2782,13 @@ Seed Url: ");
         /// </summary>
         public static string InvokeToolAndGetOutput(string commandLine, string outputFileName)
         {
+            // 2026-04-25: cli-cloud-bridge is COMPLETELY DISABLED in this build. Every bridge
+            // call (auth refresh, quota, project registration, token validation) had been
+            // injecting blocking network I/O and CWD/Console mutations into the build path.
+            // Until the bridge is moved out-of-process, this method short-circuits to null —
+            // ALL callers must already treat null as "skip / no-op / pretend it worked".
+            return null;
+#pragma warning disable CS0162 // unreachable code, kept for when the bridge is restored
             var result = InvokeToolAndGetOutputOnce(commandLine, outputFileName);
             if (!String.IsNullOrEmpty(result)) return result;
 
