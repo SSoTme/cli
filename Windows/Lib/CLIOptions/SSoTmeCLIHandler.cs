@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-04-26.18.29";
+        public string CLI_VERSION = "2026-05-13.17.27";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -2522,8 +2522,53 @@ Seed Url: ");
         /// Called from CheckForUpdateNotice (on CLI version change) and TryGetUrlFromRemoteTools
         /// (when a tool is not found in the cached index).
         /// </summary>
-        private void RunRemoteToolsRefresh(string remoteToolsDir, string cliVersionPath, string cachedCliVersion)
+        /// <summary>
+        /// Prints a loud, impossible-to-miss banner describing exactly why we are about to
+        /// hit cli-cloud-bridge. EVERY call to RunRemoteToolsRefresh must produce one of these.
+        /// If you see this banner you should be able to identify the root-cause trigger
+        /// without grepping the codebase.
+        /// </summary>
+        private void PrintCloudBridgeTriggerBanner(string triggerTitle, string triggerDetails, string cachedCliVersion)
         {
+            var stack = new System.Diagnostics.StackTrace(2, true);
+            var caller = stack.FrameCount > 0 ? stack.GetFrame(0) : null;
+            var callerInfo = caller != null
+                ? $"{caller.GetMethod()?.DeclaringType?.Name}.{caller.GetMethod()?.Name} ({System.IO.Path.GetFileName(caller.GetFileName())}:{caller.GetFileLineNumber()})"
+                : "unknown";
+
+            var savedFg = Console.ForegroundColor;
+            var savedBg = Console.BackgroundColor;
+            try
+            {
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.BackgroundColor = ConsoleColor.Blue;
+                Console.WriteLine("================================================================================");
+                Console.WriteLine($"  CLOUD-BRIDGE CALL TRIGGERED: {triggerTitle}");
+                Console.WriteLine("================================================================================");
+                Console.WriteLine($"  WHY:        {triggerDetails}");
+                Console.WriteLine($"  CALLED BY:  {callerInfo}");
+                Console.WriteLine($"  CLI VER:    current={this.CLI_VERSION}, cached={cachedCliVersion ?? "(none)"}");
+                Console.WriteLine($"  CWD:        {Environment.CurrentDirectory}");
+                Console.WriteLine($"  TIME:       {DateTime.UtcNow:O}");
+                Console.WriteLine($"  COMMAND:    {this.commandLine}");
+                Console.WriteLine("================================================================================");
+            }
+            finally
+            {
+                Console.ForegroundColor = savedFg;
+                Console.BackgroundColor = savedBg;
+            }
+        }
+
+        private void RunRemoteToolsRefresh(string remoteToolsDir, string cliVersionPath, string cachedCliVersion, string triggerTitle, string triggerDetails)
+        {
+            if (String.IsNullOrWhiteSpace(triggerTitle))
+                throw new ArgumentException("RunRemoteToolsRefresh requires a non-empty triggerTitle explaining why the cloud-bridge is being called.", nameof(triggerTitle));
+            if (String.IsNullOrWhiteSpace(triggerDetails))
+                throw new ArgumentException("RunRemoteToolsRefresh requires non-empty triggerDetails explaining the ground-truth reason for the cloud-bridge call.", nameof(triggerDetails));
+
+            PrintCloudBridgeTriggerBanner(triggerTitle, triggerDetails, cachedCliVersion);
+
             if (this.debug) Console.WriteLine($"DEBUG: running remote tools refresh (cached={cachedCliVersion ?? "none"}, current={this.CLI_VERSION})");
             _hasRunRemoteToolsUpdate = true;
             File.WriteAllText(cliVersionPath, this.CLI_VERSION);
@@ -2702,7 +2747,12 @@ Seed Url: ");
                 if (cachedCliVersion != this.CLI_VERSION && Directory.Exists(remoteToolsDir))
                 {
                     EnsureRemoteToolsInitialized();
-                    RunRemoteToolsRefresh(remoteToolsDir, cliVersionPath, cachedCliVersion);
+                    RunRemoteToolsRefresh(
+                        remoteToolsDir,
+                        cliVersionPath,
+                        cachedCliVersion,
+                        triggerTitle: "CheckForUpdateNotice: CLI version changed since last refresh",
+                        triggerDetails: $"Inside CheckForUpdateNotice (presentational update-banner path, NOT the build path). cached CLI version on disk ('{cachedCliVersion ?? "(none)"}') differs from current ('{this.CLI_VERSION}') — refreshing update_available.json. This path should be disabled on builds; if you are seeing this during a build, CheckForUpdateNotice was called from somewhere it shouldn't have been.");
                 }
 
                 var updateAvailablePath = Path.Combine(SSOTMEKey.SSoTmeDir.FullName, "update_available.json");
@@ -2941,7 +2991,12 @@ Seed Url: ");
 
             CliLog.LogLine("Refreshing remote tools index...");
             EnsureRemoteToolsInitialized();
-            RunRemoteToolsRefresh(remoteToolsDir, cliVersionPath, cachedCliVersion);
+            RunRemoteToolsRefresh(
+                remoteToolsDir,
+                cliVersionPath,
+                cachedCliVersion,
+                triggerTitle: "RefreshRemoteTools: explicit -refreshTools invocation",
+                triggerDetails: $"User invoked -refreshTools; deleted ssotme-tools.json, cli_version, and bridge_version_index to force a full re-fetch. cached CLI version was '{cachedCliVersion ?? "(none)"}', current is '{this.CLI_VERSION}'.");
             CliLog.LogLine("Remote tools index refreshed.");
         }
 
@@ -3245,11 +3300,10 @@ Seed Url: ");
             var pt = GetMatchingTranspilerForTool(toolName);
             if (pt == null) return null;
 
-            // Hard pin takes absolute precedence (user explicitly said "stay here forever")
-            if (!String.IsNullOrEmpty(pt.PinnedVersion)) return pt.PinnedVersion;
-
-            // Soft pin: use the last version that ran successfully
-            return pt.LastVersionUsed;
+            // Only a hard pin counts. If the user hasn't explicitly pinned, return null
+            // so the resolver picks head. LastVersionUsed is informational only — it must
+            // never act as an implicit pin.
+            return String.IsNullOrEmpty(pt.PinnedVersion) ? null : pt.PinnedVersion;
         }
 
         /// <summary>
@@ -3665,19 +3719,18 @@ Seed Url: ");
                     catch { indexIsEmpty = true; }
                 }
 
-                if (cachedCliVersion != this.CLI_VERSION)
-                {
-                    if (this.debug) Console.WriteLine($"DEBUG: CLI version changed ({cachedCliVersion ?? "none"} → {this.CLI_VERSION}), forcing remote tools refresh");
-                    _hasRunRemoteToolsUpdate = false;
-                }
-                else if (indexIsEmpty)
+                // CLI version mismatch ALONE is NOT a reason to hit the bridge. If the cached
+                // index has the tool we want, we serve from cache no matter how old the CLI marker is.
+                // The ONLY legitimate triggers from the build path are:
+                //   (a) the index file is missing or empty (no data to serve from), or
+                //   (b) the requested transpiler is not present in the cached index.
+                if (indexIsEmpty)
                 {
                     if (this.debug) Console.WriteLine($"DEBUG: ssotme-tools.json is empty, forcing remote tools refresh");
                     _hasRunRemoteToolsUpdate = false;
                 }
                 else
                 {
-                    // Index is current and non-empty — no refresh needed regardless of whether this tool is in it
                     _hasRunRemoteToolsUpdate = true;
                 }
 
@@ -3686,7 +3739,7 @@ Seed Url: ");
 
                 var url = TryGetUrlFromRemoteToolsJson(transpilerName, remoteToolsDir, pinnedVersion);
                 if (this._suppressGenericToolNotFoundError) return null;  // specific error already printed
-                if (url != null && cachedCliVersion == this.CLI_VERSION)
+                if (url != null)
                 {
                     if (this.debug) Console.WriteLine($"DEBUG: matched '{transpilerName}' to remote tool (cached index) → {url}");
                     return url;
@@ -3696,7 +3749,17 @@ Seed Url: ");
                 {
                     if (this.debug) Console.WriteLine($"DEBUG: no match in cached index for '{transpilerName}', refreshing remote tools...");
                     CliLog.LogLine("Refreshing CLI tool URL index...");
-                    RunRemoteToolsRefresh(remoteToolsDir, cliVersionPath, cachedCliVersion);
+                    var triggerReason = indexIsEmpty
+                        ? $"Local transpiler URL cache (ssotme-tools.json) is empty or corrupt — must repopulate from cli-cloud-bridge before any transpiler can be resolved."
+                        : $"Requested transpiler '{transpilerName}' is NOT present in the local URL cache (ssotme-tools.json). The cache contains other transpilers but not this one, so we must ask cli-cloud-bridge for its URL.";
+                    RunRemoteToolsRefresh(
+                        remoteToolsDir,
+                        cliVersionPath,
+                        cachedCliVersion,
+                        triggerTitle: indexIsEmpty
+                            ? "Empty local transpiler URL cache"
+                            : $"Transpiler '{transpilerName}' not in local cache",
+                        triggerDetails: triggerReason);
 
                     if (this.debug) Console.WriteLine($"DEBUG: refresh complete, rechecking for '{transpilerName}'");
 

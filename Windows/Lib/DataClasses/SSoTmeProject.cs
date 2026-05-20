@@ -395,9 +395,19 @@ effortless.env";
 
                             if (existingMatch != null)
                             {
-                                // Preserve any extra properties from existing
+                                // Preserve any extra properties from existing, but ONLY for keys
+                                // that are not managed fields on ProjectTranspiler. Managed fields
+                                // that are absent from the freshly-serialized JSON were intentionally
+                                // cleared (e.g. -upgrade nulling PinnedVersion) — resurrecting them
+                                // here would silently undo the clear.
+                                var managedKeys = new HashSet<string>(
+                                    typeof(ProjectTranspiler)
+                                        .GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+                                        .Select(p => p.Name),
+                                    StringComparer.OrdinalIgnoreCase);
                                 foreach (var prop in existingMatch.Properties())
                                 {
+                                    if (managedKeys.Contains(prop.Name)) continue;
                                     if (newTranspiler[prop.Name] == null)
                                     {
                                         newTranspiler[prop.Name] = prop.Value;
