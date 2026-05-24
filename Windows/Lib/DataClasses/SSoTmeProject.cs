@@ -448,17 +448,16 @@ effortless.env";
 
         public void RemoveUUIds()
         {
-            this.ProjectSettings.ToList().ForEach(setting =>
+            (this.ProjectSettings ?? Enumerable.Empty<ProjectSetting>()).ToList().ForEach(setting =>
             {
                 setting.ProjectSettingId = Guid.Empty;
             });
 
-            this.ProjectTranspilers.ToList().ForEach(transpiler =>
+            (this.ProjectTranspilers ?? Enumerable.Empty<ProjectTranspiler>()).ToList().ForEach(transpiler =>
             {
                 if (transpiler != null)
                 {
                     transpiler.ProjectTranspilerId = Guid.Empty;
-                    // Note: MatchedTranspiler is not saved to JSON (marked with [JsonIgnore])
                 }
             });
         }
@@ -652,6 +651,7 @@ effortless.env";
             if (string.IsNullOrEmpty(settingName)) throw new Exception("Settings must be in the format of 'name=value'");
             else
             {
+                if (this.ProjectSettings == null) this.ProjectSettings = new System.ComponentModel.BindingList<ProjectSetting>();
                 var currentSettings = this.ProjectSettings.Where(whereSetting => String.Equals(whereSetting.Name, settingName, StringComparison.OrdinalIgnoreCase));
 
                 var addSetting = true;
