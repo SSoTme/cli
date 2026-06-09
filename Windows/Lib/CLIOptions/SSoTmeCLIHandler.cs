@@ -3358,6 +3358,12 @@ Seed Url: ");
             }
             var oldVersion = matched.PinnedVersion ?? matched.LastVersionUsed ?? "(unpinned)";
             matched.PinnedVersion = null;
+            // Also advance the soft pin. A normal build resolves the version via
+            // GetPinnedVersionForTool, which returns LastVersionUsed when no hard pin is set —
+            // so leaving LastVersionUsed at the old version would keep the next build locked there
+            // and the tool would NOT track latest despite the "unpinned" message. Set it to the
+            // resolved head so the upgrade actually takes effect on the very next build.
+            matched.LastVersionUsed = newVersion;
             project.Save();
             Console.WriteLine($"Upgraded {toolName}: {oldVersion} → HEAD ({newVersion}, unpinned — will track latest)");
         }
@@ -3423,6 +3429,10 @@ Seed Url: ");
                 }
 
                 pt.PinnedVersion = null;
+                // Advance the soft pin too — see UpgradeSingleTool: a build resolves via
+                // LastVersionUsed when no hard pin is set, so the upgrade only takes effect on the
+                // next build if LastVersionUsed is moved to the resolved head as well.
+                pt.LastVersionUsed = newVersion;
                 Console.WriteLine($"  UP   {cmdTool}: {oldVersion} → HEAD ({newVersion}, unpinned)");
                 upgraded++;
             }
