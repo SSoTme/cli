@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026-05-13.17.27";
+        public string CLI_VERSION = "2026.05.24.0047";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.

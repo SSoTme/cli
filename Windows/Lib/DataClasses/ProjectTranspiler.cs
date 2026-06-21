@@ -83,7 +83,7 @@ namespace SSoTme.OST.Lib.DataClasses
         : this()
         {
             bool localCommand = (ReferenceEquals(result, null));
-            this.Name = localCommand ? "LocalCommand" : result.Transpiler.Name;
+            this.Name = localCommand ? "LocalCommand" : (result.Transpiler.DisplayName ?? result.Transpiler.Name);
             this.PinnedVersion = pinnedVersion;
 
             this.RelativePath = relativePath.SafeToString().Replace("\\", "/");

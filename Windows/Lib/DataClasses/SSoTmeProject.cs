@@ -1629,7 +1629,7 @@ effortless.env";
             firstIndex = Math.Min(firstIndex, this.ProjectTranspilers.Count);
             if (firstIndex >= 0) this.ProjectTranspilers.Insert(firstIndex, projectTranspiler);
             else if (addIfMissing) this.ProjectTranspilers.Add(projectTranspiler);
-            projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.Name.Replace("-", "") ?? "noTranspilerFound";
+            projectTranspiler.Name = projectTranspiler.MatchedTranspiler?.DisplayName ?? projectTranspiler.MatchedTranspiler?.Name ?? "noTranspilerFound";
         }
 
         private static string GetToolName(string commandLine)

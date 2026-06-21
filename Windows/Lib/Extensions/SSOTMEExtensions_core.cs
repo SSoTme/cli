@@ -570,24 +570,14 @@ namespace SSoTme.OST.Lib.Extensions
                         if (debug) Console.WriteLine($"DEBUG: Binary content matches: {contentMatches}");
                     }
 
-                    // Clean logic: Delete if AlwaysOverwrite (neverOverwrite=false) OR if content matches
-                    if (!neverOverwrite || contentMatches)
+                    // Never-overwrite files are hand-edited — never delete them during clean.
+                    // Only Always-overwrite files are removed so the write step can recreate them.
+                    if (!neverOverwrite)
                     {
                         CliLog.Cleaning(fiToClean.FullName);
                         if (debug)
                         {
-                            if (!neverOverwrite && contentMatches)
-                            {
-                                Console.WriteLine($"DEBUG: File deleted - Reason: AlwaysOverwrite=true AND content matches");
-                            }
-                            else if (!neverOverwrite)
-                            {
-                                Console.WriteLine($"DEBUG: File deleted - Reason: AlwaysOverwrite=true (content match not required)");
-                            }
-                            else if (contentMatches)
-                            {
-                                Console.WriteLine($"DEBUG: File deleted - Reason: Content matches generated output (preserving transpiler changes)");
-                            }
+                            Console.WriteLine($"DEBUG: File deleted - Reason: AlwaysOverwrite=true");
                         }
                         fiToClean.Delete();
                         if (debug) Console.WriteLine($"DEBUG: File deletion completed successfully");
@@ -596,7 +586,7 @@ namespace SSoTme.OST.Lib.Extensions
                     {
                         if (debug)
                         {
-                            Console.WriteLine($"DEBUG: File NOT deleted - Reason: Content doesn't match AND OverwriteMode != Always (preserving user changes)");
+                            Console.WriteLine($"DEBUG: File NOT deleted - Reason: OverwriteMode=Never (preserving hand-edits)");
                         }
                     }
                 }
