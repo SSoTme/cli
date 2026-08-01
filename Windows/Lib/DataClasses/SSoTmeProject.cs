@@ -918,9 +918,9 @@ effortless.env";
             return relativePath.Replace("\\", "/");
         }
 
-        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug, bool ignoreErrors = false)
+        internal void RebuildAll(string rootPath, bool includeDisabled, string transpilerGroup, string buildOnTrigger, bool copilotConnect, bool isLocalBuild, bool debug, bool continueOnError = false)
         {
-            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, debug, true, ignoreErrors: ignoreErrors);
+            this.Rebuild(rootPath, includeDisabled, transpilerGroup, buildOnTrigger, copilotConnect, isLocalBuild, debug, true, continueOnError: continueOnError);
         }
 
         internal void Rebuild(
@@ -932,16 +932,16 @@ effortless.env";
             bool isBuildLocal,
             bool debug,
             bool isBuildAll = false,
-            bool ignoreErrors = false)
+            bool continueOnError = false)
         {
             if (!string.IsNullOrEmpty(buildOnTrigger))
             {
                 this.LogMessage("Watching for Airtable changes using baseId: {0}...", buildOnTrigger);
-                this.ListenForChangesAndRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll, buildOnTrigger, debug, copilotConnect);
+                this.ListenForChangesAndRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, isBuildAll, buildOnTrigger, debug, copilotConnect, continueOnError);
             }
             else
             {
-                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll, ignoreErrors: ignoreErrors);
+                this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll, continueOnError: continueOnError);
             }
         }
         
@@ -953,7 +953,8 @@ effortless.env";
             bool isBuildAll,
             string baseId,
             bool debug,
-            bool isCopilot = false)
+            bool isCopilot = false,
+            bool continueOnError = false)
         {
             DateTime? lastChangedTime = null;
             bool changeEverDetected = false;
@@ -1010,7 +1011,12 @@ effortless.env";
                         Console.WriteLine("No changes in last 10 seconds. Rebuilding...");
                         try
                         {
-                            this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll);
+                            // The watch loop re-runs the build over and over; each pass gets its
+                            // own ledger so errors.json always describes the LAST build, not the
+                            // accumulated history of every rebuild since the watcher started.
+                            BuildErrorLog.Begin(this.RootPath, continueOnError, "buildOnTrigger");
+                            try { this.DoRebuild(buildPath, includeDisabled, transpilerGroup, isBuildLocal, debug, isBuildAll, continueOnError: continueOnError); }
+                            finally { BuildErrorLog.Finish(); }
                         }
                         catch (Exception ex)
                         {
@@ -1055,7 +1061,7 @@ effortless.env";
             }
         }
 
-        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool debugOption, bool isBuildAll = false, bool ignoreErrors = false)
+        internal void DoRebuild(string buildPath, bool includeDisabled, string transpilerGroup, bool isBuildLocal, bool debugOption, bool isBuildAll = false, bool continueOnError = false)
         {
             if (!isBuildLocal) this.CheckIfParentIsRootSeed();
             if (isBuildAll) this.FindSSoTmeJsonFiles();
@@ -1073,8 +1079,43 @@ effortless.env";
 
                 foreach (var pt in matchingProjectTranspilers)
                 {
-                    if (!pt.IsDisabled || includeDisabled) pt.Rebuild(this, debugOption, ignoreErrors);
-                    else this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
+                    if (!pt.IsDisabled || includeDisabled)
+                    {
+                        // The ONE place that decides whether a failed step stops the build.
+                        // Two kinds of failure arrive here and both must be survivable when
+                        // -continueOnError is set:
+                        //   1. TranspilerStepFailedException — the step ran and reported a
+                        //      failure. ProjectTranspiler.Rebuild already recorded the full
+                        //      detail in BuildErrorLog, so we only log-and-continue here.
+                        //   2. Anything else — the CLI itself blew up mid-step (bad payload,
+                        //      network, a null-ref in a code path a specific tool provokes).
+                        //      This is the case that used to take the WHOLE build down even
+                        //      with the old -ignoreErrors flag set, because that flag was only
+                        //      ever consulted on a non-zero RETURN, never on a throw. Record it
+                        //      with the same fidelity and keep going.
+                        try
+                        {
+                            pt.Rebuild(this, debugOption, continueOnError);
+                        }
+                        catch (TranspilerStepFailedException ex)
+                        {
+                            if (!continueOnError) throw;
+                            CliLog.LogLine($"{ex.Message}", ConsoleColor.Red);
+                            CliLog.LogLine($"-continueOnError is set — moving on to the next step.", ConsoleColor.Yellow);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (!continueOnError) throw;
+                            BuildErrorLog.RecordFailure(pt, -1, null, ex, null, null);
+                            CliLog.LogLine($"Transpiler '{pt.Name}' threw: {ex.Message}", ConsoleColor.Red);
+                            CliLog.LogLine($"-continueOnError is set — moving on to the next step.", ConsoleColor.Yellow);
+                        }
+                    }
+                    else
+                    {
+                        BuildErrorLog.RecordSkipped(pt, "IsDisabled is true in effortless.json");
+                        this.LogMessage("\n\n - SKIPPING DISABLED TRANSPILER: {0}\n - {1}\n - {2}\n\n", pt.Name, pt.RelativePath, pt.CommandLine);
+                    }
                 }
                 if (isBuildAll) this.BuildSubSSoTmeProjects();
 

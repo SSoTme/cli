@@ -183,8 +183,8 @@ namespace SSoTme.OST.Lib.CLIOptions
         [CommandLineOption(Description = "Check the user's configured URLs for updates, if they match an online transpiler name.", MinOccurs = 0, Aliases = "ut,updateToolUrls,uu")]
         public bool updateUrls { get; set; }
         
-        [CommandLineOption(Description = "Ignore errors sent by this transpiler (continue build if it fails)", MinOccurs = 0, Aliases = "ignoreError")]
-        public bool ignoreErrors { get; set; }
+        [CommandLineOption(Description = "Don't let one failing step stop the build: run every remaining transpiler, write the full exception detail of anything that failed to errors.json in the project root, and still exit 0. Defaults to off.", MinOccurs = 0, Aliases = "coe,ignoreErrors,ignoreError")]
+        public bool continueOnError { get; set; }
         
         [CommandLineOption(Description = "List all available versions of the tool", MinOccurs = 0, Aliases = "lv,list,l")]
         public bool listVersions { get; set; }

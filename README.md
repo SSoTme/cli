@@ -122,6 +122,63 @@ To uninstall a Mac .pkg installation, run the uninstall script by entering `/App
 
 For windows, uninstall ssotme by re-running the Windows installer executable, and select 'Uninstall'.
 
+## Surviving a broken transpiler: `-continueOnError`
+
+By default, `effortless build` stops at the first step that fails. That is the
+right default for CI and for a one-shot build you are watching — but it is the
+wrong default for any long-running host that builds a whole pipeline and then
+runs the result, because one non-load-bearing step (an export, a docs
+generator) takes down every load-bearing step with it.
+
+```
+effortless build -continueOnError
+```
+
+Aliases: `-coe`, `-ignoreErrors`, `-ignoreError`. Defaults to **off**.
+
+With the flag set:
+
+- **Every remaining step still runs.** A step that fails — whether it returns a
+  non-zero result *or throws* — is recorded and skipped, and the build moves on.
+  (The older `-ignoreErrors` flag only ever handled the non-zero-return case; a
+  throwing step still killed the whole build. That gap is fixed.)
+- **The build exits 0.** The run completed; some steps did not.
+- **Failures are written to `errors.json` in the project root**, so nothing is
+  lost when the build no longer stops to show you. The file is deleted on a
+  clean build, so its presence always describes the *most recent* build:
+
+```jsonc
+{
+  "schema": "effortless-build-errors/v1",
+  "generatedAt": "…", "projectRoot": "…", "buildCommand": "build",
+  "continueOnError": true,
+  "totalSteps": 7, "succeededSteps": 6, "failedSteps": 1, "skippedSteps": 0,
+  "failedStepNames": ["rulebooktoxlsx"],
+  "steps": [ /* every step, in order, with status — the lightweight index */ ],
+  "errors": [
+    {
+      "name": "rulebooktoxlsx",
+      "relativePath": "/xlsx",
+      "commandLine": "rulebook-to-xlsx -i ../effortless-rulebook/effortless-rulebook.json",
+      "status": "failed",
+      "exitCode": -1,
+      "message": "…",
+      "resolvedVersion": "…", "resolvedUrl": "…",
+      "transpilerException": { "type": "…", "message": "…", "stackTrace": "…", "inner": { } },
+      "cliException":        { "type": "…", "message": "…", "stackTrace": "…", "inner": { } }
+    }
+  ]
+}
+```
+
+`transpilerException` is what the tool itself reported back over the wire;
+`cliException` is anything the CLI threw while running that step. Both walk the
+full `InnerException` chain — the real cause is often two or three levels below
+the message that reaches the console.
+
+A summary is also printed at the end of the build naming each failed step, its
+command line, and the path to `errors.json`.
+
 ## Syntax: `ssotme -help`
 This command will show the following help.
 

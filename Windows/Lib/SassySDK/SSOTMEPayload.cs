@@ -197,9 +197,64 @@ namespace SassyMQ.SSOTME.Lib.RMQActors
             SSoTme.OST.Lib.Extensions.SSOTMEExtensions.SplitFileSetFile(tempFI.FullName, extractToDir);
             tempFI.Delete();
 
-            this.SavePreviousFileSet(fileSetXml);
+            var zfsFileSetXml = this.RemoveSelfSourceEntries(fileSetXml, extractToDir);
+            this.SavePreviousFileSet(zfsFileSetXml);
 
             return 0;
+        }
+
+        // A file that is both a transpiler's input and one of its outputs (e.g. a rulebook
+        // reformatted in place) can never be "cleaned" - there is no external source to restore
+        // it from. Recording it in the .zfs would let a later -clean delete it outright. Strip
+        // such entries before the .zfs is written so these files behave like OverwriteMode=Never
+        // entries that have already been written once: left alone by clean, and (per the existing
+        // neverOverwrite-on-existing-file behavior in SplitFileSetXml/ProcessFileSetFile) not
+        // stomped by a subsequent overwrite either.
+        private string RemoveSelfSourceEntries(string fileSetXml, string extractToDir)
+        {
+            if (this.SSoTmeProject is null || String.IsNullOrEmpty(this.CLIInputFileSetXml)) return fileSetXml;
+            if (String.IsNullOrEmpty(fileSetXml) || !fileSetXml.Contains("<")) return fileSetXml;
+
+            HashSet<string> inputFullPaths;
+            try
+            {
+                inputFullPaths = this.CLIInputFileSetXml
+                    .ToFileSet()
+                    .FileSetFiles
+                    .Select(fsf => fsf.OriginalRelativePath)
+                    .Where(p => !String.IsNullOrEmpty(p))
+                    .Select(p => new FileInfo(Path.Combine(this.SSoTmeProject.RootPath, p.Trim("\\/".ToCharArray()))).FullName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            }
+            catch (Exception)
+            {
+                // Malformed input FileSet XML shouldn't block a build - fall back to keeping everything.
+                return fileSetXml;
+            }
+            if (!inputFullPaths.Any()) return fileSetXml;
+
+            var doc = new System.Xml.XmlDocument();
+            var trimmedXml = fileSetXml.Substring(fileSetXml.IndexOf("<"));
+            doc.LoadXml(trimmedXml);
+            if (doc.DocumentElement is null || doc.DocumentElement.Name != "FileSet") return fileSetXml;
+
+            var toRemove = new List<System.Xml.XmlElement>();
+            foreach (System.Xml.XmlElement fsfElem in doc.DocumentElement.SelectNodes("//FileSetFile"))
+            {
+                foreach (System.Xml.XmlElement relPathElem in fsfElem.SelectNodes("RelativePath"))
+                {
+                    var outputFullPath = new FileInfo(Path.Combine(extractToDir, relPathElem.InnerText.SafeToString().Trim("\\/".ToCharArray()))).FullName;
+                    if (inputFullPaths.Contains(outputFullPath))
+                    {
+                        toRemove.Add(fsfElem);
+                        break;
+                    }
+                }
+            }
+            if (!toRemove.Any()) return fileSetXml;
+
+            foreach (var fsfElem in toRemove) fsfElem.ParentNode.RemoveChild(fsfElem);
+            return doc.OuterXml;
         }
 
         public void SavePreviousFileSet(string fileSetXml)

@@ -49,7 +49,7 @@ namespace SSoTme.OST.Lib.CLIOptions
     public partial class SSoTmeCLIHandler
     {
         // build scripts will make this match version from package.json
-        public string CLI_VERSION = "2026.05.24.0047";
+        public string CLI_VERSION = "2026-06-09.06.13";
 
         // url to the latest version of the transpiler-lister service
         // Bootstrap URL: used only on first-ever run or when tool_urls.json is missing/corrupt.
@@ -597,6 +597,13 @@ namespace SSoTme.OST.Lib.CLIOptions
                     // If transpiler is already set but we also have a -g URL, check if we should still use remote naming
                     if (!String.IsNullOrEmpty(this.transpiler))
                     {
+                        // Preserve the original (clean) tool name before URL resolution overwrites
+                        // this.transpiler, mirroring the if-branch above. This branch is reached when a
+                        // bareword subcommand set the tool name (e.g. `effortless upgrade <tool>` or
+                        // `effortless install <tool>`); downstream handlers read `_rawTranspilerArg`
+                        // expecting the name the user typed, not the sanitized URL form.
+                        if (String.IsNullOrEmpty(this._rawTranspilerArg)) this._rawTranspilerArg = this.transpiler;
+
                         // Check if the transpiler argument itself is a URL (supports ssotme https://... syntax)
                         if (this.IsHttpUrl(this.transpiler))
                         {
@@ -1611,6 +1618,15 @@ Seed Url: ");
                     this.upgradeAll = true;
                     break;
 
+                // Bareword form of the -upgrade flag, mirroring `build` / `-build`:
+                //   effortless upgrade <tool>   ==  effortless <tool> -upgrade
+                //   effortless upgrade          ==  effortless -upgrade   (upgrades every tool in the project)
+                // `unpin` is a synonym — upgrading a tool clears its hard pin so it tracks HEAD.
+                case "upgrade":
+                case "unpin":
+                    this.upgrade = true;
+                    break;
+
                 case "cloneseed":
                 case "clone":
                     this.cloneSeed = true;
@@ -1975,11 +1991,17 @@ Seed Url: ");
                 }
                 else if (this.build || this.buildLocal)
                 {
-                    GetProjectOrThrow().Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug, ignoreErrors: this.ignoreErrors);
+                    var buildProject = GetProjectOrThrow();
+                    BuildErrorLog.Begin(buildProject.RootPath, this.continueOnError, this.buildLocal ? "build -buildLocal" : "build");
+                    try { buildProject.Rebuild(Environment.CurrentDirectory, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug, continueOnError: this.continueOnError); }
+                    finally { BuildErrorLog.Finish(); }
                 }
                 else if (this.buildAll)
                 {
-                    GetProjectOrThrow().RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug, ignoreErrors: this.ignoreErrors);
+                    var buildAllProject = GetProjectOrThrow();
+                    BuildErrorLog.Begin(buildAllProject.RootPath, this.continueOnError, "buildAll");
+                    try { buildAllProject.RebuildAll(this.AICaptureProject.RootPath, this.includeDisabled, this.transpilerGroup, this.buildOnTrigger, this.copilotConnect, this.buildLocal, this.debug, continueOnError: this.continueOnError); }
+                    finally { BuildErrorLog.Finish(); }
                 }
                 else if (this.uninstall)
                 {
@@ -3307,9 +3329,12 @@ Seed Url: ");
         }
 
         /// <summary>
-        /// Handles `ssotme {toolName} -upgrade`: resolves head version, updates PinnedVersion in ssotme.json.
+        /// Handles `effortless {toolName} -upgrade` (and the `effortless upgrade {toolName}` bareword).
+        /// Always refreshes the remote tools index (the "core list") first, so HEAD moves for every
+        /// project that uses the tool unpinned — that is the whole point: upgrade from anywhere, available
+        /// everywhere. Then, if the tool IS installed in THIS project, clears its hard pin so it tracks HEAD.
+        /// If the tool is not used in this project, that is NOT an error — the core list was still refreshed.
         /// When no toolName is given, upgrades all tools in the project to the latest version.
-        /// Always refreshes the remote tools index first.
         /// </summary>
         private void HandleUpgradeCommand()
         {
@@ -3353,16 +3378,19 @@ Seed Url: ");
             var matched = DisambiguateByCurrentDirectory(allMatches, project.RootPath);
             if (matched == null)
             {
-                ShowError($"No installed transpiler matching '{toolName}' found in effortless.json.");
+                // Not used in this project — that's fine, not an error. The core tools index was already
+                // refreshed above (HandleUpgradeCommand), so any project that uses this tool unpinned now
+                // resolves HEAD ({newVersion}) on its next build. There is simply nothing to unpin here.
+                Console.WriteLine($"{toolName} is not used in this project — nothing to unpin here.");
+                Console.WriteLine($"Refreshed the core tools index; '{toolName}' will track latest (HEAD {newVersion}) wherever it is used unpinned.");
                 return;
             }
             var oldVersion = matched.PinnedVersion ?? matched.LastVersionUsed ?? "(unpinned)";
+            // Clearing the hard pin is the whole job: with PinnedVersion null, GetPinnedVersionForTool
+            // returns null and every build resolves HEAD from the refreshed core index. LastVersionUsed
+            // is informational only (it never acts as an implicit pin), but we advance it to the resolved
+            // head so effortless.json reflects the version the next build will actually use.
             matched.PinnedVersion = null;
-            // Also advance the soft pin. A normal build resolves the version via
-            // GetPinnedVersionForTool, which returns LastVersionUsed when no hard pin is set —
-            // so leaving LastVersionUsed at the old version would keep the next build locked there
-            // and the tool would NOT track latest despite the "unpinned" message. Set it to the
-            // resolved head so the upgrade actually takes effect on the very next build.
             matched.LastVersionUsed = newVersion;
             project.Save();
             Console.WriteLine($"Upgraded {toolName}: {oldVersion} → HEAD ({newVersion}, unpinned — will track latest)");

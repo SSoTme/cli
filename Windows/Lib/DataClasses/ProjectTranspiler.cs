@@ -162,7 +162,7 @@ namespace SSoTme.OST.Lib.DataClasses
             return true;
         }
 
-        internal void Rebuild(SSoTmeProject project, bool debugOption, bool ignoreErrors = false)
+        internal void Rebuild(SSoTmeProject project, bool debugOption, bool continueOnError = false)
         {
             // Build command line with debug flag if needed, but don't mutate this.CommandLine
             var commandLineToRun = this.CommandLine;
@@ -188,7 +188,7 @@ namespace SSoTme.OST.Lib.DataClasses
                 cliHandler.AICaptureProject = project;
                 cliHandler.commandLine = commandLineToRun;  // Use the modified command line, not this.CommandLine
                 cliHandler.ParseCommand();
-                cliHandler.ignoreErrors = ignoreErrors;
+                cliHandler.continueOnError = continueOnError;
                 if (!String.IsNullOrEmpty(cliHandler.ResolvedVersionLabel))
                 {
                     Console.ForegroundColor = ConsoleColor.Blue;
@@ -202,16 +202,28 @@ namespace SSoTme.OST.Lib.DataClasses
                 var cliResult = cliHandler.TranspileProject(this, isBuildOperation: true);
                 if (cliResult != 0)
                 {
-                    if (cliHandler.ignoreErrors)
-                    {
-                        Console.WriteLine($"WARNING: Transpiler '{this.Name}' failed but -ignoreErrors is set — continuing build.");
-                    }
-                    else
-                    {
-                        var errorMsg = cliHandler.result?.Exception?.Message ?? "unknown error";
-                        throw new Exception($"Transpiler '{this.Name}' failed: {errorMsg}");
-                    }
+                    // Record the failure HERE (this is the only place with the exit code,
+                    // the tool's own reported exception, and the resolved version/URL all
+                    // in scope), then always throw. Whether that throw stops the build or
+                    // is swallowed and logged is SSoTmeProject.DoRebuild's call — it is the
+                    // one place that knows if -continueOnError is in effect. Throwing a
+                    // TranspilerStepFailedException tells DoRebuild "already recorded, do
+                    // not record me twice".
+                    BuildErrorLog.RecordFailure(
+                        this,
+                        cliResult,
+                        cliHandler.result?.Exception,
+                        null,
+                        cliHandler.ResolvedVersionKey,
+                        cliHandler.ResolvedVersionUrl);
+
+                    var errorMsg = cliHandler.result?.Exception?.Message;
+                    if (String.IsNullOrWhiteSpace(errorMsg))
+                        errorMsg = $"exited with code {cliResult} but reported no error message";
+                    throw new TranspilerStepFailedException($"Transpiler '{this.Name}' failed: {errorMsg}");
                 }
+
+                BuildErrorLog.RecordSuccess(this);
             }
             finally
             {
