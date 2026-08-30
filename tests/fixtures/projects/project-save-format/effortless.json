@@ -1,0 +1,19 @@
+{
+  "Name": "Format Project",
+  "SSoTmeProjectId": "5ec7cbb7-322a-469c-8364-c47c23b0db34",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Format Project"
+    }
+  ],
+  "ProjectTranspilers": [
+    {
+      "Name": "Echo",
+      "RelativePath": "",
+      "CommandLine": "echo",
+      "IsDisabled": false,
+      "IsSSoTTranspiler": false
+    }
+  ]
+}

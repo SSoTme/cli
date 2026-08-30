@@ -1,0 +1,21 @@
+{
+  "Name": "Pinned Project",
+  "SSoTmeProjectId": "1d68dc8f-0ca2-4ebd-9fa0-f92973ad3c2c",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Pinned Project"
+    }
+  ],
+  "ProjectTranspilers": [
+    {
+      "Name": "To Uppercase",
+      "RelativePath": "",
+      "CommandLine": "to-uppercase -i in.txt",
+      "PinnedVersion": "v2025.12.31.2359",
+      "LastVersionUsed": "v2025.12.31.2359",
+      "IsDisabled": false,
+      "IsSSoTTranspiler": false
+    }
+  ]
+}

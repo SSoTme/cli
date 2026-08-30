@@ -1,0 +1,15 @@
+{
+  "Name": "Settings Project",
+  "SSoTmeProjectId": "d56ca5b4-158e-456b-8bca-bf4b9382a7db",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Settings Project"
+    },
+    {
+      "Name": "a",
+      "Value": "1"
+    }
+  ],
+  "ProjectTranspilers": []
+}

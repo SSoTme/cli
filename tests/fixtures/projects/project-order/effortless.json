@@ -1,0 +1,33 @@
+{
+  "Name": "Order Project",
+  "SSoTmeProjectId": "c99bd605-529a-4f85-b058-14d13fa4fd23",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Order Project"
+    }
+  ],
+  "ProjectTranspilers": [
+    {
+      "Name": "First",
+      "RelativePath": "",
+      "CommandLine": "to-uppercase -p position=first",
+      "IsDisabled": false,
+      "IsSSoTTranspiler": false
+    },
+    {
+      "Name": "Second",
+      "RelativePath": "",
+      "CommandLine": "echo -p position=second",
+      "IsDisabled": false,
+      "IsSSoTTranspiler": false
+    },
+    {
+      "Name": "Third",
+      "RelativePath": "",
+      "CommandLine": "third-tool -p position=third",
+      "IsDisabled": false,
+      "IsSSoTTranspiler": false
+    }
+  ]
+}

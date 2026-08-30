@@ -1,0 +1,21 @@
+{
+  "Name": "Custom Save Project",
+  "SSoTmeProjectId": "b240650c-94c7-4060-820f-cf77204e6222",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Custom Save Project"
+    }
+  ],
+  "ProjectTranspilers": [
+    {
+      "Name": "Echo",
+      "RelativePath": "",
+      "CommandLine": "echo -i in.txt",
+      "IsDisabled": false,
+      "IsSSoTTranspiler": false,
+      "Description": "hand written",
+      "Enabled": true
+    }
+  ]
+}

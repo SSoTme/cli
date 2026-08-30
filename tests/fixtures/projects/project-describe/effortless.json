@@ -1,0 +1,30 @@
+{
+  "Name": "Describe Project",
+  "SSoTmeProjectId": "c507f368-c711-40b2-9a66-abd2f1e81055",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Describe Project"
+    },
+    {
+      "Name": "a",
+      "Value": "1"
+    }
+  ],
+  "ProjectTranspilers": [
+    {
+      "Name": "Root Step",
+      "RelativePath": "",
+      "CommandLine": "to-uppercase -i root.txt",
+      "IsDisabled": false,
+      "IsSSoTTranspiler": false
+    },
+    {
+      "Name": "Sub Step",
+      "RelativePath": "/sub",
+      "CommandLine": "echo -i sub.txt",
+      "IsDisabled": true,
+      "IsSSoTTranspiler": false
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "Name": "Debug Project",
+  "SSoTmeProjectId": "c296767d-f28f-4f0b-8378-37976fe17002",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Debug Project"
+    }
+  ],
+  "ProjectTranspilers": []
+}
