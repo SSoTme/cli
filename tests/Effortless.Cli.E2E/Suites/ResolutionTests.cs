@@ -567,6 +567,9 @@ public sealed class ResolutionTests
                 "Run latest: effortless to-uppercase",
                 result.Stdout,
                 StringComparison.Ordinal);
+            Golden.AssertMatches(
+                "res-list-versions",
+                Golden.Normalize(result.Stdout, sandbox, server.BaseUri.ToString()));
         }
     }
 

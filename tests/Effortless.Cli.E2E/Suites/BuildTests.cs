@@ -38,6 +38,9 @@ public sealed class BuildTests
             result.Stdout.IndexOf("**** : Root ****", StringComparison.Ordinal)
             < result.Stdout.IndexOf("**** /sub: Sub ****", StringComparison.Ordinal));
         Assert.Equal(["to-uppercase", "echo"], server.Requests.Select(request => request.ToolName).ToArray());
+        Golden.AssertMatches(
+            "build-basic",
+            Golden.Normalize(result.Stdout, sandbox, server.BaseUri.ToString()));
         var steps = WorkflowTestSupport.Steps(sandbox)
             .Select(node => Assert.IsType<JsonObject>(node))
             .ToArray();
@@ -405,6 +408,12 @@ public sealed class BuildTests
         Assert.All(
             root.EnumerateObject(),
             property => Assert.True(char.IsLower(property.Name[0]), $"'{property.Name}' is not camelCase."));
+        Golden.AssertMatches(
+            "build-errors-json-schema",
+            Golden.Normalize(
+                File.ReadAllText(Path.Combine(sandbox.ProjectPath, "errors.json")),
+                sandbox,
+                server.BaseUri.ToString()));
     }
 
     [Fact(DisplayName = "build-version-label: build labels pinned and latest resolutions")]

@@ -1,0 +1,54 @@
+{
+  "schema": "effortless-build-errors/v1",
+  "generatedAt": "<TIME>",
+  "startedAt": "<TIME>",
+  "projectRoot": "/private<ROOT>",
+  "buildCommand": "build",
+  "continueOnError": true,
+  "totalSteps": 3,
+  "succeededSteps": 1,
+  "failedSteps": 1,
+  "skippedSteps": 1,
+  "failedStepNames": [
+    "Fail"
+  ],
+  "steps": [
+    {
+      "name": "Fail",
+      "relativePath": "",
+      "status": "failed",
+      "message": "failed",
+      "finishedAt": "<TIME>"
+    },
+    {
+      "name": "Pass",
+      "relativePath": "",
+      "status": "succeeded",
+      "finishedAt": "<TIME>"
+    },
+    {
+      "name": "Skip",
+      "relativePath": "",
+      "status": "skipped",
+      "message": "IsDisabled is true in effortless.json",
+      "finishedAt": "<TIME>"
+    }
+  ],
+  "errors": [
+    {
+      "name": "Fail",
+      "relativePath": "",
+      "commandLine": "to-uppercase",
+      "status": "failed",
+      "exitCode": -1,
+      "message": "failed",
+      "resolvedVersion": "v2026.01.01.0001",
+      "resolvedUrl": "<MOCK>tools/to-uppercase/v2026.01.01.0001/",
+      "finishedAt": "<TIME>",
+      "transpilerException": {
+        "type": "System.Exception",
+        "message": "failed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+
+==========================================
+======  Describe Project
+======    /private<ROOT>
+==========================================
+
+
+SETTINGS:
+    - project-name = Describe Project
+    - a = 1
+
+
+TRANSPILERS:
+
+-----------------------------------
+---- Root Step
+---- ./
+-----------------------------------
+
+Command Line:> effortless to-uppercase -i root.txt
+
+
+-----------------------------------
+---- Sub Step    **** DISABLED ****
+---- ./sub/
+-----------------------------------
+
+Command Line:> effortless echo -i sub.txt

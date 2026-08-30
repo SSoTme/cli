@@ -239,6 +239,8 @@ public sealed class ProjectTests
 
         AssertProjectSummary(describe, sandbox, includeRoot: true, includeSub: true);
         AssertProjectSummary(list, sandbox, includeRoot: true, includeSub: true);
+        Golden.AssertMatches("proj-describe", Golden.Normalize(describe.Stdout, sandbox));
+        Golden.AssertMatches("proj-describe", Golden.Normalize(list.Stdout, sandbox));
     }
 
     [Fact(DisplayName = "proj-describe-subtree: describe filters transpilers by cwd subtree")]
