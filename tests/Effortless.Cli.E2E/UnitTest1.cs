@@ -242,7 +242,9 @@ public sealed class MetaTests
 
         return root.GetProperty("CliOptions").GetProperty("data")
             .EnumerateArray()
-            .Where(row => retained[row.GetProperty("Disposition").GetString()!])
+            .Where(row =>
+                retained[row.GetProperty("Disposition").GetString()!]
+                && row.GetProperty("LegacyRefCount").GetInt32() > 0)
             .Select(row => row.GetProperty("Flag").GetString()!)
             .ToArray();
     }
