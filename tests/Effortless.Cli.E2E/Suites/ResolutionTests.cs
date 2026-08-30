@@ -325,6 +325,51 @@ public sealed class ResolutionTests
         Assert.Single(toolServer.Requests);
     }
 
+    [Fact(DisplayName = "res-bootstrap-first-run: first run bootstraps the sandbox home")]
+    public async Task FirstRunBootstrapsHomeThroughConfiguredLocalBridge()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        bridge.IndexJson = index.Json;
+        toolServer.Enqueue("to-uppercase", ToolBehavior.Echo());
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedProject(sandbox);
+
+        var configure = await cli.Run(
+            ["-setUrl", $"cli-cloud-bridge={bridge.BridgeUri}"],
+            sandbox.ProjectPath,
+            sandbox);
+        var result = await cli.Run(
+            ["to-uppercase", "-i", "in.txt"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, configure.ExitCode);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(
+            "CLOUD-BRIDGE CALL TRIGGERED: Empty local transpiler URL cache",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Single(bridge.Requests);
+        Assert.Single(toolServer.Requests);
+
+        var configRoot = Path.Combine(sandbox.HomePath, ".ssotme");
+        Assert.True(File.Exists(Path.Combine(configRoot, "tool_urls.json")));
+        Assert.True(File.Exists(Path.Combine(configRoot, "remote_tools", "ssotme-tools.json")));
+        Assert.True(File.Exists(Path.Combine(configRoot, "remote_tools", "cli_version")));
+        Assert.True(File.Exists(Path.Combine(configRoot, "remote_tools", "effortless.json")));
+    }
+
+    [Fact(
+        DisplayName = "res-dead-bridge-recovery: dead bridge resets to bootstrap URL",
+        Skip = "The legacy DLL retries a hardcoded external HTTPS bootstrap URL; deterministic CI requires a product seam that Step 1 forbids.")]
+    [Trait("Slow", "true")]
+    public void DeadBridgeRecoveryRequiresTheHardcodedExternalService()
+    {
+    }
+
     [Fact(DisplayName = "res-no-refresh-on-version-change: CLI version change alone does not refresh")]
     public async Task VersionMarkerMismatchAloneDoesNotRefresh()
     {
