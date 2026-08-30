@@ -20,7 +20,9 @@ Reads the rulebook and writes, deterministically (stable ordering, LF endings, t
    `ValueType` (`bool`/`string`/`int`/`List<string>`). Must be byte-identical to the hand-written file from
    Step 3 — if not, fix the hand-written file (or the generator) until they agree.
 2. `src/Effortless.Cli.Core/Options/BarewordVerbs.g.cs` — from `BarewordForms` of retained rows, preserving
-   the verbs *as written* (case quirks included) and the `ConsumesNextArgAsTool` flag.
+   the verbs *as written* (case quirks included) and the `ConsumesNextArgAsTool` flag. For string command
+   options (`viewUrl`, `setUrl`, `removeUrl`, `searchTools`), copy the consumed argument into the option
+   property as well as the raw argument slot.
 3. `docs/cli-reference.md` — grouped by `OptionCategories.SortOrder`; per option: flag, aliases, bareword
    forms, value type, help text, description; a "Removed in the rebuild" appendix listing dropped options
    with their `DispositionReason`; the exact `-help` syntax line; exit codes from `ExitCodes`; config files

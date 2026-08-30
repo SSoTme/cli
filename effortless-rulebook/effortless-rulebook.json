@@ -1373,6 +1373,38 @@
         "Description": "Force a re-download of the tools index."
       },
       {
+        "CliOptionId": "listTools",
+        "Flag": "-listTools",
+        "Aliases": "tools,lt",
+        "BarewordForms": "listtools,tools",
+        "ValueType": "bool",
+        "HelpText": "List all available tools in the current remote tools catalog",
+        "Category": "tool-resolution",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": false,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "RemoteToolsIndex.ListTools: require a fresh catalog, collapse versions to one row per canonical tool name, show the HEAD version or NO HEAD, and sort canonical names ordinal-ignore-case.",
+        "DispositionReason": "New behavior requested for catalog discovery; the legacy CLI can list versions only when the tool name is already known.",
+        "Description": "List canonical remote tool names and their current head versions."
+      },
+      {
+        "CliOptionId": "searchTools",
+        "Flag": "-searchTools",
+        "Aliases": "search,st",
+        "BarewordForms": "searchtools,search",
+        "ValueType": "string",
+        "HelpText": "Search the current remote tools catalog by tool name",
+        "Category": "tool-resolution",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "RemoteToolsIndex.SearchTools(query): require a non-empty query and fresh catalog; case-insensitive ordinal substring match over canonical and short tool names; output uses the same one-row-per-tool projection as listTools. Bareword normalization copies the next argument into searchTools.",
+        "DispositionReason": "New behavior requested for catalog discovery; no metadata description is assumed because the wire contract guarantees names and versions only.",
+        "Description": "Find tools by canonical or short name without guessing an exact tool name."
+      },
+      {
         "CliOptionId": "legacy",
         "Flag": "-legacy",
         "Aliases": "lc",
@@ -1736,7 +1768,7 @@
         "LifecycleStateId": "S04-resolve-tool",
         "Phase": "tool-resolution",
         "SortOrder": 4,
-        "Entry": "Apply ToolResolutionRules R1..R6 (R7 removed).",
+        "Entry": "Apply ToolResolutionRules R0..R6 (R7 removed). R0 first proves catalog freshness for a named remote tool; explicit URLs bypass it.",
         "ImplementedIn": "ParseCommand + TryGetUrlFromRemoteTools + TryGetUrlFromRemoteToolsJson + TryGetUrlFromFileUrls + TryApplyLocalToolUrlOverride",
         "NewHome": "Transpile/ToolResolver.cs + Transpile/RemoteToolsIndex.cs + Config/ToolUrls.cs",
         "Disposition": "keep-modified",
@@ -1746,11 +1778,11 @@
         "LifecycleStateId": "S05-index-refresh",
         "Phase": "tool-resolution",
         "SortOrder": 5,
-        "Entry": "EnsureRemoteToolsInitialized (placeholder index, bootstrap tool_urls entry) then RunRemoteToolsRefresh: banner, write cli_version, ensure remote_tools/ssotme.json, DNS pre-check, run \"cli-cloud-bridge -p cli_version=<v>\" via an internal handler with cwd=remote_tools, then process cliUpdateAvailable/latestBridgeVersion.",
+        "Entry": "EnsureRemoteToolsInitialized (placeholder index, bootstrap tool_urls entry) then RunRemoteToolsRefresh: banner, write cli_version, ensure remote_tools/ssotme.json, DNS pre-check, run \"cli-cloud-bridge -p cli_version=<v>\" via an internal handler with cwd=remote_tools, validate the returned tool map, atomically install it with CLI-stamped fetchedAt, then process cliUpdateAvailable/latestBridgeVersion.",
         "ImplementedIn": "EnsureRemoteToolsInitialized, RunRemoteToolsRefresh, PrintCloudBridgeTriggerBanner",
         "NewHome": "Transpile/RemoteToolsIndex.cs (+ CloudBridgeClient)",
-        "Disposition": "keep",
-        "Description": "Triggers ONLY when the index is missing/empty or the requested tool is absent from it (never on CLI version change alone). The banner text and the \"WHY:\" trigger reasons are part of the observable output."
+        "Disposition": "keep-modified",
+        "Description": "Triggers when the index is missing/empty, stale/unprovable at 24 hours, explicitly refreshed, or the requested tool is absent. The banner text and WHY reason are observable. Failure is terminal and never routes back to stale resolution."
       },
       {
         "LifecycleStateId": "S06-management",
@@ -1783,9 +1815,19 @@
         "Description": ""
       },
       {
-        "LifecycleStateId": "S09-auto-build-for-install",
+        "LifecycleStateId": "S08a-project-tools-current",
         "Phase": "project-load",
         "SortOrder": 9,
+        "Entry": "For catalog-dependent work, ensure R0 freshness, resolve HEAD for every remotely versioned non-execute project step, then atomically clear pins and advance LastVersionUsed where needed. Resolve all before one Save; any missing/no-HEAD step returns non-zero with no project mutation.",
+        "ImplementedIn": "new behavior",
+        "NewHome": "Project/ProjectToolFreshness.cs + Transpile/CatalogFreshnessPolicy.cs",
+        "Disposition": "keep-modified",
+        "Description": "Runs once per top-level project invocation before input loading or build dispatch. Direct URLs, execute steps, and offline/meta commands are excluded."
+      },
+      {
+        "LifecycleStateId": "S09-auto-build-for-install",
+        "Phase": "project-load",
+        "SortOrder": 10,
         "Entry": "install && -i file missing => print \"Auto-building project before install...\" and Rebuild(cwd) first; failures are warnings.",
         "ImplementedIn": "ShouldAutoBuildForInstall",
         "NewHome": "Commands/InstallCommand.cs",
@@ -2196,15 +2238,22 @@
         "StateTransitionId": "E05",
         "FromState": "S04-resolve-tool",
         "ToState": "S05-index-refresh",
-        "Condition": "index missing/empty or tool absent (and not a management command)",
+        "Condition": "index missing/empty/stale/unprovable or tool absent (and not an offline/meta command)",
         "Description": "At most once per process."
       },
       {
         "StateTransitionId": "E06",
         "FromState": "S05-index-refresh",
         "ToState": "S04-resolve-tool",
-        "Condition": "refresh finished (success or warning)",
+        "Condition": "refresh and structural validation succeeded",
         "Description": "Lookup is retried once."
+      },
+      {
+        "StateTransitionId": "E06a",
+        "FromState": "S05-index-refresh",
+        "ToState": "S00-main",
+        "Condition": "refresh, parse, or structural validation failed",
+        "Description": "Return non-zero. The prior cache is diagnostic evidence only and is never resolved."
       },
       {
         "StateTransitionId": "E07",
@@ -2265,9 +2314,30 @@
       {
         "StateTransitionId": "E15",
         "FromState": "S08-inject-settings",
+        "ToState": "S08a-project-tools-current",
+        "Condition": "catalog-dependent work",
+        "Description": "Run once for the top-level project invocation."
+      },
+      {
+        "StateTransitionId": "E15a",
+        "FromState": "S08a-project-tools-current",
         "ToState": "S09-auto-build-for-install",
-        "Condition": "install && -i file missing",
+        "Condition": "freshness/currentness succeeded && install && -i file missing",
         "Description": ""
+      },
+      {
+        "StateTransitionId": "E15b",
+        "FromState": "S08a-project-tools-current",
+        "ToState": "S10-load-inputs",
+        "Condition": "freshness/currentness succeeded && no auto-build is required",
+        "Description": ""
+      },
+      {
+        "StateTransitionId": "E15c",
+        "FromState": "S08a-project-tools-current",
+        "ToState": "S00-main",
+        "Condition": "freshness/currentness failed",
+        "Description": "Return non-zero before inputs are loaded or requested work begins."
       },
       {
         "StateTransitionId": "E16",
@@ -2280,8 +2350,8 @@
         "StateTransitionId": "E17",
         "FromState": "S08-inject-settings",
         "ToState": "S10-load-inputs",
-        "Condition": "",
-        "Description": ""
+        "Condition": "freshness-exempt command",
+        "Description": "Offline/meta and explicit URL-only work bypass S08a."
       },
       {
         "StateTransitionId": "E18",
@@ -2837,13 +2907,13 @@
         "DispatchRuleId": "P10-management-flags",
         "Phase": "management-dispatch",
         "SortOrder": 10,
-        "Condition": "listVersions|refreshTools|authenticate|projectLogin|discuss|listSeeds|cloneSeed|localGuide|upgrade|upgradeCli|upgradeAll|viewUrl|setUrl|listUrls|removeUrl|updateUrls",
+        "Condition": "listVersions|listTools|searchTools|refreshTools|authenticate|projectLogin|discuss|listSeeds|cloneSeed|localGuide|upgrade|upgradeCli|upgradeAll|viewUrl|setUrl|listUrls|removeUrl|updateUrls",
         "Action": "continueToLoad = false (no project load, no input load).",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
         "ExitCode": "flow",
         "Disposition": "keep",
-        "Description": "These actions run in TranspileProject without a project (upgrade loads it lazily)."
+        "Description": "These actions skip normal project/input loading. Upgrade and the freshness gate lazily load a project from cwd when present; catalog list/search still work outside a project."
       },
       {
         "DispatchRuleId": "P11-load-project",
@@ -3113,13 +3183,13 @@
         "DispatchRuleId": "T21-list-versions",
         "Phase": "transpile-dispatch",
         "SortOrder": 21,
-        "Condition": "listVersions",
-        "Action": "ListTranspilerVersions(rawArg) or the \"No versions for\" message.",
+        "Condition": "listVersions|listTools|searchTools",
+        "Action": "ListTranspilerVersions(rawArg), ListTools(), or SearchTools(searchTools), selected by the active option; all require EnsureCatalogFresh before reading the index.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
         "ExitCode": "0",
         "Disposition": "keep",
-        "Description": ""
+        "Description": "Catalog discovery is intentionally handled beside listVersions so every read goes through the same index parser and freshness gate."
       },
       {
         "DispatchRuleId": "T22-remove-setting",
@@ -3410,6 +3480,16 @@
     ],
     "data": [
       {
+        "ToolResolutionRuleId": "R0-catalog-freshness",
+        "Precedence": 0,
+        "Source": "~/.ssotme/remote_tools/ssotme-tools.json fetchedAt",
+        "Condition": "before any remote-catalog read or project tool execution; except offline/meta commands and explicit URL-only execution",
+        "Result": "Validate the cached index and its CLI-stamped UTC fetchedAt using TimeProvider. Missing, malformed, more than 5 minutes in the future, or age >= 24 hours => synchronously refresh and validate before continuing. A refresh failure is fatal: keep the prior cache for diagnosis but do not resolve or run a tool from it. With a project loaded or discoverable from cwd, compare every remotely versioned non-execute step to current HEAD; any hard pin or LastVersionUsed != HEAD invokes strict transactional UpgradeAll before the requested command. Resolve every step first and save once; any missing/no-HEAD tool fails with no project mutation and the requested command does not run. Catalog list/search remain valid outside a project, where only catalog freshness can be enforced.",
+        "VersionLabel": "",
+        "Disposition": "keep-modified",
+        "Description": "New behavior. The CLI cannot refresh while it is not running; this guarantees that every catalog-dependent invocation uses a list successfully confirmed within the preceding 24 hours and that every active project's remotely versioned tools track that list. help/version/auth/URL management/settings/describe/clean remain offline. Direct URL and -execute steps are not catalog-versioned and are excluded."
+      },
+      {
         "ToolResolutionRuleId": "R1-target-url-flag",
         "Precedence": 1,
         "Source": "-g <url>",
@@ -3504,10 +3584,10 @@
         "Precedence": 10,
         "Source": "DNS pre-check",
         "Condition": "stored bridge host does not resolve",
-        "Result": "Reset tool_urls.json[cli-cloud-bridge] to the bootstrap URL, delete bridge_version_index, retry once; messages \"Stored bridge URL is unreachable ... Resetting to bootstrap URL and retrying...\" / \"Warning: Could not refresh remote tool list\".",
+        "Result": "Reset tool_urls.json[cli-cloud-bridge] to the bootstrap URL, delete bridge_version_index, and retry once. If the retry fails, return non-zero; do not stamp fetchedAt, resolve from the stale cache, mutate the project, or run the requested command.",
         "VersionLabel": "",
         "Disposition": "keep-modified",
-        "Description": "The trailing \"Falling back to RabbitMQ proxy.\" wording in the generic warning becomes \"Continuing...\" (no proxy exists)."
+        "Description": "The RabbitMQ fallback is removed. The rebuild fails explicitly instead of continuing behind stale catalog data."
       }
     ]
   },
@@ -4633,13 +4713,13 @@
         "Path": "~/.ssotme/remote_tools/ssotme-tools.json",
         "Scope": "user-home",
         "Format": "json",
-        "Purpose": "Cached cli-cloud-bridge list output: transpilerVersions{ \"<acct>/<pkg>/<tool>\": { \"vX\": { urls.post, metaData.isHeadVersion, ... } } }, cliUpdateAvailable, latestBridgeVersion, latestCliVersion, fetchedAt, totalCount.",
-        "ReadBy": "tool resolution, listVersions, upgrade, upgradeAll",
-        "WrittenBy": "index refresh (written by the bridge tool run with cwd=remote_tools), placeholder {\"transpilers\":{}} on first init, deleted by refreshTools",
+        "Purpose": "Cached cli-cloud-bridge list output: transpilerVersions{ \"<acct>/<pkg>/<tool>\": { \"vX\": { urls.post, metaData.isHeadVersion, ... } } }, cliUpdateAvailable, latestBridgeVersion, latestCliVersion, fetchedAt, totalCount. fetchedAt is a CLI-stamped UTC instant proving when a valid response last replaced the cache.",
+        "ReadBy": "catalog freshness gate, tool resolution, listTools, searchTools, listVersions, upgrade, upgradeAll",
+        "WrittenBy": "successful validated index refresh via atomic replace; placeholder {\"transpilers\":{}} on first init; deleted by refreshTools before its mandatory re-fetch",
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
-        "Description": "Both \"transpilerVersions\" and legacy \"transpilers\" keys are accepted."
+        "Description": "Both \"transpilerVersions\" and legacy \"transpilers\" keys are accepted. fetchedAt advances only after parse and structural validation succeed; refresh failure never makes stale data look current."
       },
       {
         "ConfigFileId": "remote-tools-cli-version",
@@ -5632,13 +5712,13 @@
       },
       {
         "UserMessageId": "tool-not-found",
-        "Template": "\\nERROR: Tool '{name}' does not exist.\\n\\nThe tool was not found locally or on the tools server.\\n\\nTo see available tools, run:\\n  effortless listToolUrls\\n\\nTo add a new tool URL mapping, run:\\n  effortless setToolUrl <tool-name>=<url>",
+        "Template": "\\nERROR: Tool '{name}' does not exist.\\n\\nThe tool was not found locally or on the tools server.\\n\\nTo see available tools, run:\\n  effortless listTools\\n\\nTo add a new tool URL mapping, run:\\n  effortless setToolUrl <tool-name>=<url>",
         "Color": "red",
         "Trigger": "unresolved tool / status-message response",
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep-modified",
-        "Description": "Now also the immediate outcome when no URL resolves (no proxy call)."
+        "Description": "Now also the immediate outcome when no URL resolves (no proxy call). Legacy hint: effortless listToolUrls. Rebuild hint: effortless listTools, because listToolUrls shows custom overrides rather than the remote catalog."
       },
       {
         "UserMessageId": "transpiler-error-box",
@@ -5701,24 +5781,64 @@
         "Description": ""
       },
       {
+        "UserMessageId": "catalog-refresh-required",
+        "Template": "[cli] The remote tools catalog has not been confirmed within 24 hours; refreshing before continuing.",
+        "Color": "default",
+        "Trigger": "R0 missing/invalid/stale fetchedAt",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Printed once before the mandatory refresh. No success wording is printed unless a valid index is installed."
+      },
+      {
+        "UserMessageId": "catalog-project-upgrade",
+        "Template": "[cli] Checking project tools against the current catalog... | [cli] Project tools are current.",
+        "Color": "default",
+        "Trigger": "R0 project execution after freshness is established",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "The second line is emitted only after every remotely versioned step resolves and the transactional upgrade/save succeeds."
+      },
+      {
+        "UserMessageId": "tool-catalog-list",
+        "Template": "Available tools ({n}):\\n\\n  {canonicalName}  {headVersion|NO HEAD}\\n...",
+        "Color": "default",
+        "Trigger": "-listTools",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "One row per canonical tool, sorted ordinal-ignore-case. NO HEAD is explicit rather than dropping an unusable catalog entry."
+      },
+      {
+        "UserMessageId": "tool-catalog-search",
+        "Template": "Tools matching '{query}' ({n}):\\n\\n  {canonicalName}  {headVersion|NO HEAD}\\n... | No tools matched '{query}'.",
+        "Color": "default",
+        "Trigger": "-searchTools",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "No-match is a successful, explicit empty result; search never invents tools or descriptions."
+      },
+      {
         "UserMessageId": "bridge-unreachable",
-        "Template": "Stored bridge URL is unreachable ({url}). Resetting to bootstrap URL and retrying... | Warning: Could not refresh remote tool list after reset ({msg}). Continuing... | Warning: Could not refresh remote tool list (host not found: {url}). Continuing...",
+        "Template": "Stored bridge URL is unreachable ({url}). Resetting to bootstrap URL and retrying... | Legacy: Warning: Could not refresh remote tool list after reset ({msg}). Continuing... / Warning: Could not refresh remote tool list (host not found: {url}). Continuing... | Rebuild: ERROR: Could not refresh remote tool list after reset ({msg}). / ERROR: Could not refresh remote tool list (host not found: {url}).",
         "Color": "default",
         "Trigger": "dead bridge host",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
-        "Description": ""
+        "Disposition": "keep-modified",
+        "Description": "Refresh failure is fatal; stale catalog data is retained only for diagnosis and is not used."
       },
       {
         "UserMessageId": "bridge-refresh-warning",
-        "Template": "Warning: Could not refresh remote tool list ({msg}). Falling back to RabbitMQ proxy.",
+        "Template": "Legacy: Warning: Could not refresh remote tool list ({msg}). Falling back to RabbitMQ proxy. | Rebuild: ERROR: Could not refresh remote tool list ({msg}).",
         "Color": "default",
         "Trigger": "generic refresh failure",
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep-modified",
-        "Description": "Becomes \"Warning: Could not refresh remote tool list ({msg}). Continuing...\" in the rebuild."
+        "Description": "Becomes \"ERROR: Could not refresh remote tool list ({msg}).\" in the rebuild and returns non-zero; there is no fallback to RabbitMQ or stale cache."
       },
       {
         "UserMessageId": "list-versions",
@@ -7677,7 +7797,7 @@
         "Kind": "black-box",
         "RunsInCi": true,
         "NeedsNetwork": false,
-        "Description": "Remote index resolution, versions, pins, upgrade, listVersions, refreshTools, bridge self-update, ambiguity."
+        "Description": "Remote index resolution, 24-hour freshness, automatic transactional project upgrades, catalog list/search, versions, pins, refreshTools, bridge self-update, ambiguity."
       },
       {
         "TestSuiteId": "e2e-tool-urls",
@@ -7817,7 +7937,7 @@
         "datatype": "string",
         "type": "raw",
         "nullable": true,
-        "Description": "planned, implemented, legacy-green, rebuild-green, or blocked-by-decision."
+        "Description": "planned, planned-step-03a (new behavior intentionally deferred until that step), implemented, legacy-green, rebuild-green, or blocked-by-decision."
       },
       {
         "name": "Description",
@@ -9973,12 +10093,12 @@
         "Title": "dead bridge host resets to bootstrap",
         "Given": "tool_urls cli-cloud-bridge=http://nonexistent.invalid/",
         "When": "effortless -refreshTools",
-        "Then": "\"Stored bridge URL is unreachable ... Resetting to bootstrap URL and retrying...\"; tool_urls now has the bootstrap URL; then the second warning (bootstrap unreachable in sandbox) \"Continuing...\"",
+        "Then": "legacy: reset warning followed by the legacy continuation/fallback message; rebuild: reset warning followed by explicit refresh ERROR, non-zero exit, no stale-index use",
         "Priority": "P1",
         "Interactive": false,
         "Slow": true,
         "Status": "planned",
-        "Description": "keep-modified wording on the generic warning."
+        "Description": "keep-modified: the rebuild retries bootstrap once and then fails; it never continues with stale data or RabbitMQ."
       },
       {
         "TestCaseId": "res-bridge-payload",
@@ -10021,6 +10141,146 @@
         "Slow": false,
         "Status": "planned",
         "Description": ""
+      },
+      {
+        "TestCaseId": "res-list-tools",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "listTools",
+        "Title": "listTools projects the fresh catalog",
+        "Given": "fresh index fixture with multiple versions, deliberately unsorted canonical names, and one tool with no head",
+        "When": "effortless listTools ; effortless -listTools ; effortless -lt",
+        "Then": "\"Available tools (N):\"; exactly one sorted row per canonical tool; current head version shown; unusable entry says NO HEAD; no bridge call",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior. Runs in the existing E2E binary/process harness and CI OS matrix."
+      },
+      {
+        "TestCaseId": "res-search-tools",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "searchTools",
+        "Title": "searchTools matches canonical and short names",
+        "Given": "fresh index fixture containing effortless/data/rulebook-to-postgres and unrelated tools",
+        "When": "effortless searchTools POSTGRES ; effortless -searchTools postgres ; effortless -st postgres",
+        "Then": "case-insensitive ordinal substring match returns only the matching canonical tool and its head version",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior. Search is name-only because descriptions are not guaranteed by the index contract."
+      },
+      {
+        "TestCaseId": "res-search-tools-empty",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "searchTools",
+        "Title": "searchTools reports an explicit empty result",
+        "Given": "fresh non-empty index fixture",
+        "When": "effortless searchTools definitely-not-present",
+        "Then": "\"No tools matched 'definitely-not-present'.\"; exit 0; no invented suggestion or bridge call",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior; an empty search result is not a transport failure."
+      },
+      {
+        "TestCaseId": "res-freshness-current",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "refreshTools",
+        "Title": "catalog younger than 24 hours is reused",
+        "Given": "valid fetchedAt = test clock minus 23:59:59; project tools already match catalog HEAD",
+        "When": "effortless build",
+        "Then": "no bridge call; no project save; build executes against the cached HEAD",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior. E2E clock comes from an under-test-only injected TimeProvider, never wall-clock sleeps."
+      },
+      {
+        "TestCaseId": "res-freshness-stale-upgrades",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "upgradeAll",
+        "Title": "24-hour catalog refresh upgrades the active project before build",
+        "Given": "fetchedAt = test clock minus exactly 24 hours; project has v0 hard pin and stale LastVersionUsed; bridge returns valid v2 HEAD",
+        "When": "effortless build",
+        "Then": "mandatory refresh occurs once; all remote steps resolve before one project save; pins cleared and LastVersionUsed=v2; requested build runs afterward against v2",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior. The boundary is age >= 24 hours, not greater than 24 hours."
+      },
+      {
+        "TestCaseId": "res-freshness-invalid-time",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "refreshTools",
+        "Title": "missing malformed or future fetchedAt cannot prove freshness",
+        "Given": "three valid index fixtures whose fetchedAt is missing, malformed, or more than 5 minutes after the test clock",
+        "When": "run a catalog-dependent command against each fixture",
+        "Then": "each case performs a mandatory refresh before reading or executing",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior. A timestamp is evidence only when it parses and is plausible."
+      },
+      {
+        "TestCaseId": "res-freshness-refresh-fails",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "refreshTools",
+        "Title": "failed mandatory refresh never falls back",
+        "Given": "stale but otherwise usable cache; project file snapshot; bridge mock returns failure",
+        "When": "effortless build",
+        "Then": "non-zero exit and explicit refresh error; requested tool is not called; stale index remains only for diagnosis with unchanged fetchedAt; project bytes are unchanged",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior. This is the no-fallback guarantee."
+      },
+      {
+        "TestCaseId": "res-freshness-upgrade-atomic",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "upgradeAll",
+        "Title": "automatic project upgrade is all-or-nothing",
+        "Given": "fresh valid catalog; project has one stale pinned tool and one remote tool that is missing or has no HEAD",
+        "When": "effortless build",
+        "Then": "non-zero exit naming the unresolved step; no pin/LastVersionUsed changes are saved for any step; requested build does not start",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior. Explicit -upgradeAll keeps its documented SKIP behavior; only the automatic freshness gate is strict and transactional."
+      },
+      {
+        "TestCaseId": "res-freshness-offline-meta",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "refreshTools",
+        "Title": "offline metadata commands do not refresh",
+        "Given": "missing catalog and bridge mock that records calls",
+        "When": "effortless -help ; effortless -version",
+        "Then": "legacy-compatible output and zero bridge calls",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior boundary: freshness is enforced only for catalog-dependent work."
+      },
+      {
+        "TestCaseId": "unit-catalog-freshness",
+        "Suite": "unit-core",
+        "PrimaryOption": "refreshTools",
+        "Title": "catalog freshness boundary uses TimeProvider",
+        "Given": "fixed UTC TimeProvider and parsed fetchedAt values",
+        "When": "evaluate 23:59:59, 24:00:00, malformed, and future timestamps",
+        "Then": "fresh, stale, stale, stale respectively; no direct DateTime.UtcNow dependency",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "planned-step-03a",
+        "Description": "New behavior seam used by deterministic E2E tests on macOS, Windows, and Linux."
       },
       {
         "TestCaseId": "res-upgrade-tool",
@@ -10981,7 +11241,7 @@
         "Goal": "A black-box xunit suite + mock tool/bridge server that runs every P0/P1 e2e TestCase against the unmodified legacy dll and is green.",
         "DependsOn": "step-00",
         "InstructionsPath": "docs/refactor-plan/step-01-characterization-tests.md",
-        "DoneCriteria": "dotnet test tests/Effortless.Cli.E2E passes with EFFORTLESS_CLI_UNDER_TEST pointing at the legacy dll; every P0/P1 e2e TestCase id has an implementation; goldens recorded; CI workflow runs it; TestCases.Status updated to legacy-green.",
+        "DoneCriteria": "dotnet test tests/Effortless.Cli.E2E passes with EFFORTLESS_CLI_UNDER_TEST pointing at the legacy dll; every P0/P1 e2e TestCase id except planned-step-03a new-behavior rows has an implementation; goldens recorded; CI workflow runs it; implemented TestCases.Status updated to legacy-green.",
         "Owner": "opus",
         "Status": "ready",
         "Description": "No CLI code changes allowed in this step."
@@ -11005,17 +11265,29 @@
         "Goal": "src/Effortless.Cli produces a binary that passes the entire e2e suite (minus blocked-by-decision cases).",
         "DependsOn": "step-02",
         "InstructionsPath": "docs/refactor-plan/step-03-cli-port.md",
-        "DoneCriteria": "dotnet test with EFFORTLESS_CLI_UNDER_TEST=new dll: all legacy-green cases green (keep-modified cases asserted on the new behavior); contract-wire green.",
+        "DoneCriteria": "dotnet test with EFFORTLESS_CLI_UNDER_TEST=new dll: all legacy-green cases green except planned-step-03a rows; keep-modified cases assert documented new behavior; contract-wire green.",
         "Owner": "opus",
         "Status": "ready",
-        "Description": "The big one; split into 3a options/dispatch, 3b resolution/index, 3c transpile client/output if needed."
+        "Description": "The big one; split into 3.1 options/dispatch, 3.2 resolution/index, 3.3 transpile client/output if needed."
+      },
+      {
+        "RefactorStepId": "step-03a",
+        "SortOrder": 4,
+        "Title": "Automatic tool freshness and catalog discovery",
+        "Goal": "Every catalog-dependent invocation proves the remote tools index is less than 24 hours old, automatically brings the active project's remote tools to catalog HEAD, and exposes deterministic list/search commands.",
+        "DependsOn": "step-03",
+        "InstructionsPath": "docs/refactor-plan/step-03a-tool-freshness-and-discovery.md",
+        "DoneCriteria": "All planned-step-03a tests are rebuild-green on the existing Linux/macOS/Windows suites; stale or unprovable catalogs refresh before use; failed refreshes and incomplete automatic upgrades return non-zero without running the requested command or partially mutating the project; listTools/searchTools outputs are deterministic.",
+        "Owner": "opus",
+        "Status": "ready",
+        "Description": "New behavior requested after the legacy characterization plan was authored; it uses the same RemoteToolsIndex, VersionCommands, dispatcher, mock bridge, fixtures, manifests, and CI matrix as the rest of the CLI."
       },
       {
         "RefactorStepId": "step-04",
-        "SortOrder": 4,
+        "SortOrder": 5,
         "Title": "Cut the legacy tree and finish the repo shape",
         "Goal": "Delete Windows/, DSPXml/, ODXML/, SSoT/, docs (legacy), ssotme/, setup.py...; move installers; new README/CLAUDE.md/.gitignore/effortless.json; cli.js on the new dll.",
-        "DependsOn": "step-03",
+        "DependsOn": "step-03a",
         "InstructionsPath": "docs/refactor-plan/step-04-repo-cutover.md",
         "DoneCriteria": "git ls-files shows only SourceModules.NewPath destinations (+ new files); npm install -g . works; all four aliases work; e2e-shim green.",
         "Owner": "opus",
@@ -11024,7 +11296,7 @@
       },
       {
         "RefactorStepId": "step-05",
-        "SortOrder": 5,
+        "SortOrder": 6,
         "Title": "Rulebook-driven generation",
         "Goal": "CliOptions.g.cs, BarewordVerbs.g.cs, docs/cli-reference.md and the test manifest are generated from the rulebook; CI fails on drift.",
         "DependsOn": "step-04",
@@ -11036,7 +11308,7 @@
       },
       {
         "RefactorStepId": "step-06",
-        "SortOrder": 6,
+        "SortOrder": 7,
         "Title": "DevOps: CI matrix, installers, release flow",
         "Goal": "ci.yml (3 OS), build-installers.yml, release.yml, update-airtable.yml, scripts/release.sh with guards; PR template + branch protection notes.",
         "DependsOn": "step-04",
@@ -11048,7 +11320,7 @@
       },
       {
         "RefactorStepId": "step-07",
-        "SortOrder": 7,
+        "SortOrder": 8,
         "Title": "Resolve open decisions and harden",
         "Goal": "Every review-* disposition is flipped to keep/drop by the owner and implemented; unit test coverage of seams; remove dead scaffolding.",
         "DependsOn": "step-05",
@@ -11060,7 +11332,7 @@
       },
       {
         "RefactorStepId": "step-08",
-        "SortOrder": 8,
+        "SortOrder": 9,
         "Title": "Parity check and squash-merge cutover",
         "Goal": "Run the whole suite against legacy-final and the rebuild, diff goldens, write migration notes, squash-merge effortless-cli into main, release.",
         "DependsOn": "step-07",

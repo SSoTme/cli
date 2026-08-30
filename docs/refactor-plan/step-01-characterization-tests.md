@@ -3,7 +3,8 @@
 **Goal:** a black-box xunit suite plus a mock transpiler/bridge server that executes every P0/P1 `e2e-*`
 row of `TestCases` against the **unmodified** legacy CLI (`Windows/CLI/bin/Release/net8.0/SSoTme.OST.CLI.dll`)
 and is green. This suite is the safety net for every later step; it must not know anything about the
-new code.
+new code. Exclude rows whose `Status` is `planned-step-03a`: those specify newly requested behavior with
+no legacy contract and are implemented in the same harness in Step 03A.
 
 **Hard rule:** no changes to any file under `Windows/`, `cli.js`, or `package.json` in this step. If a
 legacy behavior looks like a bug, pin it anyway (or record it in the rulebook as `keep-modified` with a
@@ -167,5 +168,5 @@ the owner's machine; the `metaData.isHeadVersion` and `urls.post` keys are the o
 - Windows: `HttpListener` needs `http://127.0.0.1:{port}/` (not `+`) to avoid URL ACL prompts.
 
 **Done when:** `scripts/test-legacy.sh` is green locally on macOS (and on the CI matrix), every P0/P1
-`e2e-*` `TestCaseId` exists as an xunit `DisplayName`, goldens are committed, and the rulebook statuses
-are updated.
+`e2e-*` `TestCaseId` except `planned-step-03a` rows exists as an xunit `DisplayName`, goldens are
+committed, and the implemented rulebook statuses are updated.

@@ -3,7 +3,7 @@
 **Goal:** no `review-*` dispositions remain in use; every `blocked-by-decision` test is implemented or
 deleted; the internal seams have unit coverage; the leftover static state is cleaned up.
 
-**Blocked until the owner answers D1–D10 in [README.md#decisions](README.md#decisions).** Record each
+**Blocked until the owner answers D1–D11 in [README.md#decisions](README.md#decisions).** Record each
 answer by editing the rulebook: change the `Disposition` on the affected rows to `keep`/`keep-modified`/
 `drop-legacy`, and set `Dispositions.review-drop/review-keep.NeedsUserConfirmation` to `false` once no row
 uses them (or delete the rows).
@@ -19,6 +19,7 @@ uses them (or delete the rows).
 | D5 shim | Already done in Step 4. | (revert to join-and-ignore — not recommended) |
 | D6 child spawn | Already done in Step 2. | (revert to PATH lookup — not recommended) |
 | D7–D10 | Confirm rows; no code. | — |
+| D11 parser forms | Normalize reserved commands so bareword, single-dash, and double-dash forms select the same option before a remaining argument can be treated as a transpiler. Apply this to `listTools` and `searchTools` too. | — |
 
 ## Hardening
 

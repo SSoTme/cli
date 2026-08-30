@@ -20,17 +20,17 @@ disagree, the rulebook wins — fix the rulebook, then regenerate.
 | Table | What it answers |
 |---|---|
 | `Dispositions` | The seven fates (keep / keep-modified / drop-rabbit / drop-dead / drop-dspxml / drop-legacy / review-*) and which ones need the owner's confirmation |
-| `CliOptions` (65 rows) | Every Plossum option: verbatim help text, aliases, bareword verbs, how it is handled, its disposition, **and test coverage** (`CountOfTestCases`, `IsRetainedButUntested`) |
+| `CliOptions` (67 rows) | Every Plossum option: verbatim help text, aliases, bareword verbs, how it is handled, its disposition, **and test coverage** (`CountOfTestCases`, `IsRetainedButUntested`) |
 | `DispatchRules` (50) | The exact if/else precedence of `ParseCommand` + `TranspileProject` — the request-handling state machine |
 | `LifecyclePhases` / `LifecycleStates` / `StateTransitions` | The process lifecycle, the build loop and the clean loop as a state graph, with the legacy method and the proposed new home for each state |
-| `ToolResolutionRules` / `RetryRules` | How a tool name becomes a URL + version label; the HTTP retry matrix |
+| `ToolResolutionRules` / `RetryRules` | How freshness is proven, how a tool name becomes a URL + version label, and the HTTP retry matrix |
 | `WirePayloadFields` | The REST wire contract (request camelCase / response), with evidence of which fields live tools actually consume |
 | `HttpEndpoints` | Every remote endpoint with a liveness probe from 2026-08-30 |
 | `ConfigFiles` / `ProjectFileFields` | Every file the CLI touches; the exact `effortless.json` serialization contract |
 | `UserMessages` | The console strings tests assert on (goldens) |
 | `SourceModules` (55) | The legacy → new move map for every file/dir |
 | `Dependencies`, `EnvVariables`, `EntryPoints`, `DevopsPipelines`, `ExitCodes`, `ProjectFacts` | The remaining constants of the system |
-| `TestSuites` / `TestCases` (~190) | The comprehensive test plan (Given/When/Then, priority, interactive, slow) |
+| `TestSuites` / `TestCases` (226) | The comprehensive test plan (Given/When/Then, priority, interactive, slow), including the post-characterization Step 03A cases |
 | `RefactorSteps` | The pieces of the puzzle (this plan) |
 
 Query it, don't read it whole — e.g.
@@ -49,7 +49,8 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | 01 | Characterization test harness against the **legacy** binary | opus | ready | [step-01-characterization-tests.md](step-01-characterization-tests.md) |
 | 02 | New solution skeleton + ported core library | opus | ready (after 01) | [step-02-core-library.md](step-02-core-library.md) |
 | 03 | Ported CLI: options, dispatcher, resolver, REST client | opus | ready (after 02) | [step-03-cli-port.md](step-03-cli-port.md) |
-| 04 | Cut the legacy tree and finish the repo shape | opus | ready (after 03) | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
+| 03A | **Automatic tool freshness and catalog discovery (new behavior)** | opus | ready (after 03) | [step-03a-tool-freshness-and-discovery.md](step-03a-tool-freshness-and-discovery.md) |
+| 04 | Cut the legacy tree and finish the repo shape | opus | ready (after 03A) | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
 | 05 | Rulebook-driven generation | opus | ready (after 04) | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |
 | 06 | DevOps: CI matrix, installers, release flow | opus | ready (after 04, parallel with 05) | [step-06-devops.md](step-06-devops.md) |
 | 07 | Resolve open decisions and harden | opus | **blocked on decisions below** | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
@@ -59,7 +60,8 @@ Ground rules that apply to every step:
 
 1. **Tests first, behavior second.** Step 1 pins the legacy behavior in a black-box suite. From Step 2 on,
    nothing ships that turns a `legacy-green` test red unless the rulebook row is `keep-modified` and the
-   test asserts the documented new behavior.
+   test asserts the documented new behavior. Rows marked `planned-step-03a` are an explicit new-behavior
+   exception to legacy characterization; Step 03A must turn all of them `rebuild-green` before Step 4.
 2. **The rulebook is edited, never bypassed.** Adding an option, message, file or test means adding a
    row. From Step 5 on, `CliOptions.g.cs`, `BarewordVerbs.g.cs`, `docs/cli-reference.md` and the test
    manifest are generated and CI fails on drift.
@@ -110,9 +112,9 @@ effortless-cli/
 │       │                 VersionCommands.cs, AuthCommands.cs, InfoCommand.cs, UpgradeCliCommand.cs, ExecuteCommand.cs
 │       ├── Project/      EffortlessProject.cs, ProjectTranspiler.cs, ProjectSetting.cs, ProjectLocator.cs,
 │       │                 ProjectFileStore.cs, BuildRunner.cs, BuildErrorLog.cs, CleanRunner.cs,
-│       │                 EmptyFolderPruner.cs, ChildProcessRunner.cs
+│       │                 ProjectToolFreshness.cs, EmptyFolderPruner.cs, ChildProcessRunner.cs
 │       ├── Transpile/    TranspilePayload.cs, TranspileClient.cs, RetryPolicy.cs, ToolResolver.cs,
-│       │                 RemoteToolsIndex.cs, CloudBridgeClient.cs, LogEntry.cs, VersionKey.cs
+│       │                 RemoteToolsIndex.cs, CatalogFreshnessPolicy.cs, CloudBridgeClient.cs, LogEntry.cs, VersionKey.cs
 │       ├── FileSets/     FileSet.cs, FileSetFile.cs, FileSetXml.cs, FileSetWriter.cs, FileSetCleaner.cs,
 │       │                 InputFileSetLoader.cs, ZfsLedger.cs, GZip.cs
 │       ├── Config/       UserConfigDir.cs, KeyFile.cs, EnvFile.cs, ToolUrls.cs, JwtStore.cs, CredentialResolver.cs
@@ -138,7 +140,7 @@ Start each session with:
 ```bash
 git checkout effortless-cli && git pull
 cat docs/refactor-plan/README.md            # this file
-cat docs/refactor-plan/step-0N-*.md         # the step you are on
+cat docs/refactor-plan/step-0N*.md          # the step you are on (includes step-03a)
 jq '.RefactorSteps.data[] | {RefactorStepId, Status}' effortless-rulebook/effortless-rulebook.json
 ```
 

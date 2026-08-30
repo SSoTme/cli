@@ -2,8 +2,8 @@
 
 **Goal:** `src/Effortless.Cli` builds `Effortless.Cli.dll`; with `EFFORTLESS_CLI_UNDER_TEST` pointing at it
 and `EFFORTLESS_CLI_MODE=rebuild`, the **entire Step 1 suite is green** (except rows whose `Status` is
-`blocked-by-decision`), plus the `contract-wire` tests. This is the largest step; split it into three
-PRs (3a options + dispatch, 3b resolution + index + tool URLs + upgrades, 3c transpile client + output +
+`blocked-by-decision` or `planned-step-03a`), plus the `contract-wire` tests. This is the largest step; split it into three
+PRs (3.1 options + dispatch, 3.2 resolution + index + tool URLs + upgrades, 3.3 transpile client + output +
 auth/info/updates) if a single session cannot land it.
 
 Inputs: `CliOptions`, `DispatchRules`, `LifecycleStates`/`StateTransitions`, `ToolResolutionRules`,
@@ -21,7 +21,8 @@ Inputs: `CliOptions`, `DispatchRules`, `LifecycleStates`/`StateTransitions`, `To
   (retained rows). Match exactly like `FixParameters`: lowercase the first remaining argument, look it up
   **against the verbs as written** (so `dryRun` and `pullAll` never match — the legacy quirk), set the
   option, and for `viewUrl`/`setUrl`/`removeUrl` copy the next argument into the string option. Every
-  matched verb sets `transpiler = args[1]` and removes the verb.
+  matched verb sets `transpiler = args[1]` and removes the verb. Step 03A extends the same generated
+  string-option path to copy the query for `searchTools`.
 - `CliArgumentParser.cs` — wraps Plossum: `Parse(string[] argv)` and `Parse(string commandLine)`; returns
   `CliInvocation { Options, RemainingArguments, HasErrors, ErrorText, UsageHeader, UsageOptions }`. Keep
   the `GetSafeHelpWidth` logic (80 when redirected).
@@ -66,6 +67,8 @@ Implement `ToolResolutionRules` R1–R6, R8–R10 (R7 is gone):
   `bridge_version_index`, removes the legacy `list-transpilers` key), and the dead-host recovery.
 - The "refresh at most once per process, only when the index is empty or the tool is missing" logic.
 - `ToolUrls` overrides and the `[user-set]` label; account extraction from `acct/tool`.
+- Dead-bridge recovery retries the bootstrap URL once, then fails non-zero. It must not continue with a
+  stale index or any other fallback. The 24-hour `R0-catalog-freshness` gate itself lands in Step 03A.
 - **Unresolved name:** do not call anything; leave `TargetUrl` null so T36 reports `tool-not-found`
   (`keep-modified`; test `tx-tool-not-found` in rebuild mode asserts no retry lines and a fast exit).
 
@@ -116,5 +119,6 @@ the rulebook decides who is right: if the legacy behavior is `keep`, fix the por
 the test must already have a `Behavior.IsLegacy` branch — if it does not, add the branch **and** the
 rulebook `Description` explaining the change.
 
-**Done when:** rebuild-mode E2E green (minus blocked-by-decision), unit + contract green, legacy-mode E2E
-still green, `TestCases.Status` → `rebuild-green`, `RefactorSteps.step-03.Status` → `done`.
+**Done when:** rebuild-mode E2E green (minus blocked-by-decision and planned-step-03a), unit + contract
+green, legacy-mode E2E still green, implemented `TestCases.Status` → `rebuild-green`, deferred rows stay
+`planned-step-03a`, and `RefactorSteps.step-03.Status` → `done`.
