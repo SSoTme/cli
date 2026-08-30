@@ -7929,7 +7929,7 @@
         "Title": "no arguments outside a project",
         "Given": "empty temp dir",
         "When": "effortless",
-        "Then": "\"ERROR: No Project found in this directory.\" + init hint; exit -1",
+        "Then": "\"ERROR: No project found in this directory or any parent directory.\" + init hint; exit -1",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
