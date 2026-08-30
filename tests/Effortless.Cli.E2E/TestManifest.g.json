@@ -1,0 +1,1482 @@
+[
+  {
+    "id": "meta-version-flag",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-help",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-help-width",
+    "suite": "e2e-meta",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-unknown-option",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-no-args-in-project",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-no-args-outside-project",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-debug-banner",
+    "suite": "e2e-meta",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-info-not-logged-in",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-info-with-keys",
+    "suite": "e2e-meta",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-info-project-jwt",
+    "suite": "e2e-meta",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-info-global-jwt",
+    "suite": "e2e-meta",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "meta-info-no-project",
+    "suite": "e2e-meta",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-empty",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-name",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-bareword",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-twice",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-rename",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-force-subproject",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-gitignore-append",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-init-implies-build",
+    "suite": "e2e-project",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-walk-up",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-migrate-ssotme-json",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-legacy-names",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-invalid-candidate",
+    "suite": "e2e-project",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-generate-id",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-describe",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-describe-subtree",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-describe-all",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-no-project-silent",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-list-settings",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-add-setting",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-add-setting-bad",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-add-setting-project-name",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-remove-setting",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-save-preserves-custom",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-save-no-resurrect",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-save-format",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "proj-save-order",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-basic",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-bareword",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-prefix-strip-aliases",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-subdir",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-replace",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-group",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-dry-run",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-dry-run-bareword-quirk",
+    "suite": "e2e-install",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-url",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-target-url",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-execute",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-execute-missing",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-execute-timeout",
+    "suite": "e2e-install",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "inst-auto-build",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "inst-account-prefix",
+    "suite": "e2e-install",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "uninst-basic",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "uninst-prompt-no",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "uninst-prompt-yes",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "uninst-qualified",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "uninst-missing-name",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "uninst-none",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "uninst-ambiguous",
+    "suite": "e2e-install",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-basic",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-cwd-per-step",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-skips-disabled",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-group",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-subtree",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-local",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-all",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "build-fail-stops",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-coe-continues",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-coe-throwing-step",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-errors-json-cleared",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-errors-json-schema",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-version-label",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-pinned-url",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-pinned-missing",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-sync-commandline-version",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-soft-pin-updates",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-debug",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-empty-folder-cleanup",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-nested-parent-root",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "build-no-steps",
+    "suite": "e2e-build",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-project-required",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-basic",
+    "suite": "e2e-clean",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-preserve-zfs",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-local",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-subtree",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-all",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "clean-purge",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-zfs-key-lasturl",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-zfs-fallback-single",
+    "suite": "e2e-clean",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-zfs-input",
+    "suite": "e2e-clean",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-tool-flag",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-deleted-cwd",
+    "suite": "e2e-clean",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-project-null",
+    "suite": "e2e-clean",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-request-shape",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-request-order-params",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-input-rename",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-input-list-glob",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-input-optional",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-input-outside-project",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-input-parent-project",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-input-binary",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-output-rules",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-output-newuuid-cdata",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-output-no-content",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-zfs-written",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-zfs-self-source",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-skip-clean",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-prior-clean",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-logs-display",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-logs-error-promoted",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-exception",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-exception-ssl-hint",
+    "suite": "e2e-transpile",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-non-json",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-status-message",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-http-500",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-retry-503",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-retry-400-ssl",
+    "suite": "e2e-transpile",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-retry-host-not-found",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-connection-refused",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-timeout",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-boot-spinner",
+    "suite": "e2e-transpile",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-async-completed",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-async-failed",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-async-404",
+    "suite": "e2e-transpile",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-async-timeout",
+    "suite": "e2e-transpile",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "tx-label-direct",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-bare-url",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-account-env",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-account-keyfile",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-account-json-key",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-account-runas",
+    "suite": "e2e-transpile",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-jwt-project-first",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-outside-project",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tx-tool-not-found",
+    "suite": "e2e-transpile",
+    "priority": "P0",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "res-head-latest",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-explicit-version",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-explicit-missing",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-pinned-labels",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-latest-flag",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-no-head",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-ambiguous",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-qualified",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-refresh-on-miss",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-refresh-empty-index",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-bootstrap-first-run",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-no-refresh-on-version-change",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-refresh-tools",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-bridge-self-update",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-bridge-list-transpilers-removed",
+    "suite": "e2e-resolution",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-update-available-file",
+    "suite": "e2e-resolution",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-dead-bridge-recovery",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "res-bridge-payload",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-list-versions",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-list-versions-missing",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-upgrade-tool",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-upgrade-not-installed",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-upgrade-no-project",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-upgrade-all",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-upgrade-cwd-disambiguation",
+    "suite": "e2e-resolution",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-user-set-override",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "res-user-set-unknown-tool",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "urls-set",
+    "suite": "e2e-tool-urls",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "urls-set-invalid",
+    "suite": "e2e-tool-urls",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "urls-set-bridge-warning",
+    "suite": "e2e-tool-urls",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "urls-view",
+    "suite": "e2e-tool-urls",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "urls-list",
+    "suite": "e2e-tool-urls",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "urls-remove",
+    "suite": "e2e-tool-urls",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "urls-bareword-rt-quirk",
+    "suite": "e2e-tool-urls",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-login-flow",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "auth-login-already",
+    "suite": "e2e-auth",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "auth-project-login",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "auth-logout",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "auth-subscription-no-token",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-subscription",
+    "suite": "e2e-auth",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-set-api-key",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-set-api-key-runas",
+    "suite": "e2e-auth",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-key-permissions",
+    "suite": "e2e-auth",
+    "priority": "P2",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "shim-argv-passthrough",
+    "suite": "e2e-shim",
+    "priority": "P0",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "shim-exit-code",
+    "suite": "e2e-shim",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "shim-version-sync",
+    "suite": "e2e-shim",
+    "priority": "P0",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "shim-aliases",
+    "suite": "e2e-shim",
+    "priority": "P1",
+    "status": "planned",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "net-upgrade-cli-check",
+    "suite": "e2e-network",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "net-live-bridge-list",
+    "suite": "e2e-network",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "net-live-tool-run",
+    "suite": "e2e-network",
+    "priority": "P2",
+    "status": "planned",
+    "slow": true,
+    "interactive": false
+  }
+]
