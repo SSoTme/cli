@@ -1,0 +1,309 @@
+using Effortless.Cli.E2E.Harness;
+
+namespace Effortless.Cli.E2E.Suites;
+
+public sealed class CleanTests
+{
+    [Theory(DisplayName = "clean-basic: clean forms honor overwrite and SkipClean ledger rules")]
+    [InlineData("clean")]
+    [InlineData("-clean")]
+    [InlineData("-c")]
+    public async Task CleanHonorsLedgerRules(string form)
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Cleaner", "", "to-uppercase"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("out.txt", "remove", alwaysOverwrite: true),
+                FileSetEntry.TextFile("keep.txt", "keep", overwriteMode: "Never"),
+                FileSetEntry.TextFile("skip.txt", "skip", alwaysOverwrite: true, skipClean: true),
+                FileSetEntry.BinaryFile(
+                    "empty/bin.dat",
+                    [0, 1, 2, 255],
+                    alwaysOverwrite: true,
+                    zipped: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+        Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+
+        var result = await cli.Run([form], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("[cli] Cleaning", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("out.txt", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("bin.dat", result.Stdout, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "out.txt")));
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "empty", "bin.dat")));
+        Assert.False(Directory.Exists(Path.Combine(sandbox.ProjectPath, "empty")));
+        Assert.Equal("keep", sandbox.ReadFile("keep.txt"));
+        Assert.Equal("skip", sandbox.ReadFile("skip.txt"));
+        Assert.Empty(WorkflowTestSupport.ZfsFiles(sandbox));
+        Assert.True(Directory.Exists(sandbox.ProjectPath));
+    }
+
+    [Theory(DisplayName = "clean-preserve-zfs: preserveZFS aliases retain ledgers after cleaning")]
+    [InlineData("-preserveZFS")]
+    [InlineData("-rz")]
+    public async Task PreserveZfsRetainsLedger(string option)
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Cleaner", "", "to-uppercase"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("out.txt", "remove", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+        var ledger = Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+
+        var result = await cli.Run(
+            ["clean", option],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "out.txt")));
+        Assert.True(File.Exists(ledger));
+    }
+
+    [Fact(DisplayName = "clean-local: cleanLocal cleans only the exact current path")]
+    public async Task CleanLocalCleansOnlyExactPath()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Root", "", "to-uppercase"),
+            new WorkflowStep("Sub", "/sub", "echo"));
+        Directory.CreateDirectory(Path.Combine(sandbox.ProjectPath, "sub"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("root.txt", "root", alwaysOverwrite: true)));
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("sub.txt", "sub", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+
+        var result = await cli.Run(
+            ["cleanlocal"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "root.txt")));
+        Assert.True(File.Exists(Path.Combine(sandbox.ProjectPath, "sub", "sub.txt")));
+        Assert.Empty(WorkflowTestSupport.ZfsFiles(sandbox));
+        Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox, "sub"));
+    }
+
+    [Fact(DisplayName = "clean-subtree: clean from a subdirectory cleans only that subtree")]
+    public async Task CleanFromSubdirectoryCleansOnlySubtree()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Root", "", "to-uppercase"),
+            new WorkflowStep("Sub", "/sub", "echo"));
+        var sub = Directory.CreateDirectory(Path.Combine(sandbox.ProjectPath, "sub")).FullName;
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("root.txt", "root", alwaysOverwrite: true)));
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("sub.txt", "sub", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+
+        var result = await cli.Run(["clean"], sub, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(File.Exists(Path.Combine(sandbox.ProjectPath, "root.txt")));
+        Assert.False(File.Exists(Path.Combine(sub, "sub.txt")));
+        Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+        Assert.Empty(WorkflowTestSupport.ZfsFiles(sandbox, "sub"));
+    }
+
+    [Fact(DisplayName = "clean-all: cleanAll cleans root and nested projects")]
+    [Trait("Slow", "true")]
+    public async Task CleanAllCleansNestedProjects()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Root", "", "to-uppercase"));
+        var sub = Directory.CreateDirectory(Path.Combine(sandbox.ProjectPath, "sub")).FullName;
+        var nested = Path.Combine(sub, "nested");
+        WorkflowTestSupport.WriteProjectAt(
+            nested,
+            new WorkflowStep("Nested", "", "echo"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("root.txt", "root", alwaysOverwrite: true)));
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("nested.txt", "nested", alwaysOverwrite: true)));
+        var rootBuild = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        var nestedBuild = await cli.Run(["build"], nested, sandbox);
+        Assert.Equal(0, rootBuild.ExitCode);
+        Assert.Equal(0, nestedBuild.ExitCode);
+
+        var result = await cli.Run(
+            ["cleanall"],
+            sub,
+            sandbox,
+            timeoutMs: 180_000);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "root.txt")));
+        Assert.False(File.Exists(Path.Combine(nested, "nested.txt")));
+        Assert.Contains(
+            "Executing 'effortless -clean' in ",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains("/sub/nested", result.Stdout, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "clean-purge: purge cleans and removes orphaned ledgers")]
+    public async Task PurgeCleansOrphanedLedger()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Orphan", "", "to-uppercase"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("orphan.txt", "orphan", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+        var ledger = Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+        WorkflowTestSupport.WriteProject(sandbox);
+
+        var ordinary = await cli.Run(["clean"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, ordinary.ExitCode);
+        Assert.True(File.Exists(Path.Combine(sandbox.ProjectPath, "orphan.txt")));
+        Assert.True(File.Exists(ledger));
+
+        var purged = await cli.Run(
+            ["clean", "-purge"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, purged.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "orphan.txt")));
+        Assert.False(File.Exists(ledger));
+    }
+
+    [Fact(DisplayName = "clean-zfs-key-lasturl: clean locates the ledger using LastUrl")]
+    public async Task CleanUsesLastUrlForLedgerKey()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        var targetUrl = server.ToolUri("to-uppercase").ToString();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep(
+                "Remote",
+                "",
+                $"to-uppercase -g {targetUrl}",
+                LastUrl: targetUrl));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("remote.txt", "remote", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+        var ledger = Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+        Assert.Contains(
+            WorkflowTestSupport.SanitizeUrl(targetUrl),
+            Path.GetFileNameWithoutExtension(ledger),
+            StringComparison.Ordinal);
+        WorkflowTestSupport.WriteProject(
+            sandbox,
+            new WorkflowStep(
+                "DifferentName",
+                "",
+                "echo",
+                LastUrl: targetUrl));
+
+        var result = await cli.Run(["clean"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "remote.txt")));
+        Assert.False(File.Exists(ledger));
+        Assert.Single(server.Requests);
+    }
+
+    [Fact(DisplayName = "clean-tool-flag: direct tool -clean cleans instead of writing")]
+    public async Task ToolCleanFlagUsesPriorLedgerWithoutPosting()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Direct", "", "to-uppercase -i in.txt"));
+        sandbox.WriteFile("in.txt", "source");
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("direct.txt", "direct", alwaysOverwrite: true)),
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("rerun.txt", "must not be written", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+        var ledger = Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+        var ledgerContents = File.ReadAllBytes(ledger);
+
+        var result = await cli.Run(
+            ["to-uppercase", "-i", "in.txt", "-clean"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "direct.txt")));
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "rerun.txt")));
+        Assert.True(File.Exists(ledger));
+        Assert.Equal(ledgerContents, File.ReadAllBytes(ledger));
+        Assert.Equal(2, server.Requests.Count);
+    }
+
+    [Fact(DisplayName = "clean-project-null: clean outside a project fails clearly")]
+    public async Task CleanOutsideProjectFails()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var result = await cli.Run(["clean"], sandbox.ProjectPath, sandbox);
+
+        Assert.True(result.Failed);
+        Assert.Contains(
+            "No Project found in this directory",
+            result.Combined,
+            StringComparison.OrdinalIgnoreCase);
+    }
+}
