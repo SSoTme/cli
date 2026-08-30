@@ -1,0 +1,15 @@
+{
+  "Name": "wire-project",
+  "SSoTmeProjectId": "4ec92dc6-8de5-43ed-9c30-f55a66407d07",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "wire-project"
+    },
+    {
+      "Name": "a",
+      "Value": "1"
+    }
+  ],
+  "ProjectTranspilers": []
+}
