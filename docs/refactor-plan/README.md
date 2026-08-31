@@ -50,7 +50,7 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | 02 | New solution skeleton + ported core library | opus | **done** | [step-02-core-library.md](step-02-core-library.md) |
 | 03 | Ported CLI: options, dispatcher, resolver, REST client | opus | **done** | [step-03-cli-port.md](step-03-cli-port.md) |
 | 03A | **Automatic tool freshness and catalog discovery (new behavior)** | opus | ready (after 03) | [step-03a-tool-freshness-and-discovery.md](step-03a-tool-freshness-and-discovery.md) |
-| 04 | Cut the legacy tree and finish the repo shape | opus | ready (after 03A) | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
+| 04 | Cut the legacy tree and finish the repo shape | opus | **done** | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
 | 05 | Rulebook-driven generation | opus | ready (after 04) | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |
 | 06 | DevOps: CI matrix, installers, release flow | opus | ready (after 04, parallel with 05) | [step-06-devops.md](step-06-devops.md) |
 | 07 | Resolve open decisions and harden | opus | **blocked on decisions below** | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |

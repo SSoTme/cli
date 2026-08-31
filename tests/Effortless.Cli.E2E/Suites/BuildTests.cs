@@ -39,7 +39,9 @@ public sealed class BuildTests
             < result.Stdout.IndexOf("**** /sub: Sub ****", StringComparison.Ordinal));
         Assert.Equal(["to-uppercase", "echo"], server.Requests.Select(request => request.ToolName).ToArray());
         Golden.AssertMatches(
-            "build-basic",
+            Behavior.IsLegacy
+                ? "build-basic"
+                : "build-basic-rebuild",
             Golden.Normalize(result.Stdout, sandbox, server.BaseUri.ToString()));
         var steps = WorkflowTestSupport.Steps(sandbox)
             .Select(node => Assert.IsType<JsonObject>(node))
@@ -436,8 +438,14 @@ public sealed class BuildTests
         var result = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
+        var pinnedVersion = Behavior.IsLegacy
+            ? WorkflowTestSupport.OldVersion
+            : WorkflowTestSupport.HeadVersion;
+        var pinnedLabel = Behavior.IsLegacy
+            ? " [pinned]"
+            : " [latest]";
         Assert.Contains(
-            $"cli:> effortless/common/to-uppercase {WorkflowTestSupport.HeadVersion} [latest]",
+            $"cli:> effortless/common/to-uppercase {pinnedVersion}{pinnedLabel}",
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -465,15 +473,27 @@ public sealed class BuildTests
 
         Assert.Equal(0, result.ExitCode);
         var request = Assert.Single(server.Requests);
-        Assert.Equal(WorkflowTestSupport.HeadVersion, request.Version);
+        var expectedVersion = Behavior.IsLegacy
+            ? WorkflowTestSupport.OldVersion
+            : WorkflowTestSupport.HeadVersion;
+        Assert.Equal(expectedVersion, request.Version);
         Assert.Equal(
-            WorkflowTestSupport.HeadVersion,
+            expectedVersion,
             WorkflowTestSupport.SingleStep(sandbox)["LastVersionUsed"]!.GetValue<string>());
         Assert.Equal(
-            server.ToolUri("to-uppercase", WorkflowTestSupport.HeadVersion).ToString(),
+            server.ToolUri("to-uppercase", expectedVersion).ToString(),
             WorkflowTestSupport.SingleStep(sandbox)["LastUrl"]!.GetValue<string>());
-        Assert.Null(
-            WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]);
+        if (Behavior.IsLegacy)
+        {
+            Assert.Equal(
+                WorkflowTestSupport.OldVersion,
+                WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]!.GetValue<string>());
+        }
+        else
+        {
+            Assert.Null(
+                WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]);
+        }
     }
 
     [Fact(DisplayName = "build-pinned-missing: an unavailable hard pin is cleared before build")]
@@ -485,16 +505,31 @@ public sealed class BuildTests
             cli,
             server,
             new WorkflowStep("Missing", "", "to-uppercase", PinnedVersion: "v9"));
-        server.Enqueue("to-uppercase", ToolBehavior.Files());
+        if (!Behavior.IsLegacy)
+        {
+            server.Enqueue("to-uppercase", ToolBehavior.Files());
+        }
 
         var result = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Equal(
-            WorkflowTestSupport.HeadVersion,
-            Assert.Single(server.Requests).Version);
-        Assert.Null(
-            WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]);
+        if (Behavior.IsLegacy)
+        {
+            Assert.True(result.Failed);
+            Assert.Contains(
+                "Error: version 'v9' not found for tool",
+                result.Combined,
+                StringComparison.Ordinal);
+            Assert.Empty(server.Requests);
+        }
+        else
+        {
+            Assert.Equal(0, result.ExitCode);
+            Assert.Equal(
+                WorkflowTestSupport.HeadVersion,
+                Assert.Single(server.Requests).Version);
+            Assert.Null(
+                WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]);
+        }
     }
 
     [Fact(DisplayName = "build-sync-commandline-version: automatic freshness removes embedded versions")]
@@ -516,7 +551,9 @@ public sealed class BuildTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(
-            "effortless/common/to-uppercase",
+            Behavior.IsLegacy
+                ? $"effortless/common/to-uppercase/{WorkflowTestSupport.HeadVersion}"
+                : "effortless/common/to-uppercase",
             WorkflowTestSupport.RequiredString(
                 WorkflowTestSupport.SingleStep(sandbox),
                 "CommandLine"));

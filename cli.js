@@ -8,14 +8,11 @@ const fs = require('fs');
 
 const appDir = path.dirname(require.main.filename);
 const rebuildProjectPath = path.join(appDir, 'src', 'Effortless.Cli', 'Effortless.Cli.csproj');
-const isRebuild = fs.existsSync(rebuildProjectPath);
-const solutionPath = path.join(appDir, isRebuild ? 'Effortless.Cli.sln' : 'SSoTme-OST-CLI.sln');
-const outputPath = isRebuild
-    ? path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 'net8.0', 'Effortless.Cli.dll')
-    : path.join(appDir, 'Windows', 'CLI', 'bin', 'Release', 'net8.0', 'SSoTme.OST.CLI.dll');
+const solutionPath = path.join(appDir, 'Effortless.Cli.sln');
+const outputPath = path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 'net8.0', 'Effortless.Cli.dll');
 
 // Sync version from package.json into .csproj <Version> and CLI_VERSION constant.
-// Mirrors Windows/Installer/Scripts/build.ps1 so dev builds (npm install -g .) match MSI/PKG.
+// Mirrors installers/windows/Scripts/build.ps1 so dev builds and installers match.
 // Returns true if any source file was modified (caller forces a rebuild).
 function syncVersionFromPackageJson() {
     const pkgVersion = require(path.join(appDir, 'package.json')).version;
@@ -26,7 +23,7 @@ function syncVersionFromPackageJson() {
         : pkgVersion;
 
     let changed = false;
-    const updates = isRebuild ? [
+    const updates = [
         {
             file: rebuildProjectPath,
             pattern: /<Version>.*?<\/Version>/,
@@ -36,17 +33,6 @@ function syncVersionFromPackageJson() {
             file: path.join(appDir, 'src', 'Effortless.Cli.Core', 'CliVersion.cs'),
             pattern: /public const string Value = ".*?";/,
             replacement: `public const string Value = "${pkgVersion}";`,
-        },
-    ] : [
-        {
-            file: path.join(appDir, 'Windows', 'CLI', 'SSoTme.OST.CLI.csproj'),
-            pattern: /<Version>.*?<\/Version>/,
-            replacement: `<Version>${csprojVersion}</Version>`,
-        },
-        {
-            file: path.join(appDir, 'Windows', 'Lib', 'CLIOptions', 'SSoTmeCLIHandler.cs'),
-            pattern: /public string CLI_VERSION = ".*?";/,
-            replacement: `public string CLI_VERSION = "${pkgVersion}";`,
         },
     ];
     for (const u of updates) {

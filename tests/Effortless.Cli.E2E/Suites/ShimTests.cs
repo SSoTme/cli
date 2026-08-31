@@ -90,7 +90,7 @@ public sealed class ShimTests
         const string expectedCsprojVersion = "2099.12.31.2359";
         var cli = new CliUnderTest();
         using var sandbox = Sandbox.Create(cli);
-        var sourcePaths = VersionSourcePaths();
+        var sourcePaths = VersionSourcePaths(cli);
         var sourceHashesBefore = sourcePaths.ToDictionary(path => path, HashFile);
         var shim = ShimUnderTest.CreateFullSource(cli, sandbox);
         shim.SetPackageVersion(testVersion);
@@ -146,7 +146,8 @@ public sealed class ShimTests
         Assert.Single(outputs.Distinct(StringComparer.Ordinal));
     }
 
-    private static IReadOnlyList<string> VersionSourcePaths()
+    private static IReadOnlyList<string> VersionSourcePaths(
+        CliUnderTest cli)
     {
         var paths = new List<string>
         {
@@ -155,15 +156,16 @@ public sealed class ShimTests
         };
         if (Behavior.IsLegacy)
         {
+            var legacyRoot = LegacyRepositoryRoot(cli);
             paths.Add(
                 Path.Combine(
-                    CliUnderTest.Root,
+                    legacyRoot,
                     "Windows",
                     "CLI",
                     "SSoTme.OST.CLI.csproj"));
             paths.Add(
                 Path.Combine(
-                    CliUnderTest.Root,
+                    legacyRoot,
                     "Windows",
                     "Lib",
                     "CLIOptions",
@@ -186,6 +188,23 @@ public sealed class ShimTests
         }
 
         return paths;
+    }
+
+    private static string LegacyRepositoryRoot(
+        CliUnderTest cli)
+    {
+        var directory = new DirectoryInfo(
+            Path.GetDirectoryName(cli.DllPath)
+            ?? throw new InvalidOperationException(
+                "The legacy CLI DLL has no containing directory."));
+        for (var index = 0; index < 5; index++)
+        {
+            directory = directory.Parent
+                ?? throw new DirectoryNotFoundException(
+                    "Could not locate the legacy worktree from the CLI DLL.");
+        }
+
+        return directory.FullName;
     }
 
     private static string HashFile(string path) =>

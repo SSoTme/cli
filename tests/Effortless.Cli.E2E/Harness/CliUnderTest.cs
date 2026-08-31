@@ -132,19 +132,6 @@ internal sealed class CliUnderTest
 
     private static string GetDefaultDllPath()
     {
-        var legacy = Path.Combine(
-            Root,
-            "Windows",
-            "CLI",
-            "bin",
-            "Release",
-            "net8.0",
-            "SSoTme.OST.CLI.dll");
-        if (File.Exists(legacy))
-        {
-            return legacy;
-        }
-
         return Path.Combine(
             Root,
             "src",

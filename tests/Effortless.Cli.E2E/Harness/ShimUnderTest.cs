@@ -74,13 +74,16 @@ internal sealed class ShimUnderTest
         string expectedDll;
         if (Behavior.IsLegacy)
         {
-            CopyRepositoryFile(
+            var legacyRoot = LegacyRepositoryRoot(cli);
+            CopyRepositoryFileFrom(
+                legacyRoot,
                 Path.Combine(
                     "Windows",
                     "CLI",
                     "SSoTme.OST.CLI.csproj"),
                 root);
-            CopyRepositoryFile(
+            CopyRepositoryFileFrom(
+                legacyRoot,
                 Path.Combine(
                     "Windows",
                     "Lib",
@@ -139,9 +142,13 @@ internal sealed class ShimUnderTest
         CopyRootFile("package.json", root);
         if (Behavior.IsLegacy)
         {
-            CopyRootFile("SSoTme-OST-CLI.sln", root);
+            var legacyRoot = LegacyRepositoryRoot(cli);
+            CopyRepositoryFileFrom(
+                legacyRoot,
+                "SSoTme-OST-CLI.sln",
+                root);
             CopyDirectory(
-                Path.Combine(CliUnderTest.Root, "Windows"),
+                Path.Combine(legacyRoot, "Windows"),
                 Path.Combine(root, "Windows"),
                 excludeBuildArtifacts: true);
         }
@@ -437,7 +444,18 @@ internal sealed class ShimUnderTest
 
     private static void CopyRepositoryFile(string relativePath, string destinationRoot)
     {
-        var source = Path.Combine(CliUnderTest.Root, relativePath);
+        CopyRepositoryFileFrom(
+            CliUnderTest.Root,
+            relativePath,
+            destinationRoot);
+    }
+
+    private static void CopyRepositoryFileFrom(
+        string repositoryRoot,
+        string relativePath,
+        string destinationRoot)
+    {
+        var source = Path.Combine(repositoryRoot, relativePath);
         if (!File.Exists(source))
         {
             throw new FileNotFoundException(
@@ -448,6 +466,23 @@ internal sealed class ShimUnderTest
         var destination = Path.Combine(destinationRoot, relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         File.Copy(source, destination);
+    }
+
+    private static string LegacyRepositoryRoot(
+        CliUnderTest cli)
+    {
+        var directory = new DirectoryInfo(
+            Path.GetDirectoryName(cli.DllPath)
+            ?? throw new InvalidOperationException(
+                "The legacy CLI DLL has no containing directory."));
+        for (var index = 0; index < 5; index++)
+        {
+            directory = directory.Parent
+                ?? throw new DirectoryNotFoundException(
+                    "Could not locate the legacy worktree from the CLI DLL.");
+        }
+
+        return directory.FullName;
     }
 
     private static void CopyDirectory(

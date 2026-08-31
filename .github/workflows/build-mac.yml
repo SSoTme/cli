@@ -79,14 +79,14 @@ jobs:
       run: |
         ARCHITECTURE="x86_64"
         INSTALLER_NAME="SSoTme-Installer-$ARCHITECTURE.pkg"
-        /bin/bash macOS/Installer/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
+        /bin/bash installers/macos/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
     
     - name: Upload Intel Installer
       if: steps.early_check.outputs.pkg_count < '2'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-x86_64
-        path: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
+        path: installers/macos/bin/signed/SSoTme-Installer-x86_64.pkg
 
     - name: Get release tag from package.json
       id: get_tag
@@ -117,7 +117,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag_name }}
-        files: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
+        files: installers/macos/bin/signed/SSoTme-Installer-x86_64.pkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -194,14 +194,14 @@ jobs:
       run: |
         ARCHITECTURE="arm64"
         INSTALLER_NAME="SSoTme-Installer-$ARCHITECTURE.pkg"
-        /bin/bash macOS/Installer/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
+        /bin/bash installers/macos/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
     
     - name: Upload ARM Installer
       if: steps.early_check_arm.outputs.pkg_count < '2'
       uses: actions/upload-artifact@v4
       with:
         name: SSoTme-Installer-arm64
-        path: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
+        path: installers/macos/bin/signed/SSoTme-Installer-arm64.pkg
 
     - name: Get release tag from package.json
       id: get_tag_arm
@@ -232,6 +232,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
-        files: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
+        files: installers/macos/bin/signed/SSoTme-Installer-arm64.pkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

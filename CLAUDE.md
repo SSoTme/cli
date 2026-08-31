@@ -1,58 +1,96 @@
-# Effortless / SSoTme CLI — repo guide for Claude
+# Effortless CLI repository guide
 
-This repo builds the `effortless` (a.k.a. `ssotme` / `aicapture` / `aic`) CLI. `cli.js` is an npm
-shim that builds and runs the bundled .NET 8 binary (`Windows/CLI/...SSoTme.OST.CLI.dll`). All four
-`bin` names point at `cli.js`.
+This repository builds the REST-only `effortless` CLI. The npm package remains
+`ssotme`, and all four binary names (`effortless`, `ssotme`, `aicapture`, `aic`)
+point at `cli.js`.
 
-## Publishing a new version — ALWAYS do this, never hand-roll it
+## Source of truth
 
-When you change CLI source and want it released, run the publish script from the repo root:
+`effortless-rulebook/effortless-rulebook.json` is the single source of truth for
+CLI options, dispatch behavior, wire contracts, messages, files, tests, and the
+refactor plan. Query it with `jq`; do not read the whole file.
+
+When changing generated options, bareword verbs, the CLI reference, or the test
+manifest:
+
+1. Edit the rulebook.
+2. Run `npm run generate`.
+3. Never hand-edit `*.g.cs` or other generated artifacts.
+
+The generated pipeline is introduced in Step 5. Until then, keep the checked-in
+generated files synchronized with the rulebook changes in the same commit.
+
+## Repository layout
+
+- `src/Effortless.Cli/` — .NET 8 executable.
+- `src/Effortless.Cli.Core/` — parser, dispatcher, project, REST, auth, file-set,
+  configuration, and update logic.
+- `tests/Effortless.Cli.Tests/` — unit and wire-contract tests.
+- `tests/Effortless.Cli.E2E/` — black-box CLI tests and mock HTTP servers.
+- `tests/fixtures/` — project, catalog, wire, shim, and golden fixtures.
+- `installers/windows/` and `installers/macos/` — MSI and PKG sources.
+- `scripts/` — generation, parity, legacy-test, CI, and release scripts.
+- `docs/refactor-plan/` — the staged rebuild plan and historical record.
+
+## Build and test
 
 ```bash
-cd ~/.effortless/cli
-./release-cli.sh          # stamps package.json with a fresh yyyy-mm-dd.hh.mm version,
-                          # commits + pushes that to main, and cuts a GitHub release
-                          # (the release triggers the MSI + PKG CI builds).
-npm install -g .          # upgrade THIS machine's global install to the just-released version.
+dotnet build Effortless.Cli.sln --configuration Release
+dotnet test Effortless.Cli.sln --configuration Release
 ```
 
-Then verify: `effortless -version` should print the new `yyyy-mm-dd.hh.mm`.
+Run `dotnet test` before every commit. The E2E harness uses the rebuilt DLL by
+default after the legacy tree is removed.
 
-**Rules:**
-- **Commit your source fixes FIRST** (the `.cs` files etc.), THEN run `./release-cli.sh`. The release
-  script only stamps + commits `package.json`; it does not commit your code changes for you.
-- **Do NOT hand-edit the version** in `package.json` or `Windows/CLI/SSoTme.OST.CLI.csproj`.
-  `release-cli.sh` owns `package.json`'s version, and `cli.js` auto-syncs the `<Version>` in the
-  `.csproj` and `CLI_VERSION` in `SSoTmeCLIHandler.cs` from `package.json` on the next build. If you
-  see those two files modified in the working tree after a build, that's the auto-sync — `git checkout`
-  them before committing and let the release flow regenerate them, so the version stamp stays consistent.
-- `./build-package.sh` builds the local macOS `.pkg` installer only — it does NOT publish. Use
-  `release-cli.sh` to publish.
-- After any source change, rebuild before testing: `rm -rf Windows/CLI/bin && dotnet build SSoTme-OST-CLI.sln -c Release`,
-  then `npm install -g .` (the global symlink already points here, so `cli.js` runs the freshly-built dll).
+For npm-shim testing:
 
-## Gotchas already fixed here (don't reintroduce)
+```bash
+npm install -g .
+effortless -version
+ssotme -v
+aicapture -v
+aic -v
+```
 
-- **`-upgrade` must persist.** `SSoTmeProject.Save()` merges the on-disk `effortless.json` to preserve
-  custom transpiler properties — but it must SKIP model-owned properties (`PinnedVersion`,
-  `LastVersionUsed`, etc.). `PinnedVersion` serializes with `IgnoreAndPopulate`, so setting it to `null`
-  omits it; if the merge copies the old value back from disk, the unpin is silently undone. Keep the
-  `modelOwnedProps` skip-set in `Save()`.
-- **`-upgrade` must advance the soft pin.** A build with no hard pin resolves its version from
-  `LastVersionUsed` (`GetPinnedVersionForTool` returns it). So `UpgradeSingleTool` / `UpgradeAllTools`
-  must set `LastVersionUsed = <resolved head>` in addition to clearing `PinnedVersion`, or the next
-  build stays locked to the old version despite the "unpinned — will track latest" message.
+## Local tool URL debugging
 
-## Branch `effortless-cli`: the clean REST-only rebuild (read this first on that branch)
+Point a catalog tool at a local HTTP service, run the command or build, then
+remove the override:
 
-This branch rebuilds the CLI without RabbitMQ. The **single source of truth** for the rebuild is
-`effortless-rulebook/effortless-rulebook.json` (every CLI option with verbatim help text, the dispatch
-state machine, the REST wire contract, config files, endpoints, the legacy→new move map, the full test plan,
-and the refactor steps). The step-by-step instructions are in `docs/refactor-plan/README.md` and
-`docs/refactor-plan/step-0N-*.md`. Start every session there.
+```bash
+effortless -setToolUrl tool-name=http://localhost:PORT
+effortless tool-name -debug
+effortless -removeToolUrl tool-name
+```
 
-- Legacy final commit: `a8f0f320f4417c58fa931cc4bc8164f79cbbbd97` (tag `legacy-final`, branch `legacy/main`). Never touch `main`/`legacy/main` from this branch.
-- Query the rulebook with `jq`; don't read it whole (it is ~430 KB). Edit rulebook rows, don't bypass them.
-- Step 1 (characterization tests) must be green against the legacy dll BEFORE any change under `Windows/`.
-- Open owner decisions D1–D10 live in `docs/refactor-plan/README.md#decisions`; proceed under the encoded recommendation until told otherwise.
-- Pin semantics in a8f0f32: only `PinnedVersion` (hard pin) affects resolution; `LastVersionUsed` is informational. The gotcha above that says otherwise is stale and gets corrected in Step 4.
+Do not add a stale-catalog, alternate-transport, or RabbitMQ fallback. A catalog
+refresh failure is a hard failure.
+
+## Project save and upgrade invariants
+
+- `EffortlessProject.Save()` merges unknown custom transpiler properties from the
+  on-disk `effortless.json`, but must never restore model-owned properties such as
+  `PinnedVersion` or `LastVersionUsed`. `PinnedVersion` uses
+  `IgnoreAndPopulate`; copying the old value back would silently undo an unpin.
+- With no hard pin, resolution uses catalog HEAD. `LastVersionUsed` is
+  informational and records what ran; it does not select a version. Upgrade paths
+  clear `PinnedVersion`, remove embedded command-line versions, and advance
+  `LastVersionUsed` to HEAD.
+
+## Releases
+
+Commit source changes first, then use the guarded release flow:
+
+```bash
+scripts/release.sh
+```
+
+The release script owns version stamping, pushing, and release creation. Do not
+hand-edit release versions or invent a publish procedure.
+
+## Branch safety
+
+The final RabbitMQ-era source is commit
+`a8f0f320f4417c58fa931cc4bc8164f79cbbbd97` (`legacy-final`,
+`legacy/main`). Do not modify `main` or `legacy/main` while completing the
+REST-only rebuild branch.

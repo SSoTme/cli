@@ -145,7 +145,10 @@ public sealed class ToolUrlTests
             missing.Stdout,
             StringComparison.Ordinal);
 
-        foreach (var alias in new[] { "-listUrls", "listurls", "-lu" })
+        var aliases = Behavior.IsLegacy
+            ? new[] { "-listUrls", "listurls", "-lu", "-lt" }
+            : new[] { "-listUrls", "listurls", "-lu" };
+        foreach (var alias in aliases)
         {
             using var sandbox = Sandbox.Create(cli);
             ToolUrlTestSupport.WriteToolUrls(

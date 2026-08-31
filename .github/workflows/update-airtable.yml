@@ -18,7 +18,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install -r .github/scripts/requirements.txt
+        pip install -r scripts/ci/requirements.txt
     
     - name: Get version from package.json
       id: get_version
@@ -29,7 +29,7 @@ jobs:
     
     - name: Update Airtable with new version
       run: |
-        python .github/scripts/add_latest_version_to_airtable_db.py --version "${{ steps.get_version.outputs.version }}"
+        python scripts/ci/add_latest_version_to_airtable_db.py --version "${{ steps.get_version.outputs.version }}"
       env:
         AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
         SSOT_BASE_ID: ${{ secrets.SSOT_BASE_ID }}

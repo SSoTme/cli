@@ -1,7 +1,6 @@
 {
   "name": "ssotme",
   "version": "2026-06-09.06.13",
-  "cloud_bridge_url": "https://ssotme-cli-cloud-bridge-v2026-04-24-1853-cmvbd4phczmeg.7pktzg2z971j0.cpln.app",
   "dotnet": "8.0.410",
   "description": "",
   "bin": {
@@ -11,7 +10,10 @@
     "aic": "cli.js"
   },
   "scripts": {
-    "build": "dotnet build SSoTme-OST-CLI.sln --configuration Release",
+    "build": "dotnet build Effortless.Cli.sln --configuration Release",
+    "test": "dotnet test Effortless.Cli.sln --configuration Release",
+    "test:legacy": "bash scripts/test-legacy.sh",
+    "generate": "node scripts/generate-from-rulebook.mjs",
     "start": "node cli.js"
   },
   "keywords": [],

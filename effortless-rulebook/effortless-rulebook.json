@@ -11291,7 +11291,7 @@
         "InstructionsPath": "docs/refactor-plan/step-04-repo-cutover.md",
         "DoneCriteria": "git ls-files shows only SourceModules.NewPath destinations (+ new files); npm install -g . works; all four aliases work; e2e-shim green.",
         "Owner": "opus",
-        "Status": "ready",
+        "Status": "done",
         "Description": "Point of no return for the branch (still safe: main is untouched)."
       },
       {
