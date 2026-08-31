@@ -10713,7 +10713,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10723,11 +10723,11 @@
         "Title": "LowerHyphenName / ToTitle / ToCamelString",
         "Given": "",
         "When": "\"ToUppercase\", \"to-uppercase\", \"JSON To Handlebars\", \"rulebook_to_x\"",
-        "Then": "legacy expectations (\"to-uppercase\", \"to-uppercase\", \"json-to-handlebars\", ...)",
+        "Then": "legacy expectations (\"to-uppercase\", \"to-uppercase\", \"j-s-o-n-to-handlebars\", \"rulebooktox\")",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10741,7 +10741,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10755,7 +10755,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10769,7 +10769,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10797,7 +10797,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10811,7 +10811,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10825,7 +10825,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10839,7 +10839,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10881,7 +10881,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10909,7 +10909,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10923,7 +10923,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10937,7 +10937,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -10993,7 +10993,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -11007,7 +11007,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "implemented",
         "Description": ""
       },
       {
@@ -11255,7 +11255,7 @@
         "InstructionsPath": "docs/refactor-plan/step-02-core-library.md",
         "DoneCriteria": "Effortless.Cli.sln builds; unit-core P0 tests green; legacy solution untouched and still green.",
         "Owner": "opus",
-        "Status": "ready",
+        "Status": "done",
         "Description": "Mechanical port under new namespaces; RabbitMQ-free by construction."
       },
       {

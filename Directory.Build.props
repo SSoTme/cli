@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <LangVersion>latest</LangVersion>
+    <Company>Effortless API</Company>
+    <Product>Effortless CLI</Product>
+  </PropertyGroup>
+</Project>
