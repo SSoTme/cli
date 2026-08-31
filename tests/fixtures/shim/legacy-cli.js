@@ -7,37 +7,19 @@ const path = require('path');
 const fs = require('fs');
 
 const appDir = path.dirname(require.main.filename);
-const rebuildProjectPath = path.join(appDir, 'src', 'Effortless.Cli', 'Effortless.Cli.csproj');
-const isRebuild = fs.existsSync(rebuildProjectPath);
-const solutionPath = path.join(appDir, isRebuild ? 'Effortless.Cli.sln' : 'SSoTme-OST-CLI.sln');
-const outputPath = isRebuild
-    ? path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 'net8.0', 'Effortless.Cli.dll')
-    : path.join(appDir, 'Windows', 'CLI', 'bin', 'Release', 'net8.0', 'SSoTme.OST.CLI.dll');
+const solutionPath = path.join(appDir, 'SSoTme-OST-CLI.sln');
+const outputPath = path.join(appDir, 'Windows', 'CLI', 'bin', 'Release', 'net8.0', 'SSoTme.OST.CLI.dll');
 
-// Sync version from package.json into .csproj <Version> and CLI_VERSION constant.
-// Mirrors Windows/Installer/Scripts/build.ps1 so dev builds (npm install -g .) match MSI/PKG.
-// Returns true if any source file was modified (caller forces a rebuild).
+// Frozen at legacy-final for characterization tests.
 function syncVersionFromPackageJson() {
     const pkgVersion = require(path.join(appDir, 'package.json')).version;
-    // "2026-04-24.18.54" -> "2026.4.24.1854"
     const m = pkgVersion.match(/^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$/);
     const csprojVersion = m
         ? `${+m[1]}.${+m[2]}.${+m[3]}.${+m[4]}${m[5].padStart(2, '0')}`
         : pkgVersion;
 
     let changed = false;
-    const updates = isRebuild ? [
-        {
-            file: rebuildProjectPath,
-            pattern: /<Version>.*?<\/Version>/,
-            replacement: `<Version>${csprojVersion}</Version>`,
-        },
-        {
-            file: path.join(appDir, 'src', 'Effortless.Cli.Core', 'CliVersion.cs'),
-            pattern: /public const string Value = ".*?";/,
-            replacement: `public const string Value = "${pkgVersion}";`,
-        },
-    ] : [
+    const updates = [
         {
             file: path.join(appDir, 'Windows', 'CLI', 'SSoTme.OST.CLI.csproj'),
             pattern: /<Version>.*?<\/Version>/,
@@ -63,7 +45,6 @@ function syncVersionFromPackageJson() {
 
 const versionChanged = syncVersionFromPackageJson();
 
-// Check if we need to build
 if (versionChanged || !fs.existsSync(outputPath)) {
     console.log('Building .NET solution...');
     try {
@@ -77,21 +58,12 @@ if (versionChanged || !fs.existsSync(outputPath)) {
     }
 }
 
-// Run the CLI
 try {
-    const child = spawn('dotnet', [
+    spawn('dotnet', [
         outputPath,
-        ...process.argv.slice(2)
+        process.argv.slice(2).join(' ')
     ], {
         stdio: 'inherit',
-        // cwd: appDir
-    });
-    child.on('error', (error) => {
-        console.error('Failed to run CLI:', error);
-        process.exit(1);
-    });
-    child.on('exit', (code, signal) => {
-        process.exit(signal ? 1 : (code ?? 1));
     });
 } catch (error) {
     console.error('Failed to run CLI:', error);

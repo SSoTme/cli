@@ -979,6 +979,20 @@ public sealed class TranspileBehaviorTests
         Assert.DoesNotContain("Refreshing CLI tool URL index...", result.Combined, StringComparison.Ordinal);
         Assert.DoesNotContain("CLOUD-BRIDGE CALL TRIGGERED:", result.Combined, StringComparison.Ordinal);
         Assert.Contains("ERROR: Tool 'nope' does not exist.", result.Combined, StringComparison.Ordinal);
+        var expectedListCommand = Behavior.IsLegacy
+            ? "listToolUrls"
+            : "listTools";
+        var unexpectedListCommand = Behavior.IsLegacy
+            ? "listTools"
+            : "listToolUrls";
+        Assert.Contains(
+            $"To see available tools, run:{Environment.NewLine}  effortless {expectedListCommand}{Environment.NewLine}",
+            result.Combined,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            $"  effortless {unexpectedListCommand}{Environment.NewLine}",
+            result.Combined,
+            StringComparison.Ordinal);
         Assert.Empty(server.Requests);
         server.ThrowIfFaulted();
     }

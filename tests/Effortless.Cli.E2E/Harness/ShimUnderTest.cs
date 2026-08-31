@@ -24,10 +24,39 @@ internal sealed class ShimUnderTest
     public string PackagePath => Path.Combine(RootPath, "package.json");
 
     public string CsprojPath =>
-        Path.Combine(RootPath, "Windows", "CLI", "SSoTme.OST.CLI.csproj");
+        IsRebuildFixture
+            ? Path.Combine(
+                RootPath,
+                "src",
+                "Effortless.Cli",
+                "Effortless.Cli.csproj")
+            : Path.Combine(
+                RootPath,
+                "Windows",
+                "CLI",
+                "SSoTme.OST.CLI.csproj");
 
-    public string HandlerPath =>
-        Path.Combine(RootPath, "Windows", "Lib", "CLIOptions", "SSoTmeCLIHandler.cs");
+    public string VersionConstantPath =>
+        IsRebuildFixture
+            ? Path.Combine(
+                RootPath,
+                "src",
+                "Effortless.Cli.Core",
+                "CliVersion.cs")
+            : Path.Combine(
+                RootPath,
+                "Windows",
+                "Lib",
+                "CLIOptions",
+                "SSoTmeCLIHandler.cs");
+
+    private bool IsRebuildFixture =>
+        File.Exists(
+            Path.Combine(
+                RootPath,
+                "src",
+                "Effortless.Cli",
+                "Effortless.Cli.csproj"));
 
     public string AliasInstallPath =>
         Path.Combine(
@@ -39,31 +68,62 @@ internal sealed class ShimUnderTest
     {
         var root = Path.Combine(sandbox.RootPath, "shim-prebuilt");
         Directory.CreateDirectory(root);
-        CopyRootFile("cli.js", root);
+        CopyShim(root);
         CopyRootFile("package.json", root);
-        CopyRepositoryFile(
-            Path.Combine("Windows", "CLI", "SSoTme.OST.CLI.csproj"),
-            root);
-        CopyRepositoryFile(
-            Path.Combine("Windows", "Lib", "CLIOptions", "SSoTmeCLIHandler.cs"),
-            root);
+        string outputDestination;
+        string expectedDll;
+        if (Behavior.IsLegacy)
+        {
+            CopyRepositoryFile(
+                Path.Combine(
+                    "Windows",
+                    "CLI",
+                    "SSoTme.OST.CLI.csproj"),
+                root);
+            CopyRepositoryFile(
+                Path.Combine(
+                    "Windows",
+                    "Lib",
+                    "CLIOptions",
+                    "SSoTmeCLIHandler.cs"),
+                root);
+            outputDestination = Path.Combine(
+                root,
+                "Windows",
+                "CLI",
+                "bin",
+                "Release",
+                "net8.0");
+            expectedDll = Path.Combine(
+                outputDestination,
+                "SSoTme.OST.CLI.dll");
+        }
+        else
+        {
+            CopyDirectory(
+                Path.Combine(CliUnderTest.Root, "src"),
+                Path.Combine(root, "src"),
+                excludeBuildArtifacts: true);
+            outputDestination = Path.Combine(
+                root,
+                "src",
+                "Effortless.Cli",
+                "bin",
+                "Release",
+                "net8.0");
+            expectedDll = Path.Combine(
+                outputDestination,
+                "Effortless.Cli.dll");
+        }
 
         var outputSource = Path.GetDirectoryName(cli.DllPath)
-            ?? throw new InvalidOperationException("The CLI DLL has no containing directory.");
-        var outputDestination = Path.Combine(
-            root,
-            "Windows",
-            "CLI",
-            "bin",
-            "Release",
-            "net8.0");
+            ?? throw new InvalidOperationException(
+                "The CLI DLL has no containing directory.");
         CopyDirectory(outputSource, outputDestination);
-
-        var expectedDll = Path.Combine(outputDestination, "SSoTme.OST.CLI.dll");
         if (!File.Exists(expectedDll))
         {
             throw new FileNotFoundException(
-                "The isolated legacy shim fixture requires SSoTme.OST.CLI.dll.",
+                "The isolated shim fixture requires the actual CLI assembly for its source layout.",
                 expectedDll);
         }
 
@@ -75,13 +135,28 @@ internal sealed class ShimUnderTest
     {
         var root = Path.Combine(sandbox.RootPath, "shim-version-sync");
         Directory.CreateDirectory(root);
-        CopyRootFile("cli.js", root);
+        CopyShim(root);
         CopyRootFile("package.json", root);
-        CopyRootFile("SSoTme-OST-CLI.sln", root);
-        CopyDirectory(
-            Path.Combine(CliUnderTest.Root, "Windows"),
-            Path.Combine(root, "Windows"),
-            excludeBuildArtifacts: true);
+        if (Behavior.IsLegacy)
+        {
+            CopyRootFile("SSoTme-OST-CLI.sln", root);
+            CopyDirectory(
+                Path.Combine(CliUnderTest.Root, "Windows"),
+                Path.Combine(root, "Windows"),
+                excludeBuildArtifacts: true);
+        }
+        else
+        {
+            CopyRootFile("Effortless.Cli.sln", root);
+            CopyDirectory(
+                Path.Combine(CliUnderTest.Root, "src"),
+                Path.Combine(root, "src"),
+                excludeBuildArtifacts: true);
+            CopyDirectory(
+                Path.Combine(CliUnderTest.Root, "tests"),
+                Path.Combine(root, "tests"),
+                excludeBuildArtifacts: true);
+        }
         return new ShimUnderTest(root, cli, sandbox);
     }
 
@@ -285,17 +360,75 @@ internal sealed class ShimUnderTest
               $"{match.Groups[5].Value.PadLeft(2, '0')}"
             : packageVersion;
 
+        var rebuildProject = Path.Combine(
+            root,
+            "src",
+            "Effortless.Cli",
+            "Effortless.Cli.csproj");
+        var isRebuild = File.Exists(rebuildProject);
         var csproj = File.ReadAllText(
-            Path.Combine(root, "Windows", "CLI", "SSoTme.OST.CLI.csproj"));
-        var handler = File.ReadAllText(
-            Path.Combine(root, "Windows", "Lib", "CLIOptions", "SSoTmeCLIHandler.cs"));
-        if (!csproj.Contains($"<Version>{csprojVersion}</Version>", StringComparison.Ordinal)
-            || !handler.Contains(
+            isRebuild
+                ? rebuildProject
+                : Path.Combine(
+                    root,
+                    "Windows",
+                    "CLI",
+                    "SSoTme.OST.CLI.csproj"));
+        var versionSource = File.ReadAllText(
+            isRebuild
+                ? Path.Combine(
+                    root,
+                    "src",
+                    "Effortless.Cli.Core",
+                    "CliVersion.cs")
+                : Path.Combine(
+                    root,
+                    "Windows",
+                    "Lib",
+                    "CLIOptions",
+                    "SSoTmeCLIHandler.cs"));
+        var hasVersionConstant = isRebuild
+            ? versionSource.Contains(
+                $"public const string Value = \"{packageVersion}\";",
+                StringComparison.Ordinal)
+            : versionSource.Contains(
                 $"public string CLI_VERSION = \"{packageVersion}\";",
-                StringComparison.Ordinal))
+                StringComparison.Ordinal);
+        if (!csproj.Contains(
+                $"<Version>{csprojVersion}</Version>",
+                StringComparison.Ordinal)
+            || !hasVersionConstant)
         {
             throw new InvalidOperationException(
-                "The prebuilt shim fixture's copied version sources are not synchronized with package.json.");
+                "The prebuilt shim fixture's version sources are not synchronized with package.json.");
+        }
+    }
+
+    private static void CopyShim(string destinationRoot)
+    {
+        var source = Behavior.IsLegacy
+            ? Path.Combine(
+                CliUnderTest.Root,
+                "tests",
+                "fixtures",
+                "shim",
+                "legacy-cli.js")
+            : Path.Combine(CliUnderTest.Root, "cli.js");
+        var destination = Path.Combine(destinationRoot, "cli.js");
+        File.Copy(
+            source,
+            destination);
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(
+                destination,
+                UnixFileMode.UserRead
+                | UnixFileMode.UserWrite
+                | UnixFileMode.UserExecute
+                | UnixFileMode.GroupRead
+                | UnixFileMode.GroupExecute
+                | UnixFileMode.OtherRead
+                | UnixFileMode.OtherExecute);
         }
     }
 

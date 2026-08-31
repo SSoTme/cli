@@ -46,9 +46,9 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | Step | Title | Owner | Status | Instructions |
 |---|---|---|---|---|
 | 00 | Freeze the legacy line and author the rulebook | fable | **done** | this file |
-| 01 | Characterization test harness against the **legacy** binary | opus | ready | [step-01-characterization-tests.md](step-01-characterization-tests.md) |
-| 02 | New solution skeleton + ported core library | opus | ready (after 01) | [step-02-core-library.md](step-02-core-library.md) |
-| 03 | Ported CLI: options, dispatcher, resolver, REST client | opus | ready (after 02) | [step-03-cli-port.md](step-03-cli-port.md) |
+| 01 | Characterization test harness against the **legacy** binary | opus | **done** | [step-01-characterization-tests.md](step-01-characterization-tests.md) |
+| 02 | New solution skeleton + ported core library | opus | **done** | [step-02-core-library.md](step-02-core-library.md) |
+| 03 | Ported CLI: options, dispatcher, resolver, REST client | opus | **done** | [step-03-cli-port.md](step-03-cli-port.md) |
 | 03A | **Automatic tool freshness and catalog discovery (new behavior)** | opus | ready (after 03) | [step-03a-tool-freshness-and-discovery.md](step-03a-tool-freshness-and-discovery.md) |
 | 04 | Cut the legacy tree and finish the repo shape | opus | ready (after 03A) | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
 | 05 | Rulebook-driven generation | opus | ready (after 04) | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |

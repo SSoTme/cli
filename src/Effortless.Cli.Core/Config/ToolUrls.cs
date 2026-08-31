@@ -36,8 +36,9 @@ public static class ToolUrls
         }
         catch (Exception ex)
         {
-            Console.WriteLine(
-                $"Warning: Error reading ~/.ssotme/tool_urls.json: {ex.Message}");
+            throw new InvalidDataException(
+                $"Error reading ~/.ssotme/tool_urls.json: {ex.Message}",
+                ex);
         }
 
         return null;

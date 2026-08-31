@@ -1,0 +1,331 @@
+using System.Reflection;
+using Plossum.CommandLine;
+
+namespace Effortless.Cli.Options;
+
+public sealed class CliArgumentParser
+{
+    private static readonly IReadOnlySet<string> KnownOptionNames =
+        GetKnownOptionNames();
+
+    private static readonly IReadOnlyDictionary<string, string> NoDashCommandForms =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["listSettings"] = "listSettings",
+            ["ls"] = "listSettings",
+            ["addSetting"] = "addSetting",
+            ["as"] = "addSetting",
+            ["removeSetting"] = "removeSetting",
+            ["rs"] = "removeSetting",
+            ["execute"] = "execute",
+            ["exec"] = "execute",
+            ["setAccountAPIKey"] = "setAccountAPIKey",
+            ["api"] = "setAccountAPIKey",
+            ["listVersions"] = "listVersions",
+            ["lv"] = "listVersions",
+            ["l"] = "listVersions",
+            ["upgradeCli"] = "upgradeCli",
+            ["uc"] = "upgradeCli",
+            ["update"] = "upgradeCli",
+        };
+
+    public CliInvocation Parse(string[] argv)
+    {
+        var normalizedArguments = NormalizeArguments(argv ?? Array.Empty<string>());
+        return ParseCore(normalizedArguments);
+    }
+
+    public CliInvocation Parse(string commandLine)
+    {
+        var options = new ParserOptions();
+        var parser = new CommandLineParser(options);
+        parser.Parse(
+            NormalizeLeadingNoDashCommand(commandLine ?? string.Empty),
+            false);
+        return CreateInvocation(options, parser);
+    }
+
+    private static CliInvocation ParseCore(string[] arguments)
+    {
+        var options = new ParserOptions();
+        var parser = new CommandLineParser(options);
+        parser.Parse(ToPlossumCommandLine(arguments), false);
+        return CreateInvocation(options, parser);
+    }
+
+    private static CliInvocation CreateInvocation(
+        CliOptions options,
+        CommandLineParser parser)
+    {
+        var remainingArguments = parser.RemainingArguments.ToList();
+        var invocation = new CliInvocation
+        {
+            Options = options,
+            RemainingArguments = remainingArguments,
+            HasErrors = parser.HasErrors,
+            ErrorText = parser.UsageInfo.GetErrorsAsString(78),
+            UsageHeader = parser.UsageInfo.GetHeaderAsString(GetSafeHelpWidth()),
+            UsageOptions = parser.UsageInfo.GetOptionsAsString(GetSafeHelpWidth()),
+            ParseResult = parser.HasErrors ? -1 : 0,
+            SuppressTranspile = parser.HasErrors,
+            ContinueOnError = options.continueOnError,
+            TargetUrl = options.targetUrl,
+            Account = options.account ?? string.Empty,
+        };
+
+        ApplyNoDashCommand(options, invocation.RemainingArguments);
+
+        if (BarewordVerbs.TryApply(
+                options,
+                invocation.RemainingArguments,
+                out var transpiler))
+        {
+            invocation.Transpiler = transpiler ?? string.Empty;
+            invocation.RawTranspilerArg = transpiler;
+        }
+
+        return invocation;
+    }
+
+    private static void ApplyNoDashCommand(
+        CliOptions options,
+        IList<string> remainingArguments)
+    {
+        if (remainingArguments.Count == 0 ||
+            !IsBareword(remainingArguments[0]) ||
+            !NoDashCommandForms.TryGetValue(
+                remainingArguments[0],
+                out var command))
+        {
+            return;
+        }
+
+        switch (command)
+        {
+            case "listSettings":
+                options.listSettings = true;
+                break;
+            case "addSetting":
+                ConsumeListValue(options.addSetting, remainingArguments);
+                break;
+            case "removeSetting":
+                ConsumeListValue(options.removeSetting, remainingArguments);
+                break;
+            case "execute":
+                options.execute = ConsumeStringValue(remainingArguments);
+                break;
+            case "setAccountAPIKey":
+                options.setAccountAPIKey = ConsumeStringValue(remainingArguments);
+                break;
+            case "listVersions":
+                options.listVersions = true;
+                break;
+            case "upgradeCli":
+                options.upgradeCli = true;
+                break;
+        }
+
+        remainingArguments.RemoveAt(0);
+    }
+
+    private static void ConsumeListValue(
+        ICollection<string> target,
+        IList<string> remainingArguments)
+    {
+        var value = ConsumeStringValue(remainingArguments);
+        if (value is not null)
+        {
+            target.Add(value);
+        }
+    }
+
+    private static string ConsumeStringValue(
+        IList<string> remainingArguments)
+    {
+        if (remainingArguments.Count < 2)
+        {
+            return null;
+        }
+
+        var value = remainingArguments[1];
+        remainingArguments.RemoveAt(1);
+        return value;
+    }
+
+    private static string[] NormalizeArguments(IEnumerable<string> arguments)
+    {
+        var normalized = arguments
+            .Select(NormalizeDoubleDashOption)
+            .ToArray();
+
+        if (normalized.Length > 0 &&
+            IsBareword(normalized[0]) &&
+            NoDashCommandForms.TryGetValue(
+                normalized[0],
+                out var canonicalCommand))
+        {
+            normalized[0] = "-" + canonicalCommand;
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeLeadingNoDashCommand(
+        string commandLine)
+    {
+        var start = 0;
+        while (start < commandLine.Length &&
+               char.IsWhiteSpace(commandLine[start]))
+        {
+            start++;
+        }
+
+        var end = start;
+        while (end < commandLine.Length &&
+               !char.IsWhiteSpace(commandLine[end]))
+        {
+            end++;
+        }
+
+        if (start == end)
+        {
+            return commandLine;
+        }
+
+        var candidate = commandLine.Substring(start, end - start);
+        if (!IsBareword(candidate) ||
+            !NoDashCommandForms.TryGetValue(
+                candidate,
+                out var canonicalCommand))
+        {
+            return commandLine;
+        }
+
+        return commandLine.Substring(0, start) +
+               "-" +
+               canonicalCommand +
+               commandLine.Substring(end);
+    }
+
+    private static string ToPlossumCommandLine(
+        IEnumerable<string> arguments)
+    {
+        return string.Join(
+            " ",
+            arguments.Select(QuotePlossumArgument));
+    }
+
+    private static string QuotePlossumArgument(string argument)
+    {
+        argument ??= string.Empty;
+        if (argument.Length > 0 &&
+            !argument.Any(char.IsWhiteSpace) &&
+            !argument.Contains('\\') &&
+            !argument.Contains('"'))
+        {
+            return argument;
+        }
+
+        return "\"" +
+               argument
+                   .Replace("\\", "\\\\")
+                   .Replace("\"", "\\\"") +
+               "\"";
+    }
+
+    private static string NormalizeDoubleDashOption(string argument)
+    {
+        if (string.IsNullOrEmpty(argument) ||
+            !argument.StartsWith("--", StringComparison.Ordinal) ||
+            argument.Length == 2)
+        {
+            return argument;
+        }
+
+        var assignmentIndex = argument.IndexOfAny(new[] { '=', ':' }, 2);
+        var nameLength = assignmentIndex < 0
+            ? argument.Length - 2
+            : assignmentIndex - 2;
+        var optionName = argument.Substring(2, nameLength);
+
+        return KnownOptionNames.Contains(optionName)
+            ? argument.Substring(1)
+            : argument;
+    }
+
+    private static bool IsBareword(string argument)
+    {
+        return !string.IsNullOrEmpty(argument) &&
+               argument[0] != '-' &&
+               argument[0] != '/' &&
+               argument[0] != '@';
+    }
+
+    private static IReadOnlySet<string> GetKnownOptionNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in typeof(CliOptions).GetProperties())
+        {
+            var attribute =
+                property.GetCustomAttribute<CommandLineOptionAttribute>();
+            if (attribute is null)
+            {
+                continue;
+            }
+
+            names.Add(property.Name);
+            foreach (var alias in (attribute.Aliases ?? string.Empty)
+                         .Split(
+                             new[] { ',', ';', ' ' },
+                             StringSplitOptions.RemoveEmptyEntries))
+            {
+                names.Add(alias);
+            }
+        }
+
+        return names;
+    }
+
+    private static int GetSafeHelpWidth(int min = 80, int pad = 4)
+    {
+        try
+        {
+            if (Console.IsOutputRedirected ||
+                Console.IsErrorRedirected ||
+                Console.IsInputRedirected)
+            {
+                return min;
+            }
+
+            return Math.Max(Console.WindowWidth - pad, min);
+        }
+        catch
+        {
+            return min;
+        }
+    }
+
+    // Step 3 preserves the legacy -lt spelling for listUrls. The rulebook also
+    // assigns it to Step 03A's listTools option; Plossum rejects duplicate
+    // aliases, so the parser shadow removes that not-yet-active spelling.
+    [CommandLineManager(
+        ApplicationName = "SSoTme CLI",
+        Copyright = "Copyright 2026, EffortlessAPI.com",
+        Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions",
+        EnabledOptionStyles =
+            OptionStyles.Windows |
+            OptionStyles.Unix |
+            OptionStyles.File)]
+    private sealed class ParserOptions : CliOptions
+    {
+        [CommandLineOption(
+            Description = "List all available tools in the current remote tools catalog",
+            MinOccurs = 0,
+            Aliases = "tools")]
+        public new bool listTools
+        {
+            get => base.listTools;
+            set => base.listTools = value;
+        }
+    }
+}

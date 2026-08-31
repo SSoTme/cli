@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>Effortless.Cli</AssemblyName>
+    <RootNamespace>Effortless.Cli</RootNamespace>
+    <Version>2026.6.9.613</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Effortless.Cli.Core/Effortless.Cli.Core.csproj" />
+  </ItemGroup>
+
+</Project>

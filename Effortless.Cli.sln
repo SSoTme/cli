@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Effortless.Cli.Core", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Effortless.Cli.Tests", "tests\Effortless.Cli.Tests\Effortless.Cli.Tests.csproj", "{88A3B0AD-BF43-4A2B-88E4-8E1044D680E0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Effortless.Cli", "src\Effortless.Cli\Effortless.Cli.csproj", "{6544943A-B441-4A2D-9187-B5D3508FC214}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,10 +36,15 @@ Global
 		{88A3B0AD-BF43-4A2B-88E4-8E1044D680E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{88A3B0AD-BF43-4A2B-88E4-8E1044D680E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{88A3B0AD-BF43-4A2B-88E4-8E1044D680E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6544943A-B441-4A2D-9187-B5D3508FC214}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6544943A-B441-4A2D-9187-B5D3508FC214}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6544943A-B441-4A2D-9187-B5D3508FC214}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6544943A-B441-4A2D-9187-B5D3508FC214}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6CD681B2-EFB8-4F20-89A9-54A8CEA2C62A} = {EB81A79A-880A-4999-9D1E-9CCBFEB1A7C1}
 		{DFB7E40C-F6D0-4899-8821-41F97712241E} = {7B5F86B2-1E21-41FD-81F5-99F3FFEA3E06}
 		{88A3B0AD-BF43-4A2B-88E4-8E1044D680E0} = {EB81A79A-880A-4999-9D1E-9CCBFEB1A7C1}
+		{6544943A-B441-4A2D-9187-B5D3508FC214} = {7B5F86B2-1E21-41FD-81F5-99F3FFEA3E06}
 	EndGlobalSection
 EndGlobal

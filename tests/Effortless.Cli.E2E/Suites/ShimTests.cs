@@ -26,7 +26,8 @@ public sealed class ShimTests
         sandbox.WriteFile("in.txt", "shim input");
         var shim = ShimUnderTest.CreatePrebuilt(cli, sandbox);
         var csprojBefore = File.ReadAllText(shim.CsprojPath);
-        var handlerBefore = File.ReadAllText(shim.HandlerPath);
+        var versionConstantBefore =
+            File.ReadAllText(shim.VersionConstantPath);
 
         var version = await shim.RunNode(["-version"], sandbox.ProjectPath);
         var transpile = await shim.RunNode(
@@ -52,7 +53,9 @@ public sealed class ShimTests
         }
 
         Assert.Equal(csprojBefore, File.ReadAllText(shim.CsprojPath));
-        Assert.Equal(handlerBefore, File.ReadAllText(shim.HandlerPath));
+        Assert.Equal(
+            versionConstantBefore,
+            File.ReadAllText(shim.VersionConstantPath));
         server.ThrowIfFaulted();
     }
 
@@ -105,8 +108,10 @@ public sealed class ShimTests
             File.ReadAllText(shim.CsprojPath),
             StringComparison.Ordinal);
         Assert.Contains(
-            $"public string CLI_VERSION = \"{testVersion}\";",
-            File.ReadAllText(shim.HandlerPath),
+            Behavior.IsLegacy
+                ? $"public string CLI_VERSION = \"{testVersion}\";"
+                : $"public const string Value = \"{testVersion}\";",
+            File.ReadAllText(shim.VersionConstantPath),
             StringComparison.Ordinal);
         foreach (var path in sourcePaths)
         {
@@ -141,18 +146,47 @@ public sealed class ShimTests
         Assert.Single(outputs.Distinct(StringComparer.Ordinal));
     }
 
-    private static IReadOnlyList<string> VersionSourcePaths() =>
-    [
-        Path.Combine(CliUnderTest.Root, "package.json"),
-        Path.Combine(CliUnderTest.Root, "cli.js"),
-        Path.Combine(CliUnderTest.Root, "Windows", "CLI", "SSoTme.OST.CLI.csproj"),
-        Path.Combine(
-            CliUnderTest.Root,
-            "Windows",
-            "Lib",
-            "CLIOptions",
-            "SSoTmeCLIHandler.cs"),
-    ];
+    private static IReadOnlyList<string> VersionSourcePaths()
+    {
+        var paths = new List<string>
+        {
+            Path.Combine(CliUnderTest.Root, "package.json"),
+            Path.Combine(CliUnderTest.Root, "cli.js"),
+        };
+        if (Behavior.IsLegacy)
+        {
+            paths.Add(
+                Path.Combine(
+                    CliUnderTest.Root,
+                    "Windows",
+                    "CLI",
+                    "SSoTme.OST.CLI.csproj"));
+            paths.Add(
+                Path.Combine(
+                    CliUnderTest.Root,
+                    "Windows",
+                    "Lib",
+                    "CLIOptions",
+                    "SSoTmeCLIHandler.cs"));
+        }
+        else
+        {
+            paths.Add(
+                Path.Combine(
+                    CliUnderTest.Root,
+                    "src",
+                    "Effortless.Cli",
+                    "Effortless.Cli.csproj"));
+            paths.Add(
+                Path.Combine(
+                    CliUnderTest.Root,
+                    "src",
+                    "Effortless.Cli.Core",
+                    "CliVersion.cs"));
+        }
+
+        return paths;
+    }
 
     private static string HashFile(string path) =>
         Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));

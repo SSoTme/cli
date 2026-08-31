@@ -226,18 +226,11 @@ public static class ZfsLedger
         tempFI.FullName.SplitFileSetFile(extractToDir);
         tempFI.Delete();
 
-        var zfsFileSetXml = RemoveSelfSourceEntries(
-            project,
-            transpilerKey,
-            cwd,
-            fileSetXml,
-            inputFileSetXml,
-            extractToDir);
         SavePreviousFileSet(
             project,
             transpilerKey,
             cwd,
-            zfsFileSetXml,
+            fileSetXml,
             debug);
 
         return 0;

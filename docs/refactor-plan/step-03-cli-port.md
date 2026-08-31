@@ -94,8 +94,8 @@ Implement `ToolResolutionRules` R1–R6, R8–R10 (R7 is gone):
   `CleanCommand` (three branches), `ToolUrlCommands` (set/view/list/remove), `VersionCommands`
   (listVersions, refreshTools, upgrade, upgradeAll, `-latest` handling in F02), `AuthCommands` (login,
   projectLogin, logout, subscription — via `Auth/MagicLinkAuth` + `CloudBridgeClient.InvokeAndGetOutput`;
-  **keep the short-circuit behind a single constant** `CloudBridgeClient.AuthCallsEnabled = false` until
-  D3 is decided, so the legacy golden holds), `InfoCommand`, `UpgradeCliCommand` (`Updates/`).
+  D3 re-enables bridge calls for these explicit user commands only, while the build/transpile path remains
+  bridge-free), `InfoCommand`, `UpgradeCliCommand` (`Updates/`).
 - Drop: discuss, legacy, updateUrls, localGuide, checkResults, createDocs, seeds (D1 default), buildOnTrigger
   (D2 default), copilotConnect, addTranspiler, deleteTranspiler, keyFile, repoUrl, betaRepo, skipBuild.
 

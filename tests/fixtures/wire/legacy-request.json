@@ -1,0 +1,39 @@
+{
+  "PayloadId": "legacy-payload",
+  "SenderId": "legacy-sender",
+  "RoutingKey": "ssotmecoordinator.general.accountholder.commandlinetranspile",
+  "Exchange": "ssotme",
+  "ReplyTo": "amq.rabbitmq.reply-to",
+  "DeliveryTag": 42,
+  "DirectMessageQueue": "amq.gen-legacy",
+  "CorrelationId": "legacy-correlation",
+  "LexiconTerm": {
+    "RoutingKey": "ssotmecoordinator.general.accountholder.commandlinetranspile"
+  },
+  "ReplyPayload": null,
+  "EmailAddress": "cli@aicapture.io",
+  "Secret": "captured-legacy-secret",
+  "Settings": {},
+  "Transpiler": {
+    "Name": "legacy-tool",
+    "LowerHyphenName": "legacy-tool"
+  },
+  "TranspileRequest": {
+    "ZippedInputFileSet": "H4sIAAAAAAAA/7Nxy8xJDU4tsbOBMkBUMQrPziYoNSexJLMsNSCxJMMuM0+vpKLERh9F0CYqs6AgNQWk3Dk/ryQ1r6TYzsOk2NMRClwtSjyrkvO8nMqd3QsyHI2cAkGitrY2+lg02uij2K6P6jIY1w4AqzCzp7sAAAA="
+  },
+  "CLIAccount": "legacy-account",
+  "CLIInput": [
+    "in.txt"
+  ],
+  "CLIInputFileContents": "",
+  "CLIInputFileSetJson": null,
+  "CLIInputFileSetXml": "<FileSet><FileSetFiles><FileSetFile><RelativePath>in.txt</RelativePath><ZippedFileContents>H4sIAAAAAAAAE8tIzcnJBwCGphA2BQAAAA==</ZippedFileContents></FileSetFile></FileSetFiles></FileSet>",
+  "CLIOutput": "out.txt",
+  "CLIParams": [
+    "project-name=legacy"
+  ],
+  "CLITranspiler": "legacy-tool",
+  "CLIWaitTimeout": 300000,
+  "CLIDebug": false,
+  "CLIJwt": ""
+}
