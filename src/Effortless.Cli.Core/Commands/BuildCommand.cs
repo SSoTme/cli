@@ -7,14 +7,46 @@ public sealed class BuildCommand
 {
     private readonly Func<string, EffortlessProject, bool, int>
         _runCommandLine;
+    private readonly TriggerBuildWatcher _triggerWatcher;
 
     public BuildCommand(
-        Func<string, EffortlessProject, bool, int> runCommandLine)
+        Func<string, EffortlessProject, bool, int> runCommandLine,
+        TriggerBuildWatcher triggerWatcher = null)
     {
         _runCommandLine = runCommandLine;
+        _triggerWatcher =
+            triggerWatcher ?? new TriggerBuildWatcher();
     }
 
     public int Run(CliInvocation invocation, bool all)
+    {
+        if (string.IsNullOrWhiteSpace(
+                invocation.Options.buildOnTrigger))
+        {
+            return RunOnce(invocation, all);
+        }
+
+        _triggerWatcher.WatchAsync(
+                invocation.Options.buildOnTrigger,
+                () =>
+                {
+                    var result = RunOnce(invocation, all);
+                    if (result != 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Triggered build exited with code {result}.");
+                    }
+
+                    return Task.CompletedTask;
+                })
+            .GetAwaiter()
+            .GetResult();
+        return 0;
+    }
+
+    private int RunOnce(
+        CliInvocation invocation,
+        bool all)
     {
         var project = invocation.Project;
         var command = all

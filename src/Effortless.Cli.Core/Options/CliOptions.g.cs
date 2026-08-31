@@ -42,6 +42,9 @@ public class CliOptions
     [CommandLineOption(Description = "Build only the transpilers installed in the current folder", MinOccurs = 0, Aliases = "bl,replaylocal,rebuildLocal,pullLocal")]
     public bool buildLocal { get; set; }
 
+    [CommandLineOption(Description = "Builds whenever a trigger is invoked (see readme for URL)", MinOccurs = 0, Aliases = "bot")]
+    public string buildOnTrigger { get; set; }
+
     [CommandLineOption(Description = "Show debug output", MinOccurs = 0, Aliases = "")]
     public bool debug { get; set; }
 
@@ -128,6 +131,12 @@ public class CliOptions
 
     [CommandLineOption(Description = "Dry run of a buid", MinOccurs = 0, Aliases = "dr")]
     public bool dryRun { get; set; }
+
+    [CommandLineOption(Description = "Lists public Effortless seed repositories", MinOccurs = 0, Aliases = "lsd")]
+    public bool listSeeds { get; set; }
+
+    [CommandLineOption(Description = "Clones a public Effortless seed repository", MinOccurs = 0, Aliases = "cs,clone")]
+    public bool cloneSeed { get; set; }
 
     [CommandLineOption(Description = "TargetUrl of the tool bing invoked", MinOccurs = 0, Aliases = "g")]
     public string targetUrl { get; set; }

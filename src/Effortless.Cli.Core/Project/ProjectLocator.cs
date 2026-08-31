@@ -1,4 +1,5 @@
 using System.Threading;
+using Effortless.Cli.Seeds;
 using Newtonsoft.Json;
 
 namespace Effortless.Cli.Project;
@@ -8,20 +9,10 @@ public interface ISeedReplacements
     Task ApplyAsync(DirectoryInfo rootDirectory, bool reverseUpdate);
 }
 
-internal sealed class NoOpSeedReplacements : ISeedReplacements
-{
-    public Task ApplyAsync(
-        DirectoryInfo rootDirectory,
-        bool reverseUpdate)
-    {
-        return Task.CompletedTask;
-    }
-}
-
 public static class ProjectLocator
 {
     private static readonly ISeedReplacements DefaultSeedReplacements =
-        new NoOpSeedReplacements();
+        new SeedReplacements();
 
     internal static bool IsValidProjectFile(FileInfo file)
     {

@@ -548,12 +548,12 @@
         "ValueType": "string",
         "HelpText": "Builds whenever a trigger is invoked (see readme for URL)",
         "Category": "legacy-other",
-        "Disposition": "review-drop",
+        "Disposition": "keep-modified",
         "IsCommand": false,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 3,
-        "HandlerNotes": "SSoTmeProject.ListenForChangesAndRebuild polls https://ssotme-cli-airtable-bridge-ahrnz660db6k4.aws-us-east-1.controlplane.us/check?baseId=... every 3s and rebuilds 10s after the last change.",
-        "DispositionReason": "Airtable-change watch loop hardwired to one Control Plane host (still alive 2026-08-30). Watch/rebuild is now owned by effortless-rulebook-editor. Recommend drop; owner to confirm.",
+        "HandlerNotes": "TriggerBuildWatcher polls the live Airtable bridge every 3s and rebuilds after 10 quiet seconds. HTTP, status, or JSON failures stop the watcher with non-zero status; there is no silent polling fallback.",
+        "DispositionReason": "Owner decision D2: keep the lightweight cloud-trigger monitor independently of effortless-rulebook-editor.",
         "Description": "Watch an Airtable base and rebuild on change."
       },
       {
@@ -770,15 +770,15 @@
         "Aliases": "lsd",
         "BarewordForms": "listseeds",
         "ValueType": "bool",
-        "HelpText": "Lists seeds available to be clones",
+        "HelpText": "Lists public Effortless seed repositories",
         "Category": "seeds",
-        "Disposition": "review-drop",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
-        "HandlerNotes": "GET https://api.github.com/users/ssotme/repos filtered by \"seed\"; root seeds vs seeds depends on IsCurrentSeedRoot (TranspilerGroup \"ssot\").",
-        "DispositionReason": "Seeds pre-date rulebook-first bootstrapping (effortless-init / effortless-demo-app skills). Recommend drop with the whole seed subsystem; owner to confirm.",
-        "Description": "List GitHub starter seeds."
+        "HandlerNotes": "SeedCatalogClient lists public repositories under the requested/default GitHub account and retains only repositories with effortless.json at the root.",
+        "DispositionReason": "Owner decision D1: root and child Effortless repositories remain first-class seeds.",
+        "Description": "List public Effortless seed repositories."
       },
       {
         "CliOptionId": "cloneSeed",
@@ -786,15 +786,15 @@
         "Aliases": "cs,clone",
         "BarewordForms": "cloneseed,clone",
         "ValueType": "bool",
-        "HelpText": "Clones a specified seed",
+        "HelpText": "Clones a public Effortless seed repository",
         "Category": "seeds",
-        "Disposition": "review-drop",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
-        "HandlerNotes": "git clone, strip .git, CheckSSoTmeCache (~/.ssotme/seed_cache), InvokeSSoTmeBuild, StartSeedBuild (start-on-complete commands from ssotme-seed.json).",
-        "DispositionReason": "See listSeeds.",
-        "Description": "Clone and build a starter seed."
+        "HandlerNotes": "SeedRepositoryManager runs argument-safe git clone, preserves repository history, verifies effortless.json at the root, and prints the explicit build command without executing cloned code automatically.",
+        "DispositionReason": "Owner decision D1. Modernized to preserve .git and avoid executing downloaded code without a separate user action.",
+        "Description": "Clone a public Effortless seed repository."
       },
       {
         "CliOptionId": "account",
@@ -4298,13 +4298,13 @@
       {
         "HttpEndpointId": "github-seed-repos",
         "Method": "GET",
-        "UrlPattern": "https://api.github.com/users/ssotme/repos",
-        "Purpose": "List seeds.",
+        "UrlPattern": "https://api.github.com/users/{account}/repos plus https://raw.githubusercontent.com/{account}/{repo}/{defaultBranch}/effortless.json",
+        "Purpose": "List public repositories and prove that each seed contains effortless.json at its root.",
         "UsedByOption": "listSeeds, cloneSeed",
         "LivenessOn20260830": "alive",
         "TimeoutMs": 100000,
-        "Disposition": "review-drop",
-        "Description": "Seeds subsystem."
+        "Disposition": "keep-modified",
+        "Description": "Owner decision D1; no hardcoded repository fallback is synthesized on network failure."
       },
       {
         "HttpEndpointId": "airtable-bridge-check",
@@ -4314,8 +4314,8 @@
         "UsedByOption": "buildOnTrigger",
         "LivenessOn20260830": "alive",
         "TimeoutMs": 100000,
-        "Disposition": "review-drop",
-        "Description": ""
+        "Disposition": "keep-modified",
+        "Description": "Owner decision D2. Polling transport and payload failures are fatal rather than treated as unchanged state."
       },
       {
         "HttpEndpointId": "copilot-bridge",
@@ -6329,6 +6329,13 @@
         "Description": "Only referenced by the seeds subsystem; goes with it."
       },
       {
+        "EnvVariableId": "EFFORTLESS_SEED_GITHUB_ACCOUNT",
+        "Source": "process-env",
+        "Purpose": "Default GitHub account used by listSeeds and cloneSeed when the invocation does not provide an account.",
+        "Disposition": "keep-modified",
+        "Description": "Defaults to ssotme when unset."
+      },
+      {
         "EnvVariableId": "DEBUG (compile define)",
         "Source": "build-define",
         "Purpose": "Switches AICaptureHost to https://localhost:7033 for the dead auth0 flow.",
@@ -6837,8 +6844,8 @@
         "Kind": "file",
         "ApproxLines": 4866,
         "Disposition": "keep-modified",
-        "NewPath": "src/Effortless.Cli.Core/{Options,Commands,Transpile,Config,Updates,Console}/*",
-        "Notes": "Split by concern (see LifecycleStates.NewHome). Remove: SMQAccountHolder/DMProxy/PublicUser/LexiconTerm code, AccountHolder_ReplyTo, PublicUser_ReplyTo, CheckAuthenticationNow/PrintAuth/Auth0SID/AICaptureHost, the discuss branch, the -legacy flag, the proxy fallback URL, UpdateToolUrls + its DTOs, seeds (review), localGuide branch, buildOnTrigger/copilot params (review), InvokeToolAndGetOutput short-circuit (decision), CheckForUpdateNotice call site (keep the method, still disabled).",
+        "NewPath": "src/Effortless.Cli.Core/{Options,Commands,Transpile,Config,Updates,Console,Seeds}/*",
+        "Notes": "Split by concern (see LifecycleStates.NewHome). Remove RabbitMQ/auth0/discuss/localGuide/copilot and dead URL-update code. Keep D1 seeds in SeedCommands/Seeds and D2 buildOnTrigger in TriggerBuildWatcher. InvokeToolAndGetOutput follows the explicit-auth-only decision.",
         "Description": "The monolith."
       },
       {
@@ -6847,8 +6854,8 @@
         "Kind": "file",
         "ApproxLines": 1800,
         "Disposition": "keep-modified",
-        "NewPath": "src/Effortless.Cli.Core/Project/EffortlessProject.cs + ProjectLocator.cs + ProjectFileStore.cs + BuildRunner.cs + CleanRunner.cs + EmptyFolderPruner.cs",
-        "Notes": "Remove: FileSystemWatcher/ProjectMonitor, Expand/Collapse/Hide/Show GUI paths (but keep HiddenPaths/ExpandedPaths properties for serialization compatibility), CheckResults/CreateDocs (DSPXml), ListenForChangesAndRebuild/CheckChanged/BOTBridge (review), seed replacement hook (review). Class name may change; JSON property names may NOT.",
+        "NewPath": "src/Effortless.Cli.Core/Project/EffortlessProject.cs + ProjectLocator.cs + ProjectFileStore.cs + BuildRunner.cs + CleanRunner.cs + EmptyFolderPruner.cs + TriggerBuildWatcher.cs",
+        "Notes": "Remove GUI/DSPXml/copilot code while retaining serialization-compatible path properties. Keep the seed replacement load hook and the D2 cloud-trigger polling loop as focused services.",
         "Description": "Project model + build/clean loops."
       },
       {
@@ -6926,10 +6933,10 @@
         "LegacyPath": "Windows/Lib/Extensions/ReplacementExtensions.cs",
         "Kind": "file",
         "ApproxLines": 678,
-        "Disposition": "review-drop",
-        "NewPath": "",
-        "Notes": "Seed token replacement + Airtable hints. If seeds are kept: src/Effortless.Cli.Core/Seeds/SeedReplacements.cs.",
-        "Description": "Seeds."
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/Seeds/SeedReplacements.cs",
+        "Notes": "Port the $key$ content/filename replacement contract on project load; exclude generated/config metadata and fail when required values are unavailable. Legacy Airtable guessing is not retained.",
+        "Description": "Seed token replacement."
       },
       {
         "SourceModuleId": "extensions-dir",
@@ -6946,10 +6953,10 @@
         "LegacyPath": "Windows/Lib/Extensions/RepositoryManager.cs",
         "Kind": "file",
         "ApproxLines": 100,
-        "Disposition": "review-drop",
-        "NewPath": "",
-        "Notes": "git clone for seeds.",
-        "Description": "Seeds."
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/Seeds/{SeedCatalogClient.cs,SeedRepositoryManager.cs} + Commands/SeedCommands.cs",
+        "Notes": "Discover repositories by root effortless.json; clone with ProcessStartInfo.ArgumentList; preserve .git; verify the cloned root and do not auto-execute downloaded code.",
+        "Description": "Seed discovery and cloning."
       },
       {
         "SourceModuleId": "extensions-clilog",
@@ -7329,7 +7336,7 @@
       {
         "DevopsPipelineId": "release-script",
         "LegacyPath": "release-cli.sh",
-        "Trigger": "Manual: ./release-cli.sh from repo root",
+        "Trigger": "Manual: ./scripts/release.sh from repo root",
         "Produces": "Stamps package.json with yyyy-mm-dd.hh.mm, commits \"Release vX\", pushes main, creates GitHub release vX (which triggers installer builds).",
         "Disposition": "keep-modified",
         "NewPath": "scripts/release.sh",
@@ -11009,6 +11016,62 @@
         "Slow": false,
         "Status": "rebuild-green",
         "Description": ""
+      },
+      {
+        "TestCaseId": "unit-seed-catalog",
+        "Suite": "unit-core",
+        "PrimaryOption": "listSeeds",
+        "Title": "seed discovery requires a root effortless.json",
+        "Given": "GitHub repository list with one Effortless project and one ordinary repository",
+        "When": "SeedCatalogClient lists the account",
+        "Then": "only the repository whose default branch contains root effortless.json is returned",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Owner decision D1."
+      },
+      {
+        "TestCaseId": "unit-seed-replacements",
+        "Suite": "unit-core",
+        "PrimaryOption": "cloneSeed",
+        "Title": "seed values replace content and file-name tokens",
+        "Given": "ssotme-seed.json, configured values, and $key$ tokens",
+        "When": "SeedReplacements runs during project loading",
+        "Then": "text and file names are replaced case-insensitively without deleting unrelated data",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Owner decision D1."
+      },
+      {
+        "TestCaseId": "unit-seed-clone",
+        "Suite": "unit-core",
+        "PrimaryOption": "cloneSeed",
+        "Title": "seed cloning preserves repository metadata",
+        "Given": "a valid HTTP Git clone URL and an empty destination",
+        "When": "SeedRepositoryManager clones and validates the root project",
+        "Then": "git receives argument-safe values, effortless.json is required, and .git is preserved",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Owner decision D1."
+      },
+      {
+        "TestCaseId": "unit-build-on-trigger",
+        "Suite": "unit-core",
+        "PrimaryOption": "buildOnTrigger",
+        "Title": "trigger watcher rebuilds after a quiet period and fails on transport errors",
+        "Given": "an injected clock and trigger HTTP responses",
+        "When": "a change is followed by ten quiet seconds or the endpoint returns failure",
+        "Then": "one rebuild runs after the quiet period; endpoint failure throws instead of appearing unchanged",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Owner decision D2 and no-fallback guarantee."
       },
       {
         "TestCaseId": "wire-request-snapshot",

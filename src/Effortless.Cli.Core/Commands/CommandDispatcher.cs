@@ -19,6 +19,7 @@ public sealed class CommandDispatcher
     private readonly InfoCommand _infoCommand;
     private readonly UpgradeCliCommand _upgradeCliCommand;
     private readonly ExecuteCommand _executeCommand;
+    private readonly SeedCommands _seedCommands;
     private readonly ProjectToolFreshness _projectToolFreshness;
     private bool _projectCatalogChecked;
 
@@ -48,6 +49,7 @@ public sealed class CommandDispatcher
         _infoCommand = new InfoCommand();
         _upgradeCliCommand = new UpgradeCliCommand();
         _executeCommand = new ExecuteCommand();
+        _seedCommands = new SeedCommands();
     }
 
     public int Run(string[] args)
@@ -418,6 +420,16 @@ public sealed class CommandDispatcher
             return _projectCommands.AddSettings(invocation);
         }
 
+        if (options.listSeeds)
+        {
+            return _seedCommands.List(invocation);
+        }
+
+        if (options.cloneSeed)
+        {
+            return _seedCommands.Clone(invocation);
+        }
+
         if (!string.IsNullOrEmpty(options.viewUrl))
         {
             return _toolUrlCommands.View(options.viewUrl);
@@ -784,6 +796,8 @@ public sealed class CommandDispatcher
         && !options.upgrade
         && !options.upgradeAll
         && !options.upgradeCli
+        && !options.listSeeds
+        && !options.cloneSeed
         && string.IsNullOrEmpty(options.viewUrl)
         && string.IsNullOrEmpty(options.setUrl)
         && !options.listUrls
@@ -872,6 +886,8 @@ public sealed class CommandDispatcher
         || options.logout
         || options.describe
         || options.describeAll
+        || options.listSeeds
+        || options.cloneSeed
         || options.listSettings
         || options.addSetting.Any()
         || options.removeSetting.Any()
@@ -907,6 +923,8 @@ public sealed class CommandDispatcher
         || options.upgrade
         || options.upgradeAll
         || options.upgradeCli
+        || options.listSeeds
+        || options.cloneSeed
         || !string.IsNullOrEmpty(options.viewUrl)
         || !string.IsNullOrEmpty(options.setUrl)
         || options.listUrls

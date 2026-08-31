@@ -333,6 +333,8 @@ public sealed class ToolResolver
             || options.upgrade
             || options.upgradeCli
             || options.upgradeAll
+            || options.listSeeds
+            || options.cloneSeed
             || !string.IsNullOrWhiteSpace(options.viewUrl)
             || !string.IsNullOrWhiteSpace(options.setUrl)
             || !string.IsNullOrWhiteSpace(options.removeUrl);

@@ -24,7 +24,7 @@ generated files synchronized with the rulebook changes in the same commit.
 
 - `src/Effortless.Cli/` — .NET 8 executable.
 - `src/Effortless.Cli.Core/` — parser, dispatcher, project, REST, auth, file-set,
-  configuration, and update logic.
+  configuration, seeds, cloud-trigger watching, and update logic.
 - `tests/Effortless.Cli.Tests/` — unit and wire-contract tests.
 - `tests/Effortless.Cli.E2E/` — black-box CLI tests and mock HTTP servers.
 - `tests/fixtures/` — project, catalog, wire, shim, and golden fixtures.
@@ -65,6 +65,16 @@ effortless -removeToolUrl tool-name
 
 Do not add a stale-catalog, alternate-transport, or RabbitMQ fallback. A catalog
 refresh failure is a hard failure.
+
+## Retained seed and trigger features
+
+- D1 keeps `listSeeds`, `cloneSeed`, and the `ssotme-seed.json` `$key$`
+  replacement hook. A seed is discovered only when its public repository has
+  `effortless.json` at the root. Cloning preserves `.git` and does not
+  automatically execute downloaded code.
+- D2 keeps `build -buildOnTrigger <baseId>` as a lightweight cloud-trigger
+  monitor independent of the rulebook editor. Polling failures are fatal; never
+  hide them as an unchanged trigger.
 
 ## Project save and upgrade invariants
 

@@ -61,6 +61,35 @@ Remove files recorded in the generated-file ledgers:
 effortless clean
 ```
 
+## Seeds
+
+An Effortless seed is a public GitHub repository with `effortless.json` at its
+root. List seeds from an account and clone one without automatically executing
+downloaded code:
+
+```bash
+effortless listSeeds ssotme
+effortless cloneSeed seed-name my-project
+cd my-project
+effortless build
+```
+
+Set `EFFORTLESS_SEED_GITHUB_ACCOUNT` to change the default account. Projects
+containing `ssotme-seed.json` retain the `$key$` content and filename replacement
+contract when loaded.
+
+## Build on a cloud trigger
+
+Watch the live Airtable trigger bridge and rebuild after changes have been quiet
+for ten seconds:
+
+```bash
+effortless build -buildOnTrigger <baseId>
+```
+
+The watcher polls every three seconds. Transport, HTTP, or malformed-payload
+failures stop the command instead of being treated as an unchanged base.
+
 Use `effortless -help` for command-line help. The generated command reference is
 at [docs/cli-reference.md](docs/cli-reference.md), and the REST-only rebuild
 history is under [docs/refactor-plan/](docs/refactor-plan/).

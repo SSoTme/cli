@@ -140,4 +140,34 @@ public class CliArgumentParserTests
         Assert.True(invocation.Options.listTools);
         Assert.False(invocation.Options.listUrls);
     }
+
+    [Fact]
+    public void SeedVerbsAndTriggerOptionAreReserved()
+    {
+        var list = new CliArgumentParser()
+            .Parse(new[] { "listSeeds", "example" });
+        var clone = new CliArgumentParser()
+            .Parse(new[] { "clone", "seed-api", "my-api" });
+        var trigger = new CliArgumentParser()
+            .Parse(
+                new[]
+                {
+                    "build",
+                    "-buildOnTrigger",
+                    "app123",
+                });
+
+        Assert.True(list.Options.listSeeds);
+        Assert.Equal(
+            ["example"],
+            list.RemainingArguments);
+        Assert.True(clone.Options.cloneSeed);
+        Assert.Equal(
+            ["seed-api", "my-api"],
+            clone.RemainingArguments);
+        Assert.True(trigger.Options.build);
+        Assert.Equal(
+            "app123",
+            trigger.Options.buildOnTrigger);
+    }
 }
