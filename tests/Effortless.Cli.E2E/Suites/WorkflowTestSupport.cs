@@ -125,6 +125,8 @@ internal static class WorkflowTestSupport
             ["cliUpdateAvailable"] = false,
             ["latestBridgeVersion"] = null,
             ["latestCliVersion"] = CliUnderTest.PackageVersion,
+            ["fetchedAt"] =
+                CliUnderTest.TestUtcNow.ToString("O"),
         };
         sandbox.WriteHomeFile(
             ".ssotme/remote_tools/ssotme-tools.json",

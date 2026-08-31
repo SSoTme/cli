@@ -5,7 +5,11 @@ namespace Effortless.Cli.Options;
 [CommandLineManager(
     ApplicationName = "SSoTme CLI",
     Copyright = "Copyright 2026, EffortlessAPI.com",
-    Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions")]
+    Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions",
+    EnabledOptionStyles =
+        OptionStyles.Windows |
+        OptionStyles.Unix |
+        OptionStyles.File)]
 public class CliOptions
 {
     public CliOptions()
@@ -128,7 +132,7 @@ public class CliOptions
     [CommandLineOption(Description = "TargetUrl of the tool bing invoked", MinOccurs = 0, Aliases = "g")]
     public string targetUrl { get; set; }
 
-    [CommandLineOption(Description = "List all custom tool urls defined for this user", MinOccurs = 0, Aliases = "lu,lt")]
+    [CommandLineOption(Description = "List all custom tool urls defined for this user", MinOccurs = 0, Aliases = "lu")]
     public bool listUrls { get; set; }
 
     [CommandLineOption(Description = "View the url for the specified tool", MinOccurs = 0, Aliases = "vu,vt")]

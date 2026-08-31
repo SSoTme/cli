@@ -416,8 +416,8 @@ public sealed class BuildTests
                 server.BaseUri.ToString()));
     }
 
-    [Fact(DisplayName = "build-version-label: build labels pinned and latest resolutions")]
-    public async Task BuildLabelsPinnedAndLatestResolutions()
+    [Fact(DisplayName = "build-version-label: automatic freshness labels all project tools at HEAD")]
+    public async Task BuildLabelsAutomaticallyUpgradedToolsAsLatest()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -437,7 +437,7 @@ public sealed class BuildTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains(
-            $"cli:> effortless/common/to-uppercase {WorkflowTestSupport.OldVersion} [pinned]",
+            $"cli:> effortless/common/to-uppercase {WorkflowTestSupport.HeadVersion} [latest]",
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -446,8 +446,8 @@ public sealed class BuildTests
             StringComparison.Ordinal);
     }
 
-    [Fact(DisplayName = "build-pinned-url: PinnedVersion selects its version URL")]
-    public async Task PinnedVersionSelectsVersionUrl()
+    [Fact(DisplayName = "build-pinned-url: automatic freshness clears PinnedVersion and selects HEAD")]
+    public async Task AutomaticFreshnessClearsPinAndSelectsHeadUrl()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -465,17 +465,19 @@ public sealed class BuildTests
 
         Assert.Equal(0, result.ExitCode);
         var request = Assert.Single(server.Requests);
-        Assert.Equal(WorkflowTestSupport.OldVersion, request.Version);
+        Assert.Equal(WorkflowTestSupport.HeadVersion, request.Version);
         Assert.Equal(
-            WorkflowTestSupport.OldVersion,
+            WorkflowTestSupport.HeadVersion,
             WorkflowTestSupport.SingleStep(sandbox)["LastVersionUsed"]!.GetValue<string>());
         Assert.Equal(
-            server.ToolUri("to-uppercase", WorkflowTestSupport.OldVersion).ToString(),
+            server.ToolUri("to-uppercase", WorkflowTestSupport.HeadVersion).ToString(),
             WorkflowTestSupport.SingleStep(sandbox)["LastUrl"]!.GetValue<string>());
+        Assert.Null(
+            WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]);
     }
 
-    [Fact(DisplayName = "build-pinned-missing: an unavailable hard pin fails specifically")]
-    public async Task MissingPinnedVersionFailsSpecifically()
+    [Fact(DisplayName = "build-pinned-missing: an unavailable hard pin is cleared before build")]
+    public async Task MissingPinnedVersionIsClearedBeforeBuild()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -483,24 +485,20 @@ public sealed class BuildTests
             cli,
             server,
             new WorkflowStep("Missing", "", "to-uppercase", PinnedVersion: "v9"));
+        server.Enqueue("to-uppercase", ToolBehavior.Files());
 
         var result = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
 
-        Assert.True(result.Failed);
-        Assert.Contains(
-            "Error: version 'v9' not found for tool",
-            result.Combined,
-            StringComparison.Ordinal);
-        Assert.Contains(WorkflowTestSupport.HeadVersion, result.Combined, StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "Could not find transpiler named",
-            result.Combined,
-            StringComparison.Ordinal);
-        Assert.Empty(server.Requests);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(
+            WorkflowTestSupport.HeadVersion,
+            Assert.Single(server.Requests).Version);
+        Assert.Null(
+            WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]);
     }
 
-    [Fact(DisplayName = "build-sync-commandline-version: hard pin rewrites embedded command version")]
-    public async Task HardPinRewritesEmbeddedCommandVersion()
+    [Fact(DisplayName = "build-sync-commandline-version: automatic freshness removes embedded versions")]
+    public async Task AutomaticFreshnessRemovesEmbeddedCommandVersion()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -518,7 +516,7 @@ public sealed class BuildTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(
-            $"effortless/common/to-uppercase/{WorkflowTestSupport.HeadVersion}",
+            "effortless/common/to-uppercase",
             WorkflowTestSupport.RequiredString(
                 WorkflowTestSupport.SingleStep(sandbox),
                 "CommandLine"));

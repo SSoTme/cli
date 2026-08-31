@@ -1243,7 +1243,7 @@
     "id": "res-list-tools",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1251,7 +1251,7 @@
     "id": "res-search-tools",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1259,7 +1259,7 @@
     "id": "res-search-tools-empty",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1267,7 +1267,7 @@
     "id": "res-freshness-current",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1275,7 +1275,7 @@
     "id": "res-freshness-stale-upgrades",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1283,7 +1283,7 @@
     "id": "res-freshness-invalid-time",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1291,7 +1291,7 @@
     "id": "res-freshness-refresh-fails",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1299,7 +1299,7 @@
     "id": "res-freshness-upgrade-atomic",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1307,7 +1307,7 @@
     "id": "res-freshness-offline-meta",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "planned-step-03a",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },

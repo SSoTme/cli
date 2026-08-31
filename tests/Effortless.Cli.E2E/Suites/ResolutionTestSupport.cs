@@ -44,6 +44,8 @@ internal static class ResolutionTestSupport
         var project = new
         {
             Name = "resolution-project",
+            SSoTmeProjectId =
+                "4ec92dc6-8de5-43ed-9c30-f55a66407d07",
             ProjectSettings = new[]
             {
                 new { Name = "project-name", Value = "resolution-project" },
@@ -138,6 +140,8 @@ internal sealed class ResolutionBridgeServer : IAsyncDisposable
 
     public string IndexJson { get; set; } = """{"transpilerVersions":{}}""";
 
+    public int StatusCode { get; set; } = 200;
+
     public ConcurrentQueue<CapturedBridgeRequest> Requests { get; } = new();
 
     public void ThrowIfFaulted()
@@ -230,6 +234,15 @@ internal sealed class ResolutionBridgeServer : IAsyncDisposable
                     transpiler is { ValueKind: JsonValueKind.Object }
                         ? Property(transpiler.Value, "name")?.GetString()
                         : null));
+
+            if (StatusCode != 200)
+            {
+                await WriteResponseAsync(
+                    context.Response,
+                    StatusCode,
+                    """{"error":"configured bridge failure"}""");
+                return;
+            }
 
             var xml = FileSetXml.Build(
                 [FileSetEntry.TextFile("ssotme-tools.json", IndexJson, alwaysOverwrite: true)]);

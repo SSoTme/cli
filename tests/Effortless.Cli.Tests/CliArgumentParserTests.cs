@@ -132,12 +132,12 @@ public class CliArgumentParserTests
     }
 
     [Fact]
-    public void ConflictingLtAliasPreservesStepThreeUrlList()
+    public void LtAliasListsRemoteCatalogTools()
     {
         var invocation = new CliArgumentParser().Parse(new[] { "-lt" });
 
         Assert.False(invocation.HasErrors, invocation.ErrorText);
-        Assert.False(invocation.Options.listTools);
-        Assert.True(invocation.Options.listUrls);
+        Assert.True(invocation.Options.listTools);
+        Assert.False(invocation.Options.listUrls);
     }
 }

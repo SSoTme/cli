@@ -161,6 +161,39 @@ public class ProjectTranspiler
         return true;
     }
 
+    internal bool HasCommandLineVersion()
+    {
+        if (string.IsNullOrWhiteSpace(CommandLine))
+        {
+            return false;
+        }
+
+        var toolPart = CommandLine.Split(' ')[0];
+        var slash = toolPart.LastIndexOf('/');
+        if (slash < 0 || slash == toolPart.Length - 1)
+        {
+            return false;
+        }
+
+        var suffix = toolPart[(slash + 1)..];
+        return suffix.Length > 1
+            && suffix[0] is 'v' or 'V'
+            && char.IsDigit(suffix[1]);
+    }
+
+    internal bool ClearCommandLineVersion()
+    {
+        if (!HasCommandLineVersion())
+        {
+            return false;
+        }
+
+        var parts = CommandLine.Split(' ');
+        parts[0] = parts[0][..parts[0].LastIndexOf('/')];
+        CommandLine = string.Join(" ", parts);
+        return true;
+    }
+
     public void Describe(EffortlessProject project)
     {
         Console.WriteLine("\n-----------------------------------");

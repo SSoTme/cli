@@ -73,6 +73,14 @@ public sealed class ToolResolver
         RemoteToolResolution remote = null;
         if (!invocation.SkipRemoteToolsLookup)
         {
+            if (string.IsNullOrWhiteSpace(localOverride)
+                && !_remoteTools.EnsureFresh())
+            {
+                invocation.CatalogRefreshFailed = true;
+                invocation.TargetUrl = null;
+                return;
+            }
+
             // A tool_urls-only tool must not cause a bridge call. Known catalog
             // tools are still resolved so version metadata survives R5.
             if (string.IsNullOrWhiteSpace(localOverride)

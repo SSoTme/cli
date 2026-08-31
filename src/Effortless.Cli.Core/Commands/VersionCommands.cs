@@ -1,6 +1,5 @@
 using Effortless.Cli.Options;
 using Effortless.Cli.Project;
-using Newtonsoft.Json.Linq;
 
 namespace Effortless.Cli.Commands;
 
@@ -139,20 +138,22 @@ public sealed class VersionCommands
 
     public int ListTools(string search = null)
     {
-        var tools = (_index.RawRoot?["transpilerVersions"]
-                     ?? _index.RawRoot?["transpilers"]) as JObject;
-        var names = tools?.Properties()
-                        .Select(property => property.Name)
-                        .Where(name => string.IsNullOrEmpty(search)
-                                       || name.Contains(
-                                           search,
-                                           StringComparison.OrdinalIgnoreCase))
-                        .OrderBy(name => name)
-                        .ToArray()
-                    ?? Array.Empty<string>();
-        foreach (var name in names)
+        var tools = _index.ListTools(search);
+        if (!string.IsNullOrEmpty(search) && tools.Count == 0)
         {
-            Console.WriteLine(name);
+            Console.WriteLine($"No tools matched '{search}'.");
+            return 0;
+        }
+
+        Console.WriteLine(
+            string.IsNullOrEmpty(search)
+                ? $"Available tools ({tools.Count}):"
+                : $"Tools matching '{search}' ({tools.Count}):");
+        Console.WriteLine();
+        foreach (var tool in tools)
+        {
+            Console.WriteLine(
+                $"  {tool.CanonicalName}  {tool.HeadVersion ?? "NO HEAD"}");
         }
 
         return 0;
@@ -167,56 +168,37 @@ public sealed class VersionCommands
             return 0;
         }
 
-        var upgraded = 0;
-        var skipped = 0;
-        foreach (var step in project.ProjectTranspilers)
+        var plan = new ProjectToolFreshness(_index).Plan(
+            project,
+            MissingProjectToolPolicy.Skip);
+        var changedCount = plan.ChangedCount;
+        var missingCount = plan.MissingCount;
+        foreach (var entry in plan.Entries)
         {
-            var tool = EffortlessProject.GetToolName(step.CommandLine);
-            if (string.IsNullOrEmpty(tool)
-                || tool.Equals(
-                    "-execute",
-                    StringComparison.OrdinalIgnoreCase)
-                || tool.Equals(
-                    "-exec",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var head = _index.Resolve(tool);
-            if (head is null || string.IsNullOrEmpty(head.Url))
+            if (entry.IsMissing)
             {
                 Console.WriteLine(
-                    $"  SKIP {tool} — not found in remote tools index");
-                skipped++;
+                    $"  SKIP {entry.ToolName} — not found in remote tools index");
                 continue;
             }
 
-            if (step.PinnedVersion is null
-                && string.Equals(
-                    step.LastVersionUsed,
-                    head.VersionKey,
-                    StringComparison.Ordinal))
+            if (!entry.NeedsChange)
             {
                 Console.WriteLine(
-                    $"  OK   {tool} — already unpinned at HEAD ({head.VersionKey})");
+                    $"  OK   {entry.ToolName} — already unpinned at HEAD ({entry.HeadVersion})");
                 continue;
             }
 
-            var old = step.PinnedVersion
-                      ?? step.LastVersionUsed
-                      ?? "(unpinned)";
-            step.PinnedVersion = null;
-            step.LastVersionUsed = head.VersionKey;
             Console.WriteLine(
-                $"  UP   {tool}: {old} → HEAD ({head.VersionKey}, unpinned)");
-            upgraded++;
+                $"  UP   {entry.ToolName}: {entry.PreviousVersion} → HEAD ({entry.HeadVersion}, unpinned)");
         }
 
-        project.Save();
+        plan.Apply(project);
         Console.WriteLine(
-            $"\nUpgraded {upgraded} tool(s)"
-            + (skipped > 0 ? $", skipped {skipped}" : string.Empty)
+            $"\nUpgraded {changedCount} tool(s)"
+            + (missingCount > 0
+                ? $", skipped {missingCount}"
+                : string.Empty)
             + ".");
         return 0;
     }

@@ -1247,8 +1247,8 @@
       {
         "CliOptionId": "listUrls",
         "Flag": "-listUrls",
-        "Aliases": "lu,lt",
-        "BarewordForms": "listtoolurls,listurls,lu,lt",
+        "Aliases": "lu",
+        "BarewordForms": "listtoolurls,listurls,lu",
         "ValueType": "bool",
         "HelpText": "List all custom tool urls defined for this user",
         "Category": "tool-urls",
@@ -1376,7 +1376,7 @@
         "CliOptionId": "listTools",
         "Flag": "-listTools",
         "Aliases": "tools,lt",
-        "BarewordForms": "listtools,tools",
+        "BarewordForms": "listtools,tools,lt",
         "ValueType": "bool",
         "HelpText": "List all available tools in the current remote tools catalog",
         "Category": "tool-resolution",
@@ -8984,10 +8984,10 @@
         "TestCaseId": "build-version-label",
         "Suite": "e2e-build",
         "PrimaryOption": "build",
-        "Title": "each step prints its resolved label",
-        "Given": "step pinned to a non-head version + step unpinned",
+        "Title": "automatic freshness labels project tools at HEAD",
+        "Given": "one step hard-pinned to a non-head version + one unpinned step",
         "When": "effortless build",
-        "Then": "\"cli:> <tool> <vPinned> [pinned]\" and \"cli:> <tool> <vHead> [latest]\"",
+        "Then": "the automatic currentness gate clears the hard pin, then both steps print \"cli:> <tool> <vHead> [latest]\"",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -8998,10 +8998,10 @@
         "TestCaseId": "build-pinned-url",
         "Suite": "e2e-build",
         "PrimaryOption": "build",
-        "Title": "PinnedVersion selects that version's URL",
+        "Title": "automatic freshness clears PinnedVersion and selects HEAD",
         "Given": "index fixture with v1 (head) and v0; step PinnedVersion v0",
         "When": "effortless build",
-        "Then": "POST went to v0's url; LastVersionUsed == v0",
+        "Then": "PinnedVersion is cleared before execution; POST goes to v1 HEAD; LastVersionUsed == v1",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -9012,10 +9012,10 @@
         "TestCaseId": "build-pinned-missing",
         "Suite": "e2e-build",
         "PrimaryOption": "build",
-        "Title": "PinnedVersion not in index",
+        "Title": "PinnedVersion not in index is cleared",
         "Given": "step PinnedVersion v9",
         "When": "effortless build",
-        "Then": "\"Error: version 'v9' not found for tool ... Available versions: ...\"; step fails; no generic not-found block",
+        "Then": "automatic currentness resolves HEAD independently of the obsolete pin, clears v9, advances LastVersionUsed, and runs HEAD",
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
@@ -9026,10 +9026,10 @@
         "TestCaseId": "build-sync-commandline-version",
         "Suite": "e2e-build",
         "PrimaryOption": "build",
-        "Title": "embedded /vX in CommandLine syncs to PinnedVersion",
+        "Title": "automatic freshness removes embedded /vX",
         "Given": "CommandLine \"effortless/common/to-uppercase/v0 -i in.txt\", PinnedVersion v1",
         "When": "effortless build",
-        "Then": "effortless.json CommandLine now ends with /v1 before the step runs",
+        "Then": "the command's version suffix and PinnedVersion are removed, LastVersionUsed becomes HEAD, and the step runs HEAD",
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
@@ -10153,7 +10153,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior. Runs in the existing E2E binary/process harness and CI OS matrix."
       },
       {
@@ -10167,7 +10167,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior. Search is name-only because descriptions are not guaranteed by the index contract."
       },
       {
@@ -10181,7 +10181,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior; an empty search result is not a transport failure."
       },
       {
@@ -10195,7 +10195,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior. E2E clock comes from an under-test-only injected TimeProvider, never wall-clock sleeps."
       },
       {
@@ -10209,7 +10209,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior. The boundary is age >= 24 hours, not greater than 24 hours."
       },
       {
@@ -10223,7 +10223,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior. A timestamp is evidence only when it parses and is plausible."
       },
       {
@@ -10237,7 +10237,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior. This is the no-fallback guarantee."
       },
       {
@@ -10251,7 +10251,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior. Explicit -upgradeAll keeps its documented SKIP behavior; only the automatic freshness gate is strict and transactional."
       },
       {
@@ -10265,7 +10265,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior boundary: freshness is enforced only for catalog-dependent work."
       },
       {
@@ -10279,7 +10279,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned-step-03a",
+        "Status": "rebuild-green",
         "Description": "New behavior seam used by deterministic E2E tests on macOS, Windows, and Linux."
       },
       {
@@ -10442,7 +10442,7 @@
         "PrimaryOption": "listUrls",
         "Title": "listUrls",
         "Given": "none / two entries",
-        "When": "effortless -listUrls ; listurls ; -lu ; -lt",
+        "When": "effortless -listUrls ; listurls ; -lu",
         "Then": "no-file message + hint; sorted entries + \"Total: 2 tool(s) configured\"",
         "Priority": "P0",
         "Interactive": false,
@@ -11279,7 +11279,7 @@
         "InstructionsPath": "docs/refactor-plan/step-03a-tool-freshness-and-discovery.md",
         "DoneCriteria": "All planned-step-03a tests are rebuild-green on the existing Linux/macOS/Windows suites; stale or unprovable catalogs refresh before use; failed refreshes and incomplete automatic upgrades return non-zero without running the requested command or partially mutating the project; listTools/searchTools outputs are deterministic.",
         "Owner": "opus",
-        "Status": "ready",
+        "Status": "done",
         "Description": "New behavior requested after the legacy characterization plan was authored; it uses the same RemoteToolsIndex, VersionCommands, dispatcher, mock bridge, fixtures, manifests, and CI matrix as the rest of the CLI."
       },
       {

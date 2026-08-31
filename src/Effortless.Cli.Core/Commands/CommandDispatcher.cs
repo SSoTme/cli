@@ -19,15 +19,25 @@ public sealed class CommandDispatcher
     private readonly InfoCommand _infoCommand;
     private readonly UpgradeCliCommand _upgradeCliCommand;
     private readonly ExecuteCommand _executeCommand;
+    private readonly ProjectToolFreshness _projectToolFreshness;
+    private bool _projectCatalogChecked;
 
     public CommandDispatcher()
+        : this(CreateTimeProvider())
+    {
+    }
+
+    internal CommandDispatcher(TimeProvider timeProvider)
     {
         _parser = new CliArgumentParser();
         _remoteTools = new RemoteToolsIndex(
             refreshRunner: request =>
                 new CloudBridgeClient(RunBridgeCommandLine)
-                    .Refresh(request));
+                    .Refresh(request),
+            timeProvider: timeProvider);
         _toolResolver = new ToolResolver(_remoteTools);
+        _projectToolFreshness =
+            new ProjectToolFreshness(_remoteTools);
         _credentialResolver = new CredentialResolver();
         _projectCommands = new ProjectCommands();
         _toolUrlCommands = new ToolUrlCommands();
@@ -40,8 +50,13 @@ public sealed class CommandDispatcher
         _executeCommand = new ExecuteCommand();
     }
 
-    public int Run(string[] args) =>
-        RunInvocation(_parser.Parse(args), activeStep: null);
+    public int Run(string[] args)
+    {
+        _projectCatalogChecked = false;
+        return RunInvocation(
+            _parser.Parse(args),
+            activeStep: null);
+    }
 
     public int RunCommandLine(
         string commandLine,
@@ -116,9 +131,22 @@ public sealed class CommandDispatcher
                 Console.WriteLine("DEBUG OUTPUT ENABLED");
             }
 
+            if (RequiresFreshCatalogBeforeResolution(invocation)
+                && !EnsureCatalogFresh())
+            {
+                return -1;
+            }
+
             // P01-P03: resolve the explicit URL or raw tool argument before
             // loading a project. Build-loop invocations already carry one.
             _toolResolver.Resolve(invocation);
+            if (invocation.CatalogRefreshFailed)
+            {
+                WriteError(
+                    $"ERROR: Remote tools index refresh failed: {_remoteTools.LastRefreshError}");
+                return -1;
+            }
+
             AddPositionalParameters(invocation);
 
             // P05-P10: management precedence.
@@ -181,7 +209,18 @@ public sealed class CommandDispatcher
 
             if (invocation.Project is not null)
             {
+                if (RequiresProjectCatalogGate(invocation)
+                    && !EnsureProjectToolsCurrent(invocation))
+                {
+                    return -1;
+                }
+
                 PrepareProjectInvocation(invocation);
+            }
+            else if (RequiresProjectCatalogGate(invocation)
+                     && !EnsureProjectToolsCurrent(invocation))
+            {
+                return -1;
             }
 
             // T00: project token wins; otherwise use the global token as-is.
@@ -262,6 +301,74 @@ public sealed class CommandDispatcher
                 exception);
             invocation.SuppressTranspile = true;
         }
+    }
+
+    private bool EnsureCatalogFresh()
+    {
+        if (_remoteTools.EnsureFresh())
+        {
+            return true;
+        }
+
+        WriteError(
+            $"ERROR: Remote tools index refresh failed: {_remoteTools.LastRefreshError}");
+        return false;
+    }
+
+    private bool EnsureProjectToolsCurrent(
+        CliInvocation invocation)
+    {
+        if (_projectCatalogChecked)
+        {
+            return true;
+        }
+
+        if (!EnsureCatalogFresh())
+        {
+            return false;
+        }
+
+        var project = invocation.Project;
+        if (project is null
+            && !string.IsNullOrWhiteSpace(
+                invocation.CurrentDirectory)
+            && Directory.Exists(
+                invocation.CurrentDirectory))
+        {
+            project = ProjectLocator.TryToLoad(
+                new DirectoryInfo(
+                    invocation.CurrentDirectory),
+                updateCurrent: false);
+        }
+
+        if (project is null)
+        {
+            _projectCatalogChecked = true;
+            return true;
+        }
+
+        var plan = _projectToolFreshness.Plan(
+            project,
+            MissingProjectToolPolicy.Fail);
+        if (plan.Entries.Count == 0)
+        {
+            _projectCatalogChecked = true;
+            return true;
+        }
+
+        Console.WriteLine(
+            "[cli] Checking project tools against the current catalog...");
+        if (!plan.IsSuccessful)
+        {
+            WriteError($"ERROR: {plan.Error}");
+            return false;
+        }
+
+        plan.Apply(project);
+        _projectCatalogChecked = true;
+        Console.WriteLine(
+            "[cli] Project tools are current.");
+        return true;
     }
 
     private int Dispatch(
@@ -682,6 +789,102 @@ public sealed class CommandDispatcher
         && !options.listUrls
         && string.IsNullOrEmpty(options.removeUrl);
 
+    private bool RequiresFreshCatalogBeforeResolution(
+        CliInvocation invocation)
+    {
+        var options = invocation.Options;
+        if (invocation.SkipRemoteToolsLookup
+            || IsCatalogOfflineCommand(options)
+            || options.refreshTools
+            || options.upgrade
+            || options.upgradeAll
+            || !string.IsNullOrWhiteSpace(
+                options.targetUrl))
+        {
+            return false;
+        }
+
+        if (options.listVersions
+            || options.listTools
+            || !string.IsNullOrWhiteSpace(
+                options.searchTools))
+        {
+            return true;
+        }
+
+        var rawName = invocation.RawTranspilerArg
+                      ?? invocation.Transpiler
+                      ?? invocation.RemainingArguments
+                          ?.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(rawName)
+            || IsHttpUrl(rawName)
+            || !string.IsNullOrWhiteSpace(
+                _remoteTools.TryGetToolUrl(rawName)))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool RequiresProjectCatalogGate(
+        CliInvocation invocation)
+    {
+        var options = invocation.Options;
+        if (invocation.SkipRemoteToolsLookup
+            || IsCatalogOfflineCommand(options)
+            || options.refreshTools
+            || options.upgrade
+            || options.upgradeAll
+            || options.upgradeCli
+            || !string.IsNullOrWhiteSpace(
+                options.targetUrl)
+            || !string.IsNullOrWhiteSpace(
+                options.execute))
+        {
+            return false;
+        }
+
+        if (options.listVersions
+            || options.listTools
+            || !string.IsNullOrWhiteSpace(
+                options.searchTools)
+            || options.build
+            || options.buildLocal
+            || options.buildAll
+            || options.install)
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(
+            invocation.ResolvedToolName);
+    }
+
+    private static bool IsCatalogOfflineCommand(
+        CliOptions options) =>
+        options.help
+        || options.info
+        || options.version
+        || options.authenticate
+        || options.projectLogin
+        || options.subscription
+        || options.logout
+        || options.describe
+        || options.describeAll
+        || options.listSettings
+        || options.addSetting.Any()
+        || options.removeSetting.Any()
+        || !string.IsNullOrEmpty(
+            options.setAccountAPIKey)
+        || !string.IsNullOrEmpty(options.viewUrl)
+        || !string.IsNullOrEmpty(options.setUrl)
+        || options.listUrls
+        || !string.IsNullOrEmpty(options.removeUrl)
+        || options.clean
+        || options.cleanLocal
+        || options.cleanAll;
+
     private static bool IsManagementOnly(CliOptions options) =>
         options.help
         || options.info
@@ -753,6 +956,20 @@ public sealed class CommandDispatcher
     private static bool IsHttpUrl(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var uri)
         && uri.Scheme is "http" or "https";
+
+    private static TimeProvider CreateTimeProvider()
+    {
+        var raw = Environment.GetEnvironmentVariable(
+            "EFFORTLESS_CLI_TEST_UTC_NOW");
+        return DateTimeOffset.TryParse(
+            raw,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AssumeUniversal
+            | System.Globalization.DateTimeStyles.AdjustToUniversal,
+            out var value)
+            ? new FixedTimeProvider(value)
+            : TimeProvider.System;
+    }
 
     private static void PrintToolNotFound(string toolName)
     {
@@ -829,5 +1046,18 @@ public sealed class CommandDispatcher
         Console.ForegroundColor = color;
         Console.WriteLine(message);
         Console.ForegroundColor = previous;
+    }
+
+    private sealed class FixedTimeProvider : TimeProvider
+    {
+        private readonly DateTimeOffset _utcNow;
+
+        public FixedTimeProvider(DateTimeOffset utcNow)
+        {
+            _utcNow = utcNow;
+        }
+
+        public override DateTimeOffset GetUtcNow() =>
+            _utcNow;
     }
 }

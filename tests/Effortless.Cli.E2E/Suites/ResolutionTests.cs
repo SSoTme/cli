@@ -21,7 +21,9 @@ public sealed class ResolutionTests
             sandbox.ProjectPath,
             sandbox);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.True(
+            result.ExitCode == 0,
+            result.Combined);
         var request = Assert.Single(server.Requests);
         Assert.Equal("to-uppercase", request.ToolName);
         Assert.Equal(ResolutionTestSupport.HeadVersion, request.Version);
@@ -47,7 +49,7 @@ public sealed class ResolutionTests
             sandbox.ProjectPath,
             sandbox);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.True(result.ExitCode == 0, result.Combined);
         var request = Assert.Single(server.Requests);
         Assert.Equal(ResolutionTestSupport.OldVersion, request.Version);
         Assert.Contains(
@@ -139,7 +141,7 @@ public sealed class ResolutionTests
     }
 
     [Fact(DisplayName = "res-latest-flag: -latest runs head and clears the pin")]
-    public async Task LatestRunsHeadButLegacyCannotMutateDirectInvocationStep()
+    public async Task LatestRunsHeadAndAutomaticFreshnessClearsPin()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -168,16 +170,18 @@ public sealed class ResolutionTests
             $"{ResolutionTestSupport.HeadVersion} [latest]",
             result.Stdout,
             StringComparison.Ordinal);
-        Assert.DoesNotContain("Cleared hard pin", result.Stdout, StringComparison.Ordinal);
-        Assert.DoesNotContain("Now using", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains(
+            "[cli] Project tools are current.",
+            result.Stdout,
+            StringComparison.Ordinal);
 
         var step = ResolutionTestSupport.FindStep(
             ResolutionTestSupport.ReadProject(sandbox),
             "to-uppercase");
+        Assert.Null(step["PinnedVersion"]);
         Assert.Equal(
-            ResolutionTestSupport.OldVersion,
-            step["PinnedVersion"]?.GetValue<string>());
-        Assert.Null(step["LastVersionUsed"]);
+            ResolutionTestSupport.HeadVersion,
+            step["LastVersionUsed"]?.GetValue<string>());
     }
 
     [Fact(DisplayName = "res-no-head: tool without a head version")]
@@ -312,9 +316,18 @@ public sealed class ResolutionTests
             sandbox.ProjectPath,
             sandbox);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.True(
+            result.ExitCode == 0,
+            result.Combined
+            + Environment.NewLine
+            + File.ReadAllText(
+                Path.Combine(
+                    sandbox.HomePath,
+                    ".ssotme",
+                    "remote_tools",
+                    "ssotme-tools.json")));
         Assert.Contains(
-            "CLOUD-BRIDGE CALL TRIGGERED: Empty local transpiler URL cache",
+            "CLOUD-BRIDGE CALL TRIGGERED: Remote tools catalog freshness required",
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -347,9 +360,9 @@ public sealed class ResolutionTests
             sandbox);
 
         Assert.Equal(0, configure.ExitCode);
-        Assert.Equal(0, result.ExitCode);
+        Assert.True(result.ExitCode == 0, result.Combined);
         Assert.Contains(
-            "CLOUD-BRIDGE CALL TRIGGERED: Empty local transpiler URL cache",
+            "CLOUD-BRIDGE CALL TRIGGERED: Remote tools catalog freshness required",
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Single(bridge.Requests);
@@ -389,7 +402,7 @@ public sealed class ResolutionTests
             sandbox.ProjectPath,
             sandbox);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.True(result.ExitCode == 0, result.Combined);
         Assert.DoesNotContain("CLOUD-BRIDGE CALL TRIGGERED", result.Stdout, StringComparison.Ordinal);
         Assert.Empty(bridge.Requests);
         Assert.Single(toolServer.Requests);
@@ -419,7 +432,7 @@ public sealed class ResolutionTests
 
             var result = await cli.Run([alias], sandbox.ProjectPath, sandbox);
 
-            Assert.Equal(0, result.ExitCode);
+            Assert.True(result.ExitCode == 0, result.Combined);
             Assert.Contains(
                 "CLOUD-BRIDGE CALL TRIGGERED: RefreshRemoteTools: explicit -refreshTools invocation",
                 result.Stdout,
@@ -458,7 +471,9 @@ public sealed class ResolutionTests
 
         var upgraded = await cli.Run(["-refreshTools"], sandbox.ProjectPath, sandbox);
 
-        Assert.Equal(0, upgraded.ExitCode);
+        Assert.True(
+            upgraded.ExitCode == 0,
+            upgraded.Combined);
         Assert.Equal(
             bridge.BridgeUri.ToString(),
             ResolutionTestSupport.ReadHomeObject(
@@ -481,7 +496,9 @@ public sealed class ResolutionTests
             sandbox.ProjectPath,
             sandbox);
 
-        Assert.Equal(0, lower.ExitCode);
+        Assert.True(
+            lower.ExitCode == 0,
+            lower.Combined);
         Assert.Equal(2, bridge.Requests.Count);
         Assert.Equal(
             "11",
@@ -502,7 +519,9 @@ public sealed class ResolutionTests
 
         var result = await cli.Run(["-refreshTools"], sandbox.ProjectPath, sandbox);
 
-        Assert.Equal(0, result.ExitCode);
+        Assert.True(
+            result.ExitCode == 0,
+            result.Combined);
         var request = Assert.Single(bridge.Requests);
         Assert.Contains(
             $"cli_version={CliUnderTest.PackageVersion}",
@@ -756,7 +775,11 @@ public sealed class ResolutionTests
                 "  SKIP unknown-tool — not found in remote tools index",
                 result.Stdout,
                 StringComparison.Ordinal);
-            Assert.Contains("Upgraded 1 tool(s), skipped 1.", result.Stdout, StringComparison.Ordinal);
+            Assert.True(
+                result.Stdout.Contains(
+                    "Upgraded 1 tool(s), skipped 1.",
+                    StringComparison.Ordinal),
+                result.Stdout);
             Assert.Single(bridge.Requests);
             Assert.Empty(toolServer.Requests);
         }
@@ -837,6 +860,343 @@ public sealed class ResolutionTests
         Assert.Equal("mytool", Assert.Single(toolServer.Requests).ToolName);
     }
 
+    [Fact(DisplayName = "res-list-tools: listTools projects sorted catalog HEADs")]
+    public async Task ListToolsAliasesProjectSortedHeadsAndNoHead()
+    {
+        foreach (var alias in new[] { "listTools", "-listTools", "-lt" })
+        {
+            var cli = new CliUnderTest();
+            await using var toolServer = new MockToolServer();
+            await using var bridge = new ResolutionBridgeServer();
+            var index = IndexFixture.Load(toolServer);
+            using var sandbox = Sandbox.Create(cli);
+            ResolutionTestSupport.SeedHome(
+                sandbox,
+                index,
+                bridge.BridgeUri);
+            AddNoHeadTool(sandbox, "aaa/example/no-head");
+
+            var result = await cli.Run(
+                [alias],
+                sandbox.ProjectPath,
+                sandbox);
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains(
+                "Available tools (3):",
+                result.Stdout,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "  aaa/example/no-head  NO HEAD",
+                result.Stdout,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                $"  effortless/common/to-uppercase  {ResolutionTestSupport.HeadVersion}",
+                result.Stdout,
+                StringComparison.Ordinal);
+            Assert.True(
+                result.Stdout.IndexOf(
+                    "aaa/example/no-head",
+                    StringComparison.Ordinal)
+                < result.Stdout.IndexOf(
+                    "effortless/common/echo",
+                    StringComparison.Ordinal));
+            Assert.Empty(bridge.Requests);
+        }
+    }
+
+    [Fact(DisplayName = "res-search-tools: searchTools matches canonical and short names")]
+    public async Task SearchToolsMatchesCanonicalAndShortNames()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(
+            sandbox,
+            index,
+            bridge.BridgeUri);
+
+        var canonical = await cli.Run(
+            ["searchTools", "COMMON/TO-UPPER"],
+            sandbox.ProjectPath,
+            sandbox);
+        var shortName = await cli.Run(
+            ["-st", "uppercase"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, canonical.ExitCode);
+        Assert.Contains(
+            "Tools matching 'COMMON/TO-UPPER' (1):",
+            canonical.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "effortless/common/to-uppercase",
+            canonical.Stdout,
+            StringComparison.Ordinal);
+        Assert.Equal(0, shortName.ExitCode);
+        Assert.Contains(
+            "Tools matching 'uppercase' (1):",
+            shortName.Stdout,
+            StringComparison.Ordinal);
+        Assert.Empty(bridge.Requests);
+    }
+
+    [Fact(DisplayName = "res-search-tools-empty: searchTools reports no matches explicitly")]
+    public async Task SearchToolsReportsNoMatchesExplicitly()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(
+            sandbox,
+            index,
+            bridge.BridgeUri);
+
+        var result = await cli.Run(
+            ["searchTools", "definitely-not-present"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(
+            $"No tools matched 'definitely-not-present'.{Environment.NewLine}",
+            result.Stdout);
+        Assert.Empty(bridge.Requests);
+    }
+
+    [Fact(DisplayName = "res-freshness-current: a 23:59:59 catalog is reused")]
+    public async Task FreshCatalogAndCurrentProjectAvoidRefreshAndSave()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(
+            sandbox,
+            index,
+            bridge.BridgeUri);
+        SetFetchedAt(
+            sandbox,
+            CliUnderTest.TestUtcNow
+            - TimeSpan.FromHours(24)
+            + TimeSpan.FromSeconds(1));
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "Echo",
+                "",
+                "echo -i in.txt",
+                LastVersionUsed:
+                ResolutionTestSupport.HeadVersion,
+                IsDisabled: true));
+        var before = sandbox.ReadFile("effortless.json");
+
+        var result = await cli.Run(
+            ["build"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.True(
+            result.ExitCode == 0,
+            result.Combined
+            + Environment.NewLine
+            + File.ReadAllText(
+                Path.Combine(
+                    sandbox.HomePath,
+                    ".ssotme",
+                    "remote_tools",
+                    "ssotme-tools.json")));
+        Assert.Contains(
+            "[cli] Project tools are current.",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Empty(bridge.Requests);
+        Assert.Empty(toolServer.Requests);
+        Assert.Equal(before, sandbox.ReadFile("effortless.json"));
+    }
+
+    [Fact(DisplayName = "res-freshness-stale-upgrades: stale refresh upgrades before build")]
+    public async Task StaleCatalogRefreshesAndUpgradesBeforeBuild()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        bridge.IndexJson = index.Json;
+        toolServer.Enqueue("to-uppercase", ToolBehavior.Echo());
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(
+            sandbox,
+            index,
+            bridge.BridgeUri);
+        SetFetchedAt(
+            sandbox,
+            CliUnderTest.TestUtcNow
+            - TimeSpan.FromHours(24));
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "To Uppercase",
+                "",
+                "to-uppercase -i in.txt",
+                ResolutionTestSupport.OldVersion,
+                ResolutionTestSupport.OldVersion));
+
+        var result = await cli.Run(
+            ["build"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Single(bridge.Requests);
+        Assert.Equal(
+            ResolutionTestSupport.HeadVersion,
+            Assert.Single(toolServer.Requests).Version);
+        var step = ResolutionTestSupport.FindStep(
+            ResolutionTestSupport.ReadProject(sandbox),
+            "to-uppercase");
+        Assert.Null(step["PinnedVersion"]);
+        Assert.Equal(
+            ResolutionTestSupport.HeadVersion,
+            step["LastVersionUsed"]?.GetValue<string>());
+    }
+
+    [Fact(DisplayName = "res-freshness-invalid-time: unprovable timestamps refresh")]
+    public async Task MissingMalformedAndFutureTimestampsRefresh()
+    {
+        foreach (var timestamp in new[]
+                 {
+                     (string?)null,
+                     "not-a-time",
+                     (CliUnderTest.TestUtcNow
+                      + TimeSpan.FromMinutes(5)
+                      + TimeSpan.FromSeconds(1)).ToString("O"),
+                 })
+        {
+            var cli = new CliUnderTest();
+            await using var toolServer = new MockToolServer();
+            await using var bridge = new ResolutionBridgeServer();
+            var index = IndexFixture.Load(toolServer);
+            bridge.IndexJson = index.Json;
+            using var sandbox = Sandbox.Create(cli);
+            ResolutionTestSupport.SeedHome(
+                sandbox,
+                index,
+                bridge.BridgeUri);
+            SetFetchedAt(sandbox, timestamp);
+
+            var result = await cli.Run(
+                ["listTools"],
+                sandbox.ProjectPath,
+                sandbox);
+
+            Assert.True(result.ExitCode == 0, result.Combined);
+            Assert.Single(bridge.Requests);
+        }
+    }
+
+    [Fact(DisplayName = "res-freshness-refresh-fails: mandatory refresh never falls back")]
+    public async Task FailedMandatoryRefreshPreservesBytesAndDoesNotBuild()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer
+        {
+            StatusCode = 500,
+        };
+        var index = IndexFixture.Load(toolServer);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(
+            sandbox,
+            index,
+            bridge.BridgeUri);
+        SetFetchedAt(
+            sandbox,
+            CliUnderTest.TestUtcNow
+            - TimeSpan.FromHours(24));
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "To Uppercase",
+                "",
+                "to-uppercase -i in.txt",
+                ResolutionTestSupport.OldVersion,
+                ResolutionTestSupport.OldVersion));
+        var indexPath = Path.Combine(
+            sandbox.HomePath,
+            ".ssotme",
+            "remote_tools",
+            "ssotme-tools.json");
+        var beforeIndex = File.ReadAllBytes(indexPath);
+        var beforeProject = sandbox.ReadFile("effortless.json");
+
+        var result = await cli.Run(
+            ["build"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.True(result.Failed);
+        Assert.Contains(
+            "Remote tools index refresh failed",
+            result.Combined,
+            StringComparison.Ordinal);
+        Assert.Single(bridge.Requests);
+        Assert.Empty(toolServer.Requests);
+        Assert.Equal(beforeIndex, File.ReadAllBytes(indexPath));
+        Assert.Equal(
+            beforeProject,
+            sandbox.ReadFile("effortless.json"));
+    }
+
+    [Fact(DisplayName = "res-freshness-upgrade-atomic: project upgrades are all-or-nothing")]
+    public async Task AutomaticUpgradeFailureDoesNotPartiallyMutateProject()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(
+            sandbox,
+            index,
+            bridge.BridgeUri);
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "To Uppercase",
+                "",
+                "to-uppercase -i in.txt",
+                ResolutionTestSupport.OldVersion,
+                ResolutionTestSupport.OldVersion),
+            new ResolutionProjectStep(
+                "Missing",
+                "",
+                "missing-remote-tool -i in.txt",
+                "v0",
+                "v0"));
+        var before = sandbox.ReadFile("effortless.json");
+
+        var result = await cli.Run(
+            ["build"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.True(result.Failed);
+        Assert.Contains(
+            "missing-remote-tool",
+            result.Combined,
+            StringComparison.Ordinal);
+        Assert.Empty(bridge.Requests);
+        Assert.Empty(toolServer.Requests);
+        Assert.Equal(before, sandbox.ReadFile("effortless.json"));
+    }
+
     [Fact(DisplayName = "res-freshness-offline-meta: offline metadata commands do not refresh")]
     public async Task OfflineMetadataCommandsDoNotRefreshMissingCatalog()
     {
@@ -880,5 +1240,60 @@ public sealed class ResolutionTests
             ["versionIndex"] = versionIndex,
         };
         return root.ToJsonString();
+    }
+
+    private static void AddNoHeadTool(
+        Sandbox sandbox,
+        string canonicalName)
+    {
+        var root = ResolutionTestSupport.ReadHomeObject(
+            sandbox,
+            ".ssotme/remote_tools/ssotme-tools.json");
+        var tools = root["transpilerVersions"]?.AsObject()
+            ?? throw new InvalidDataException(
+                "transpilerVersions is missing.");
+        tools[canonicalName] = new JsonObject
+        {
+            ["v1"] = new JsonObject
+            {
+                ["metaData"] = new JsonObject
+                {
+                    ["isHeadVersion"] = false,
+                },
+                ["urls"] = new JsonObject
+                {
+                    ["post"] = "http://127.0.0.1:1/no-head/",
+                },
+            },
+        };
+        sandbox.WriteHomeFile(
+            ".ssotme/remote_tools/ssotme-tools.json",
+            root.ToJsonString());
+    }
+
+    private static void SetFetchedAt(
+        Sandbox sandbox,
+        DateTimeOffset value) =>
+        SetFetchedAt(sandbox, value.ToString("O"));
+
+    private static void SetFetchedAt(
+        Sandbox sandbox,
+        string? value)
+    {
+        var root = ResolutionTestSupport.ReadHomeObject(
+            sandbox,
+            ".ssotme/remote_tools/ssotme-tools.json");
+        if (value is null)
+        {
+            root.Remove("fetchedAt");
+        }
+        else
+        {
+            root["fetchedAt"] = value;
+        }
+
+        sandbox.WriteHomeFile(
+            ".ssotme/remote_tools/ssotme-tools.json",
+            root.ToJsonString());
     }
 }

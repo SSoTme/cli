@@ -37,7 +37,7 @@ public sealed class CliArgumentParser
 
     public CliInvocation Parse(string commandLine)
     {
-        var options = new ParserOptions();
+        var options = new CliOptions();
         var parser = new CommandLineParser(options);
         parser.Parse(
             NormalizeLeadingNoDashCommand(commandLine ?? string.Empty),
@@ -47,7 +47,7 @@ public sealed class CliArgumentParser
 
     private static CliInvocation ParseCore(string[] arguments)
     {
-        var options = new ParserOptions();
+        var options = new CliOptions();
         var parser = new CommandLineParser(options);
         parser.Parse(ToPlossumCommandLine(arguments), false);
         return CreateInvocation(options, parser);
@@ -305,27 +305,4 @@ public sealed class CliArgumentParser
         }
     }
 
-    // Step 3 preserves the legacy -lt spelling for listUrls. The rulebook also
-    // assigns it to Step 03A's listTools option; Plossum rejects duplicate
-    // aliases, so the parser shadow removes that not-yet-active spelling.
-    [CommandLineManager(
-        ApplicationName = "SSoTme CLI",
-        Copyright = "Copyright 2026, EffortlessAPI.com",
-        Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions",
-        EnabledOptionStyles =
-            OptionStyles.Windows |
-            OptionStyles.Unix |
-            OptionStyles.File)]
-    private sealed class ParserOptions : CliOptions
-    {
-        [CommandLineOption(
-            Description = "List all available tools in the current remote tools catalog",
-            MinOccurs = 0,
-            Aliases = "tools")]
-        public new bool listTools
-        {
-            get => base.listTools;
-            set => base.listTools = value;
-        }
-    }
 }

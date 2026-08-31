@@ -65,6 +65,8 @@ public class CliInvocation
 
     public bool HasExplicitVersionError { get; set; }
 
+    public bool CatalogRefreshFailed { get; set; }
+
     public bool HasErrors { get; set; }
 
     public string ErrorText { get; set; }

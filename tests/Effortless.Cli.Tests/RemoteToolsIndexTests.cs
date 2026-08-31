@@ -153,6 +153,7 @@ public sealed class RemoteToolsIndexTests
             },
             validateHost: _ => { });
 
+        Assert.True(index.EnsureFresh());
         var first = index.Resolve("to-uppercase");
         var missing = index.Resolve("not-present");
 
@@ -236,6 +237,40 @@ public sealed class RemoteToolsIndexTests
             RemoteToolsIndex.BootstrapBridgeUrl,
             index.TryGetToolUrl(RemoteToolsIndex.BridgeToolName));
         Assert.False(File.Exists(index.BridgeVersionIndexFile.FullName));
+    }
+
+    [Theory]
+    [InlineData("{ malformed")]
+    [InlineData("""{"transpilerVersions":{}}""")]
+    [InlineData("""{"notAToolMap":{}}""")]
+    public void InvalidRefreshPreservesPriorCatalogBytes(
+        string replacement)
+    {
+        using var directory = new TestDirectory();
+        RemoteToolsIndex? index = null;
+        index = new RemoteToolsIndex(
+            new DirectoryInfo(directory.Path),
+            refreshRunner: _ =>
+            {
+                File.WriteAllText(
+                    index!.IndexFile.FullName,
+                    replacement);
+                return true;
+            },
+            writeLine: _ => { },
+            validateHost: _ => { });
+        WriteCatalog(index, Catalog());
+        var before = File.ReadAllBytes(
+            index.IndexFile.FullName);
+
+        var refreshed = index.Refresh(
+            "test refresh",
+            "test invalid replacement");
+
+        Assert.False(refreshed);
+        Assert.Equal(
+            before,
+            File.ReadAllBytes(index.IndexFile.FullName));
     }
 
     [Fact]
@@ -436,6 +471,7 @@ public sealed class RemoteToolsIndexTests
             },
             ["cliUpdateAvailable"] = false,
             ["latestBridgeVersion"] = null,
+            ["fetchedAt"] = DateTimeOffset.UtcNow.ToString("O"),
         };
     }
 

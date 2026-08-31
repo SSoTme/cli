@@ -16,6 +16,8 @@ internal sealed record CliResult(
 internal sealed class CliUnderTest
 {
     private static readonly Lazy<string> RepositoryRoot = new(FindRepositoryRoot);
+    public static readonly DateTimeOffset TestUtcNow =
+        new(2026, 8, 31, 6, 0, 0, TimeSpan.Zero);
 
     public CliUnderTest(string? dllPath = null)
     {
@@ -124,6 +126,8 @@ internal sealed class CliUnderTest
         startInfo.Environment.Remove("SSOTME_CHILD_PROCESS");
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["TERM"] = "dumb";
+        startInfo.Environment["EFFORTLESS_CLI_TEST_UTC_NOW"] =
+            TestUtcNow.ToString("O");
     }
 
     private static string GetDefaultDllPath()

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
 using System.Net.Http;
@@ -19,9 +18,6 @@ public sealed class RemoteToolsIndex
     public const string BootstrapBridgeUrl =
         "https://ssotme-cli-cloud-bridge-v2026-04-24-1853-cmvbd4phczmeg.7pktzg2z971j0.cpln.app";
 
-    private static readonly ConcurrentDictionary<string, byte>
-        AutomaticRefreshes = new(StringComparer.OrdinalIgnoreCase);
-
     private readonly Action<string> _writeLine;
     private readonly Func<RemoteToolsRefreshRequest, bool> _refreshRunner;
     private readonly Action<string> _validateHost;
@@ -29,6 +25,7 @@ public sealed class RemoteToolsIndex
     private readonly Action<string, string> _toolUrlSetter;
     private readonly Action<string> _toolUrlRemover;
     private readonly Func<string> _commandLine;
+    private readonly CatalogFreshnessPolicy _freshnessPolicy;
     private readonly object _loadLock = new();
     private JObject _rawRoot;
 
@@ -40,7 +37,8 @@ public sealed class RemoteToolsIndex
         Func<RemoteToolsRefreshRequest, bool> refreshRunner = null,
         Action<string> writeLine = null,
         Action<string> validateHost = null,
-        Func<string> commandLine = null)
+        Func<string> commandLine = null,
+        TimeProvider timeProvider = null)
         : this(
             UserConfigDir.SSoTmeDir,
             cliVersion,
@@ -48,6 +46,7 @@ public sealed class RemoteToolsIndex
             writeLine,
             validateHost,
             commandLine,
+            timeProvider,
             useSharedToolUrls: true)
     {
     }
@@ -62,7 +61,8 @@ public sealed class RemoteToolsIndex
         Func<RemoteToolsRefreshRequest, bool> refreshRunner = null,
         Action<string> writeLine = null,
         Action<string> validateHost = null,
-        Func<string> commandLine = null)
+        Func<string> commandLine = null,
+        TimeProvider timeProvider = null)
         : this(
             configRoot,
             cliVersion,
@@ -70,6 +70,7 @@ public sealed class RemoteToolsIndex
             writeLine,
             validateHost,
             commandLine,
+            timeProvider,
             useSharedToolUrls: false)
     {
     }
@@ -81,6 +82,7 @@ public sealed class RemoteToolsIndex
         Action<string> writeLine,
         Action<string> validateHost,
         Func<string> commandLine,
+        TimeProvider timeProvider,
         bool useSharedToolUrls)
     {
         ArgumentNullException.ThrowIfNull(configRoot);
@@ -110,6 +112,7 @@ public sealed class RemoteToolsIndex
         _refreshRunner = refreshRunner;
         _validateHost = validateHost ?? ValidateHost;
         _commandLine = commandLine ?? (() => Environment.CommandLine);
+        _freshnessPolicy = new CatalogFreshnessPolicy(timeProvider);
 
         if (useSharedToolUrls)
         {
@@ -179,6 +182,27 @@ public sealed class RemoteToolsIndex
     public string LastRefreshError { get; private set; }
 
     /// <summary>
+    /// Proves that the local catalog was validated within the preceding 24 hours.
+    /// A failed refresh is fatal; stale bytes are never used as a fallback.
+    /// </summary>
+    public bool EnsureFresh()
+    {
+        EnsureInitialized();
+        var tools = Load();
+        if (tools != null
+            && tools.Properties().Any()
+            && _freshnessPolicy.IsFresh(_rawRoot))
+        {
+            return true;
+        }
+
+        _writeLine("[cli] Refreshing CLI tool URL index...");
+        return Refresh(
+            "Remote tools catalog freshness required",
+            "The cached remote tools index is missing, invalid, empty, or at least 24 hours old. A validated replacement is required before catalog-dependent work can continue.");
+    }
+
+    /// <summary>
     /// Creates the index directory and an empty placeholder without contacting the
     /// bridge. Catalog population is performed only by <see cref="Refresh"/>.
     /// </summary>
@@ -210,7 +234,7 @@ public sealed class RemoteToolsIndex
     /// <summary>
     /// Resolves a canonical or short tool name. An explicit version suffix wins over
     /// a hard pin; <paramref name="latest"/> ignores a hard pin and selects HEAD.
-    /// Empty, corrupt, or missing catalogs are refreshed at most once per process.
+    /// The caller must establish catalog freshness before invoking this method.
     /// </summary>
     public RemoteToolResolution Resolve(
         string name,
@@ -220,23 +244,6 @@ public sealed class RemoteToolsIndex
         if (string.IsNullOrWhiteSpace(name))
         {
             return null;
-        }
-
-        EnsureInitialized();
-
-        if (IsEmpty)
-        {
-            if (!TryAutomaticRefresh(
-                    "Empty local transpiler URL cache",
-                    "Local transpiler URL cache (ssotme-tools.json) is empty or corrupt — must repopulate from cli-cloud-bridge before any transpiler can be resolved."))
-            {
-                return null;
-            }
-
-            if (IsEmpty)
-            {
-                return null;
-            }
         }
 
         var resolution = ResolveFromCurrentRoot(name, pinnedVersion, latest);
@@ -249,6 +256,62 @@ public sealed class RemoteToolsIndex
         // miss is definitive for this invocation. Step 03A introduces the
         // catalog-freshness/miss refresh gate.
         return null;
+    }
+
+    /// <summary>
+    /// Resolves the current HEAD while ignoring both command-line version suffixes
+    /// and project hard pins.
+    /// </summary>
+    public RemoteToolResolution ResolveHead(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        SplitVersionSuffix(name, out var toolPart, out _);
+        return ResolveFromCurrentRoot(
+            toolPart,
+            pinnedVersion: null,
+            latest: true);
+    }
+
+    public IReadOnlyList<RemoteCatalogTool> ListTools(string search = null)
+    {
+        var tools = Load();
+        if (tools == null)
+        {
+            return Array.Empty<RemoteCatalogTool>();
+        }
+
+        return tools.Properties()
+            .Select(property =>
+            {
+                var versions = property.Value as JObject;
+                var head = versions?.Properties()
+                    .FirstOrDefault(version =>
+                        version.Value["metaData"]?["isHeadVersion"]
+                            ?.Value<bool>() == true);
+                return new RemoteCatalogTool(
+                    property.Name,
+                    property.Name.Split('/').Last(),
+                    head?.Name);
+            })
+            .Where(tool =>
+                string.IsNullOrEmpty(search)
+                || tool.CanonicalName.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase)
+                || tool.ShortName.Contains(
+                    search,
+                    StringComparison.OrdinalIgnoreCase))
+            .OrderBy(
+                tool => tool.CanonicalName,
+                StringComparer.OrdinalIgnoreCase)
+            .ThenBy(
+                tool => tool.CanonicalName,
+                StringComparer.Ordinal)
+            .ToArray();
     }
 
     /// <summary>
@@ -349,6 +412,7 @@ public sealed class RemoteToolsIndex
         RemoveLegacyBridgeMapping();
         PrintRefreshBanner(triggerTitle, triggerDetails);
         LastRefreshError = null;
+        var previousBytes = ReadIndexBytes();
 
         if (_refreshRunner == null)
         {
@@ -369,6 +433,7 @@ public sealed class RemoteToolsIndex
             if (!IsHostNotFound(error)
                 || SameUrl(bridgeUrl, BootstrapBridgeUrl))
             {
+                RestoreIndex(previousBytes);
                 LastRefreshError = error?.Message
                     ?? "The remote tools refresh failed.";
                 return false;
@@ -381,21 +446,30 @@ public sealed class RemoteToolsIndex
 
             if (!RunRefreshAttempt(BootstrapBridgeUrl, out error))
             {
+                RestoreIndex(previousBytes);
                 LastRefreshError = error?.Message
                     ?? "The remote tools refresh failed after resetting the bridge URL.";
                 return false;
             }
         }
 
-        var tools = Load();
-        if (tools == null || !tools.Properties().Any())
+        var candidateBytes = ReadIndexBytes();
+        if (!TryParseValidCatalog(
+                candidateBytes,
+                out var candidateRoot,
+                out var validationError))
         {
-            LastRefreshError = IsCorrupt
-                ? "The bridge produced a malformed remote tools index."
-                : "The bridge produced an empty remote tools index.";
+            RestoreIndex(previousBytes);
+            LastRefreshError = validationError;
             return false;
         }
 
+        candidateRoot["fetchedAt"] =
+            _freshnessPolicy.UtcNow.ToString(
+                "O",
+                CultureInfo.InvariantCulture);
+        AtomicWriteIndex(candidateRoot);
+        Load();
         File.WriteAllText(CliVersionFile.FullName, CliVersion);
         ProcessBridgeSideEffects(_rawRoot);
         return true;
@@ -503,19 +577,6 @@ public sealed class RemoteToolsIndex
             $"{candidate} {selected.Name}{suffix}",
             hasSpecificError: false,
             hasExplicitVersionError: false);
-    }
-
-    private bool TryAutomaticRefresh(
-        string triggerTitle,
-        string triggerDetails)
-    {
-        if (!AutomaticRefreshes.TryAdd(IndexFile.FullName, 0))
-        {
-            return false;
-        }
-
-        _writeLine("[cli] Refreshing CLI tool URL index...");
-        return Refresh(triggerTitle, triggerDetails);
     }
 
     private JObject Load()
@@ -631,6 +692,126 @@ public sealed class RemoteToolsIndex
         }
     }
 
+    private byte[] ReadIndexBytes()
+    {
+        IndexFile.Refresh();
+        if (!IndexFile.Exists)
+        {
+            return null;
+        }
+
+        try
+        {
+            return File.ReadAllBytes(IndexFile.FullName);
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static bool TryParseValidCatalog(
+        byte[] bytes,
+        out JObject root,
+        out string error)
+    {
+        root = null;
+        error = null;
+        if (bytes == null || bytes.Length == 0)
+        {
+            error = "The bridge produced an empty remote tools index.";
+            return false;
+        }
+
+        try
+        {
+            root = JObject.Parse(
+                System.Text.Encoding.UTF8.GetString(bytes));
+        }
+        catch (JsonException)
+        {
+            error = "The bridge produced a malformed remote tools index.";
+            return false;
+        }
+
+        var tools = (root["transpilerVersions"]
+                     ?? root["transpilers"]) as JObject;
+        if (tools == null
+            || !tools.Properties().Any()
+            || tools.Properties().Any(
+                property => property.Value is not JObject))
+        {
+            error =
+                "The bridge produced an invalid or empty remote tools map.";
+            return false;
+        }
+
+        return true;
+    }
+
+    private void AtomicWriteIndex(JObject root)
+    {
+        var tempPath = Path.Combine(
+            RemoteToolsDirectory.FullName,
+            $".{IndexFile.Name}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.WriteAllText(
+                tempPath,
+                root.ToString(Formatting.Indented)
+                + Environment.NewLine);
+            File.Move(
+                tempPath,
+                IndexFile.FullName,
+                overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    private void RestoreIndex(byte[] previousBytes)
+    {
+        if (previousBytes == null)
+        {
+            DeleteIfPresent(IndexFile);
+        }
+        else
+        {
+            var tempPath = Path.Combine(
+                RemoteToolsDirectory.FullName,
+                $".{IndexFile.Name}.{Guid.NewGuid():N}.restore");
+            try
+            {
+                File.WriteAllBytes(tempPath, previousBytes);
+                File.Move(
+                    tempPath,
+                    IndexFile.FullName,
+                    overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                {
+                    File.Delete(tempPath);
+                }
+            }
+        }
+
+        lock (_loadLock)
+        {
+            _rawRoot = null;
+        }
+    }
+
     private void EnsureRefreshProject()
     {
         ProjectFile.Refresh();
@@ -728,7 +909,7 @@ public sealed class RemoteToolsIndex
         _writeLine(
             $"  CLI VER:    current={CliVersion}, cached={cachedVersion ?? "(none)"}");
         _writeLine($"  CWD:        {Environment.CurrentDirectory}");
-        _writeLine($"  TIME:       {DateTime.UtcNow:O}");
+        _writeLine($"  TIME:       {_freshnessPolicy.UtcNow:O}");
         _writeLine($"  COMMAND:    {_commandLine()}");
         _writeLine(
             "================================================================================");
@@ -1013,3 +1194,8 @@ public sealed class RemoteToolVersion
 
     public bool IsHead { get; }
 }
+
+public sealed record RemoteCatalogTool(
+    string CanonicalName,
+    string ShortName,
+    string HeadVersion);

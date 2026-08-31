@@ -100,7 +100,18 @@ internal sealed class Sandbox : IDisposable
                     new JsonSerializerOptions { WriteIndented = true }));
         }
 
-        WriteHomeFile(".ssotme/remote_tools/ssotme-tools.json", index.Json);
+        var catalog = JsonNode.Parse(index.Json)?.AsObject()
+            ?? throw new InvalidDataException(
+                "The index fixture is not a JSON object.");
+        catalog["fetchedAt"] =
+            CliUnderTest.TestUtcNow.ToString("O");
+        WriteHomeFile(
+            ".ssotme/remote_tools/ssotme-tools.json",
+            catalog.ToJsonString(
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                }));
         WriteHomeFile(
             ".ssotme/remote_tools/cli_version",
             CliUnderTest.PackageVersion);

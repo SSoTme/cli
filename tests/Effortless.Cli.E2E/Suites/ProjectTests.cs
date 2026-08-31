@@ -464,6 +464,13 @@ public sealed class ProjectTests
         server.Enqueue("echo", ToolBehavior.Files());
         using var sandbox = Sandbox.Create(_cli);
         sandbox.SeedHome(index);
+        var urls = index.ToolUrls.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value,
+            StringComparer.OrdinalIgnoreCase);
+        urls["third-tool"] =
+            server.ToolUri("third-tool").ToString();
+        ToolUrlTestSupport.WriteToolUrls(sandbox, urls);
         sandbox.SeedProject("project-order");
 
         var result = await _cli.Run(
