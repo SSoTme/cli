@@ -9,9 +9,22 @@ The same CLI is installed under four compatible command names: `effortless`,
 
 ## Install
 
-### npm from source
+### npm
 
 .NET 8 and Node.js are required:
+
+```bash
+npm install -g @effortlessapi/cli
+effortless -version
+```
+
+The official npm package is `@effortlessapi/cli`. The unscoped npm package
+named `effortless` is unrelated software and must not be used.
+
+The npm shim builds the `Effortless.Cli` project in Release mode when the
+compiled CLI is missing or the package version changed.
+
+### Development checkout
 
 ```bash
 git clone https://github.com/EffortlessAPI/cli.git
@@ -19,9 +32,6 @@ cd cli
 npm install -g .
 effortless -version
 ```
-
-The npm shim builds `Effortless.Cli.sln` in Release mode when the compiled CLI is
-missing or the package version changed.
 
 ### Windows MSI and macOS PKG
 
@@ -31,8 +41,11 @@ Both installers place all four command aliases on `PATH`.
 To upgrade an existing installation from the command line:
 
 ```bash
-effortless -upgradeCli
+npm install -g @effortlessapi/cli@latest
 ```
+
+`effortless -upgradeCli` also checks GitHub Releases and prints both supported
+upgrade locations.
 
 ## Quick start
 

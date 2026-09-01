@@ -11,7 +11,11 @@ param (
 
 # Update package.json with current timestamp version (unless --no-update is specified)
 if (-not $NoUpdate) {
-    $timestamp = Get-Date -Format "yyyy.MM.dd.HHmm"
+    $now = [DateTime]::UtcNow
+    $timestamp = "{0}.{1}.{2}" -f `
+        $now.Year, `
+        ($now.Month * 100 + $now.Day), `
+        ($now.Hour * 100 + $now.Minute)
     $packageJsonPath = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))) "package.json"
     if (Test-Path $packageJsonPath) {
         $packageContent = Get-Content $packageJsonPath -Raw
@@ -107,29 +111,44 @@ foreach ($Dir in $Directories) {
 
 $packageJsonTxt = Get-Content (Join-Path $RootDir "package.json") -Raw | ConvertFrom-Json
 $ssotmeVersionOriginal = $packageJsonTxt.version
-# Convert version to valid MSI format (major < 256, minor < 256, build < 65536).
-# Version format is "YYYY-MM-DD.HH.MM" (e.g. "2026-04-04.19.17").
-# Encoding: major = year % 100, minor = month, build = day * 1440 + hour * 60 + minute
-# Max build = 31*1440 + 23*60 + 59 = 46079 < 65536. All constraints satisfied.
-# e.g. "2026-04-04.19.17" -> "26.4.6917"  (4*1440 + 19*60 + 17 = 6917)
-if ($ssotmeVersionOriginal -match '(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})') {
-    $msiMajor = [int]$matches[1] % 100
-    $msiMinor = [int]$matches[2]
-    $msiBuild = [int]$matches[3] * 1440 + [int]$matches[4] * 60 + [int]$matches[5]
-    $ssotmeVersion = "$msiMajor.$msiMinor.$msiBuild"
-} else {
-    Write-Error "package.json version must use YYYY-MM-DD.HH.MM format; got '$ssotmeVersionOriginal'"
+$versionMatch = [regex]::Match(
+    $ssotmeVersionOriginal,
+    '^(\d{4})\.(\d{3,4})\.(\d{1,4})$'
+)
+if (-not $versionMatch.Success) {
+    Write-Error "package.json version must use npm-safe YYYY.MDD.HHMM format; got '$ssotmeVersionOriginal'"
     exit 1
 }
+$versionYear = [int]$versionMatch.Groups[1].Value
+$versionMonthDay = [int]$versionMatch.Groups[2].Value
+$versionHourMinute = [int]$versionMatch.Groups[3].Value
+$versionMonth = [int][Math]::Floor($versionMonthDay / 100)
+$versionDay = $versionMonthDay % 100
+$versionHour = [int][Math]::Floor($versionHourMinute / 100)
+$versionMinute = $versionHourMinute % 100
+if (
+    $versionMonth -lt 1 -or $versionMonth -gt 12 -or
+    $versionDay -lt 1 -or $versionDay -gt 31 -or
+    $versionHour -gt 23 -or $versionMinute -gt 59
+) {
+    Write-Error "package.json version contains an invalid UTC date/time: '$ssotmeVersionOriginal'"
+    exit 1
+}
+
+# Convert version to valid MSI format (major < 256, minor < 256, build < 65536).
+# Version format is npm-safe "YYYY.MDD.HHMM" (e.g. "2026.404.1917").
+# Encoding: major = year % 100, minor = month, build = day * 1440 + hour * 60 + minute
+# Max build = 31*1440 + 23*60 + 59 = 46079 < 65536. All constraints satisfied.
+# e.g. "2026.404.1917" -> "26.4.6917"  (4*1440 + 19*60 + 17 = 6917)
+$msiMajor = $versionYear % 100
+$msiMinor = $versionMonth
+$msiBuild = $versionDay * 1440 + $versionHour * 60 + $versionMinute
+$ssotmeVersion = "$msiMajor.$msiMinor.$msiBuild"
 Write-Host "Using version: $ssotmeVersion from package.json"
 
 # Convert version to numeric format for .csproj (YYYY.M.D.HHMM)
-# e.g. "2026-04-04.19.17" -> "2026.4.4.1917"
-if ($ssotmeVersionOriginal -match '^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$') {
-    $csprojVersion = "$([int]$matches[1]).$([int]$matches[2]).$([int]$matches[3]).$([int]$matches[4])$($matches[5].PadLeft(2,'0'))"
-} else {
-    $csprojVersion = $ssotmeVersionOriginal
-}
+# e.g. "2026.404.1917" -> "2026.4.4.1917"
+$csprojVersion = "$versionYear.$versionMonth.$versionDay.$versionHourMinute"
 
 # update csproj version (numeric for AssemblyVersion/FileVersion)
 $CSPROJ_CONTENT = Get-Content "$SourceDir/Effortless.Cli.csproj" -Raw

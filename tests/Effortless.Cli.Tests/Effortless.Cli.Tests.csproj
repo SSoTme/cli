@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Effortless.Cli.Core/Effortless.Cli.Core.csproj" />
+    <ProjectReference Include="../Effortless.Cli.E2E/Effortless.Cli.E2E.csproj" />
   </ItemGroup>
 
   <ItemGroup>

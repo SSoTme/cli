@@ -8,7 +8,6 @@ const fs = require('fs');
 
 const appDir = path.dirname(require.main.filename);
 const rebuildProjectPath = path.join(appDir, 'src', 'Effortless.Cli', 'Effortless.Cli.csproj');
-const solutionPath = path.join(appDir, 'Effortless.Cli.sln');
 const outputPath = path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 'net8.0', 'Effortless.Cli.dll');
 
 // Sync version from package.json into .csproj <Version> and CLI_VERSION constant.
@@ -16,11 +15,23 @@ const outputPath = path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 
 // Returns true if any source file was modified (caller forces a rebuild).
 function syncVersionFromPackageJson() {
     const pkgVersion = require(path.join(appDir, 'package.json')).version;
-    // "2026-04-24.18.54" -> "2026.4.24.1854"
-    const m = pkgVersion.match(/^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$/);
-    const csprojVersion = m
-        ? `${+m[1]}.${+m[2]}.${+m[3]}.${+m[4]}${m[5].padStart(2, '0')}`
-        : pkgVersion;
+    // npm-safe UTC stamp: "2026.424.1854" -> "2026.4.24.1854"
+    const m = pkgVersion.match(/^(\d{4})\.(\d{3,4})\.(\d{1,4})$/);
+    if (!m) {
+        throw new Error(
+            `Invalid package version '${pkgVersion}'; expected YYYY.MDD.HHMM without zero-padded numeric components.`
+        );
+    }
+    const monthDay = Number(m[2]);
+    const hourMinute = Number(m[3]);
+    const month = Math.floor(monthDay / 100);
+    const day = monthDay % 100;
+    const hour = Math.floor(hourMinute / 100);
+    const minute = hourMinute % 100;
+    if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) {
+        throw new Error(`Invalid UTC date/time in package version '${pkgVersion}'.`);
+    }
+    const csprojVersion = `${Number(m[1])}.${month}.${day}.${hourMinute}`;
 
     let changed = false;
     const updates = [
@@ -51,9 +62,9 @@ const versionChanged = syncVersionFromPackageJson();
 
 // Check if we need to build
 if (versionChanged || !fs.existsSync(outputPath)) {
-    console.log('Building .NET solution...');
+    console.log('Building Effortless CLI...');
     try {
-        execSync(`dotnet build "${solutionPath}" --configuration Release`, {
+        execSync(`dotnet build "${rebuildProjectPath}" --configuration Release`, {
             stdio: 'inherit',
             cwd: appDir
         });

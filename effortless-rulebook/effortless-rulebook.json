@@ -1480,7 +1480,7 @@
         "IsCommand": true,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 3,
-        "HandlerNotes": "GitHub releases/latest; compares ParseCliVersion; downloads the platform installer asset to temp and launches it (msi via shell, pkg via open); fallback prints npm/download hints.",
+        "HandlerNotes": "Checks GitHub releases/latest and compares the published version. Reports @effortlessapi/cli@latest and the GitHub release as explicit supported upgrade locations; it does not silently substitute another package or artifact.",
         "DispositionReason": "Core.",
         "Description": "Self-update from GitHub releases."
       },
@@ -6122,7 +6122,7 @@
       },
       {
         "UserMessageId": "upgrade-cli",
-        "Template": "Checking GitHub for the latest CLI version... | Already on the latest version ({v}). | New version available: {tag}  (you have {v}) | Downloading installer from GitHub... ({n} MB) 10% ... done. | Installer launched — follow the prompts to complete the upgrade. | To upgrade:  npm install -g ssotme@latest | Download from: https://github.com/EffortlessAPI/cli/releases/latest",
+        "Template": "Checking GitHub for the latest CLI version... | Already on the latest version ({v}). | New version available: {tag}  (you have {v}) | To upgrade: npm install -g @effortlessapi/cli@latest | Download from: https://github.com/EffortlessAPI/cli/releases/latest",
         "Color": "default",
         "Trigger": "-upgradeCli",
         "Stream": "stdout",
@@ -6403,7 +6403,7 @@
       {
         "EntryPointId": "npm-shim",
         "Kind": "npm-shim",
-        "Invocation": "npm install -g . ; then effortless | ssotme | aicapture | aic",
+        "Invocation": "npm install -g @effortlessapi/cli ; then effortless | ssotme | aicapture | aic",
         "ArgPassing": "cli.js joins process.argv.slice(2) with spaces and passes ONE string to dotnet; Plossum re-tokenizes it.",
         "Disposition": "keep-modified",
         "Description": "QUIRK: joining loses shell quoting (\"-p a=b c\" becomes two args) and makes \"init force\" impossible (args.Length is 1). New shim passes argv through untouched; the handler must accept both the string[] form and the single command-line-string form (builds still use the string form for effortless.json CommandLine values)."
@@ -6745,7 +6745,7 @@
         "ApproxLines": 80,
         "Disposition": "keep-modified",
         "NewPath": "cli.js",
-        "Notes": "Keep the version-sync + build-if-missing behavior; fix: pass argv as separate arguments (spawn(dotnet, [dll, ...argv])); update the two sync regex targets to src/Effortless.Cli/Effortless.Cli.csproj and src/Effortless.Cli.Core/CliVersion.cs; propagate the child exit code (legacy ignores it!).",
+        "Notes": "Keep version-sync + build-if-missing behavior; decode the npm-safe UTC package version into the .NET version; build src/Effortless.Cli/Effortless.Cli.csproj so the published package does not need tests or the solution; pass argv separately and propagate the child exit code.",
         "Description": "npm shim."
       },
       {
@@ -6755,7 +6755,7 @@
         "ApproxLines": 20,
         "Disposition": "keep-modified",
         "NewPath": "package.json",
-        "Notes": "Same name/bin/version scheme; add \"test\" script (dotnet test) and \"generate\" script; drop cloud_bridge_url (unused) or keep as documentation.",
+        "Notes": "Official public package is @effortlessapi/cli. Keep effortless, ssotme, aicapture, and aic as bin aliases to cli.js. Use an npm-semver-safe UTC version, public scoped-package metadata, a source-only files whitelist, and an install-time .NET build.",
         "Description": "npm manifest."
       },
       {
@@ -7337,10 +7337,10 @@
         "DevopsPipelineId": "release-script",
         "LegacyPath": "release-cli.sh",
         "Trigger": "Manual: ./scripts/release.sh from repo root",
-        "Produces": "Stamps package.json with yyyy-mm-dd.hh.mm, commits \"Release vX\", pushes main, creates GitHub release vX (which triggers installer builds).",
+        "Produces": "Stamps package.json with npm-semver-safe UTC yyyy.(M*100+d).(H*100+m), synchronizes version sources, commits \"Release vX\", pushes main, creates GitHub release vX, and publishes @effortlessapi/cli.",
         "Disposition": "keep-modified",
         "NewPath": "scripts/release.sh",
-        "Description": "Keep the exact version format and tag scheme. Modification: refuse to run on a dirty tree or off main, and run the full test suite first."
+        "Description": "Requires npm authentication and public scope access. Refuse to run on a dirty tree or off main, run the full test and package suites first, and fail the release if any publication step fails."
       },
       {
         "DevopsPipelineId": "build-mac",
@@ -7495,9 +7495,9 @@
       },
       {
         "ProjectFactId": "npm-package-name",
-        "Value": "ssotme",
+        "Value": "@effortlessapi/cli",
         "Category": "identity",
-        "Description": "package.json name; unchanged so \"npm install -g ssotme@latest\" hints keep working."
+        "Description": "Official public npm package identity. The unscoped npm package named effortless is unrelated software. ssotme, aicapture, and aic remain executable aliases only."
       },
       {
         "ProjectFactId": "binary-aliases",
@@ -7537,15 +7537,15 @@
       },
       {
         "ProjectFactId": "version-format-package",
-        "Value": "yyyy-MM-dd.HH.mm (UTC)",
+        "Value": "yyyy.(M*100+d).(H*100+m) (UTC)",
         "Category": "versioning",
-        "Description": "package.json version and CLI_VERSION. Produced by release.sh via date -u."
+        "Description": "npm-semver-safe package.json version and CLI_VERSION, e.g. 2026.424.1854. Numeric components are not zero-padded. Produced by release.sh in UTC."
       },
       {
         "ProjectFactId": "version-format-csproj",
         "Value": "yyyy.M.d.HHmm",
         "Category": "versioning",
-        "Description": "<Version> in the exe csproj; derived from the package version (leading zeros stripped from M/d; HHmm keeps the two-digit minute)."
+        "Description": "<Version> in the exe csproj; decoded from the npm-safe package version."
       },
       {
         "ProjectFactId": "version-format-msi",
@@ -7563,7 +7563,7 @@
         "ProjectFactId": "git-release-tag-format",
         "Value": "v<package version>",
         "Category": "versioning",
-        "Description": "e.g. v2026-06-09.06.13."
+        "Description": "e.g. v2026.424.1854."
       },
       {
         "ProjectFactId": "target-framework",
@@ -10654,6 +10654,20 @@
         "Description": ""
       },
       {
+        "TestCaseId": "shim-package-identity",
+        "Suite": "e2e-shim",
+        "PrimaryOption": "version",
+        "Title": "scoped package owns every alias",
+        "Given": "package.json",
+        "When": "package identity and bin map are inspected",
+        "Then": "name is @effortlessapi/cli; effortless, ssotme, aicapture, and aic all point to cli.js",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Package identity is independent of the retained compatibility command names."
+      },
+      {
         "TestCaseId": "shim-aliases",
         "Suite": "e2e-shim",
         "PrimaryOption": "version",
@@ -10790,7 +10804,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       },
       {
@@ -10860,7 +10874,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       },
       {
@@ -10874,7 +10888,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       },
       {
@@ -10902,7 +10916,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       },
       {
@@ -11140,8 +11154,22 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
+      },
+      {
+        "TestCaseId": "devops-npm-package",
+        "Suite": "devops",
+        "PrimaryOption": "version",
+        "Title": "official npm package installs every alias",
+        "Given": "clean CI runner with Node.js and .NET 8",
+        "When": "npm publish --dry-run and npm run test:package",
+        "Then": "@effortlessapi/cli is publishable; its tarball installs and all four aliases print the package version",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": true,
+        "Status": "rebuild-green",
+        "Description": "Prevents command/package-name confusion and proves the distributed tarball, not only the checkout shim."
       },
       {
         "TestCaseId": "devops-coverage-gate",
@@ -11154,7 +11182,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       },
       {
@@ -11168,7 +11196,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       },
       {
@@ -11352,7 +11380,7 @@
         "Goal": "Delete Windows/, DSPXml/, ODXML/, SSoT/, docs (legacy), ssotme/, setup.py...; move installers; new README/CLAUDE.md/.gitignore/effortless.json; cli.js on the new dll.",
         "DependsOn": "step-03a",
         "InstructionsPath": "docs/refactor-plan/step-04-repo-cutover.md",
-        "DoneCriteria": "git ls-files shows only SourceModules.NewPath destinations (+ new files); npm install -g . works; all four aliases work; e2e-shim green.",
+        "DoneCriteria": "git ls-files shows only SourceModules.NewPath destinations (+ new files); the @effortlessapi/cli package installs; all four aliases work; e2e-shim green.",
         "Owner": "opus",
         "Status": "done",
         "Description": "Point of no return for the branch (still safe: main is untouched)."
@@ -11366,7 +11394,7 @@
         "InstructionsPath": "docs/refactor-plan/step-05-rulebook-generation.md",
         "DoneCriteria": "scripts/generate-from-rulebook.mjs --check passes; effortless build in the repo root runs the generator + rulebook-to-rulespeak; devops-generation-drift/coverage/manifest tests green.",
         "Owner": "opus",
-        "Status": "ready",
+        "Status": "done",
         "Description": "Makes the rulebook the SSoT in practice."
       },
       {
@@ -11400,7 +11428,7 @@
         "Goal": "Run the whole suite against legacy-final and the rebuild, diff goldens, write migration notes, squash-merge effortless-cli into main, release.",
         "DependsOn": "step-07",
         "InstructionsPath": "docs/refactor-plan/step-08-parity-and-cutover.md",
-        "DoneCriteria": "scripts/parity-check.sh reports only the documented keep-modified differences; PR merged as one commit; release vYYYY-MM-DD.HH.MM published; installers uploaded; npm install -g . verified on macOS + Windows.",
+        "DoneCriteria": "scripts/parity-check.sh reports only the documented keep-modified differences; PR merged as one commit; npm-semver-safe release published to GitHub and @effortlessapi/cli; installers uploaded; all four npm aliases verified on macOS + Windows.",
         "Owner": "opus",
         "Status": "blocked",
         "Description": "The single pivot commit the owner asked for."

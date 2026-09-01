@@ -1,8 +1,4 @@
 {
-  "ShowHidden": false,
-  "ShowAllFiles": false,
-  "CurrentPath": null,
-  "SSoTmeProjectFiles": null,
   "SSoTmeProjectId": "691f7e3b-0480-4c9b-a777-2c184731dd93",
   "Name": "effortless-cli",
   "ProjectSettings": [
@@ -11,5 +7,26 @@
       "Value": "effortless-cli"
     }
   ],
-  "ProjectTranspilers": []
+  "ProjectTranspilers": [
+    {
+      "IsSSoTTranspiler": false,
+      "Name": "-execute",
+      "RelativePath": "",
+      "CommandLine": "-execute \"node scripts/generate-from-rulebook.mjs\"",
+      "IsDisabled": false
+    },
+    {
+      "IsSSoTTranspiler": false,
+      "Name": "rulebook-to-rulespeak",
+      "RelativePath": "/docs/rulespeak",
+      "CommandLine": "rulebook-to-rulespeak -i ../../effortless-rulebook/effortless-rulebook.json",
+      "IsDisabled": false,
+      "LastVersionUsed": "v2026.08.30.1537",
+      "LastUrl": "https://effortless-rulebook-to-rulespeak-v2026-08-30-1537-cmvbd4phczmeg.7pktzg2z971j0.cpln.app"
+    }
+  ],
+  "ShowHidden": false,
+  "ShowAllFiles": false,
+  "CurrentPath": null,
+  "SSoTmeProjectFiles": null
 }

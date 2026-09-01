@@ -1,22 +1,49 @@
 {
-  "name": "ssotme",
-  "version": "2026-06-09.06.13",
+  "name": "@effortlessapi/cli",
+  "version": "2026.609.613",
   "dotnet": "8.0.410",
-  "description": "",
+  "description": "REST-only command-line client for EffortlessAPI transpilers",
   "bin": {
     "ssotme": "cli.js",
     "aicapture": "cli.js",
     "effortless": "cli.js",
     "aic": "cli.js"
   },
+  "files": [
+    "cli.js",
+    "Directory.Build.props",
+    "src/",
+    "!src/**/bin/**",
+    "!src/**/obj/**"
+  ],
   "scripts": {
     "build": "dotnet build Effortless.Cli.sln --configuration Release",
     "test": "dotnet test Effortless.Cli.sln --configuration Release",
+    "test:package": "node scripts/test-npm-package.mjs",
     "test:legacy": "bash scripts/test-legacy.sh",
     "generate": "node scripts/generate-from-rulebook.mjs",
+    "validate:rulebook": "node scripts/validate-rulebook.mjs",
+    "build:docs": "effortless build",
+    "postinstall": "node cli.js -version",
     "start": "node cli.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "GNU"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EffortlessAPI/cli.git"
+  },
+  "homepage": "https://github.com/EffortlessAPI/cli#readme",
+  "bugs": {
+    "url": "https://github.com/EffortlessAPI/cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "effortless",
+    "ssot",
+    "code-generation",
+    "transpiler"
+  ],
+  "author": "EffortlessAPI",
+  "license": "GPL-3.0"
 }

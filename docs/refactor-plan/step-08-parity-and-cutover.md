@@ -20,8 +20,8 @@ Run it on macOS and Windows (the installers' platforms). Fix or document every u
 
 - [ ] CI green on `effortless-cli` (all jobs).
 - [ ] `parity-check.sh` clean on macOS + Windows.
-- [ ] `npm install -g .` on a clean machine: `effortless -version`, `-help`, an `-init` + `install
-      to-uppercase` + `build` + `clean` cycle against the live index.
+- [ ] `npm publish --dry-run --access public` and `npm run test:package` pass; the packed
+      `@effortlessapi/cli` tarball runs `effortless`, `ssotme`, `aicapture`, and `aic`.
 - [ ] `installers/*` built via `workflow_dispatch` on a prerelease; installed on macOS (arm64) and Windows
       (x64); the four aliases work; `-upgradeCli` from the previous legacy version finds the new release.
 - [ ] `docs/cli-reference.md` and `README.md` reviewed; the one-line legacy commit reference present.
@@ -33,9 +33,10 @@ Run it on macOS and Windows (the installers' platforms). Fix or document every u
 1. Open the PR `effortless-cli` → `main` titled `Effortless CLI: clean REST-only rebuild` with the PR
    template filled; body starts with the legacy commit line and links the rulebook and this plan.
 2. **Squash merge** (single commit). Do not delete the `effortless-cli` branch until the release is out.
-3. On `main`: `scripts/release.sh` (stamps `package.json`, commits, pushes, creates `vYYYY-MM-DD.HH.MM`)
-   → installers build → `update-airtable.yml` advertises the version.
-4. `npm install -g .` locally; verify `effortless -version` prints the new stamp.
+3. On `main`: `scripts/release.sh` (stamps the npm-semver-safe UTC version, commits, pushes, creates the
+   matching GitHub release, and publishes `@effortlessapi/cli`) → installers build →
+   `update-airtable.yml` advertises the version.
+4. `npm install -g @effortlessapi/cli@latest`; verify all four aliases print the new stamp.
 5. Post-release: `git tag rebuild-first-release <sha>`; update `README.md` if the legacy line needs the
    final wording; remove `scripts/test-legacy.sh` and the `legacy-parity` CI job (the safety net is now the
    rebuild's own suite); `RefactorSteps.step-08.Status` → `done`.

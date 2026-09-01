@@ -17,7 +17,7 @@ public sealed class CliUpdater
             Timeout = TimeSpan.FromSeconds(10),
         };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
-            "ssotme-cli");
+            "effortless-cli");
         _launchInstaller = launchInstaller ?? LaunchInstaller;
     }
 
@@ -50,12 +50,16 @@ public sealed class CliUpdater
             Console.WriteLine(
                 $"New version available: {tag}  (you have {CliVersion.Value})");
             Console.WriteLine(
+                "To upgrade: npm install -g @effortlessapi/cli@latest");
+            Console.WriteLine(
                 "Download from: https://github.com/EffortlessAPI/cli/releases/latest");
         }
         catch (Exception exception)
         {
             Console.WriteLine(
                 $"Could not reach GitHub: {exception.Message}");
+            Console.WriteLine(
+                "To upgrade from npm: npm install -g @effortlessapi/cli@latest");
             Console.WriteLine(
                 "Download manually: https://github.com/EffortlessAPI/cli/releases/latest");
         }

@@ -356,23 +356,30 @@ internal sealed class ShimUnderTest
             File.ReadAllText(Path.Combine(root, "package.json")));
         var packageVersion = package.RootElement.GetProperty("version").GetString()
             ?? throw new InvalidDataException("package.json has no version.");
-        var match = Regex.Match(
-            packageVersion,
-            @"^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$");
-        var csprojVersion = match.Success
-            ? $"{int.Parse(match.Groups[1].Value)}." +
-              $"{int.Parse(match.Groups[2].Value)}." +
-              $"{int.Parse(match.Groups[3].Value)}." +
-              $"{int.Parse(match.Groups[4].Value)}" +
-              $"{match.Groups[5].Value.PadLeft(2, '0')}"
-            : packageVersion;
-
         var rebuildProject = Path.Combine(
             root,
             "src",
             "Effortless.Cli",
             "Effortless.Cli.csproj");
         var isRebuild = File.Exists(rebuildProject);
+        var match = Regex.Match(
+            packageVersion,
+            isRebuild
+                ? @"^(\d{4})\.(\d{3,4})\.(\d{1,4})$"
+                : @"^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$");
+        var csprojVersion = isRebuild && match.Success
+            ? $"{int.Parse(match.Groups[1].Value)}." +
+              $"{int.Parse(match.Groups[2].Value) / 100}." +
+              $"{int.Parse(match.Groups[2].Value) % 100}." +
+              $"{int.Parse(match.Groups[3].Value)}"
+            : match.Success
+                ? $"{int.Parse(match.Groups[1].Value)}." +
+                  $"{int.Parse(match.Groups[2].Value)}." +
+                  $"{int.Parse(match.Groups[3].Value)}." +
+                  $"{int.Parse(match.Groups[4].Value)}" +
+                  $"{match.Groups[5].Value.PadLeft(2, '0')}"
+                : packageVersion;
+
         var csproj = File.ReadAllText(
             isRebuild
                 ? rebuildProject

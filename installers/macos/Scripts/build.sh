@@ -49,7 +49,12 @@ cd "$ROOT_DIR"
 
 # Update package.json with current timestamp version (unless --no-update is specified)
 if [ "$NO_UPDATE" = false ]; then
-    TIMESTAMP=$(date +"%Y.%m.%d.%H%M")
+    YEAR=$(date -u +"%Y")
+    MONTH=$(date -u +"%m")
+    DAY=$(date -u +"%d")
+    HOUR=$(date -u +"%H")
+    MINUTE=$(date -u +"%M")
+    TIMESTAMP="${YEAR}.$((10#$MONTH * 100 + 10#$DAY)).$((10#$HOUR * 100 + 10#$MINUTE))"
     PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
     if [ -f "$PACKAGE_JSON_PATH" ]; then
         OLD_VERSION=$(grep -o '"version": "[^"]*"' "$PACKAGE_JSON_PATH" | cut -d'"' -f4)
@@ -77,16 +82,24 @@ echo "Using version: $SSOTME_VERSION from package.json"
 CSPROJ_FILE="$SOURCE_DIR/Effortless.Cli.csproj"
 CLIVERSION_FILE="$ROOT_DIR/src/Effortless.Cli.Core/CliVersion.cs"
 
-# Convert version to numeric format for .csproj (YYYY.M.D.HHMM)
-# e.g. "2026-04-04.19.17" -> "2026.4.4.1917"
-if [[ "$SSOTME_VERSION" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})\.([0-9]{1,2})\.([0-9]{1,2})$ ]]; then
+# Convert npm-safe YYYY.MDD.HHMM to numeric YYYY.M.D.HHMM for .NET.
+# e.g. "2026.404.1917" -> "2026.4.4.1917"
+if [[ "$SSOTME_VERSION" =~ ^([0-9]{4})\.([0-9]{3,4})\.([0-9]{1,4})$ ]]; then
     CSPROJ_YEAR="${BASH_REMATCH[1]}"
-    CSPROJ_MONTH=$((10#${BASH_REMATCH[2]}))
-    CSPROJ_DAY=$((10#${BASH_REMATCH[3]}))
-    CSPROJ_HHMM="$((10#${BASH_REMATCH[4]}))$(printf '%02d' $((10#${BASH_REMATCH[5]})))"
+    MONTH_DAY=$((10#${BASH_REMATCH[2]}))
+    CSPROJ_MONTH=$((MONTH_DAY / 100))
+    CSPROJ_DAY=$((MONTH_DAY % 100))
+    CSPROJ_HHMM=$((10#${BASH_REMATCH[3]}))
+    CSPROJ_HOUR=$((CSPROJ_HHMM / 100))
+    CSPROJ_MINUTE=$((CSPROJ_HHMM % 100))
+    if (( CSPROJ_MONTH < 1 || CSPROJ_MONTH > 12 || CSPROJ_DAY < 1 || CSPROJ_DAY > 31 ||
+          CSPROJ_HOUR > 23 || CSPROJ_MINUTE > 59 )); then
+        echo "ERROR: package.json version contains an invalid UTC date/time: '$SSOTME_VERSION'"
+        exit 1
+    fi
     NEW_CSPROJ_VERSION="${CSPROJ_YEAR}.${CSPROJ_MONTH}.${CSPROJ_DAY}.${CSPROJ_HHMM}"
 else
-    echo "ERROR: package.json version must use YYYY-MM-DD.HH.MM format; got '$SSOTME_VERSION'"
+    echo "ERROR: package.json version must use npm-safe YYYY.MDD.HHMM format; got '$SSOTME_VERSION'"
     exit 1
 fi
 echo "Using csproj version: $NEW_CSPROJ_VERSION (from $SSOTME_VERSION)"

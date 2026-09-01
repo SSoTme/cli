@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Effortless.Cli.E2E.Harness;
 
 namespace Effortless.Cli.E2E.Suites;
@@ -86,7 +87,7 @@ public sealed class ShimTests
     [Trait("Slow", "true")]
     public async Task CliJsSynchronizesVersionInAnIsolatedSourceTree()
     {
-        const string testVersion = "2099-12-31.23.59";
+        const string testVersion = "2099.1231.2359";
         const string expectedCsprojVersion = "2099.12.31.2359";
         var cli = new CliUnderTest();
         using var sandbox = Sandbox.Create(cli);
@@ -101,7 +102,7 @@ public sealed class ShimTests
             timeoutMs: 300_000);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Building .NET solution...", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Building Effortless CLI...", result.Stdout, StringComparison.Ordinal);
         Assert.Contains(testVersion + Environment.NewLine, result.Stdout, StringComparison.Ordinal);
         Assert.Contains(
             $"<Version>{expectedCsprojVersion}</Version>",
@@ -117,6 +118,29 @@ public sealed class ShimTests
         {
             Assert.Equal(sourceHashesBefore[path], HashFile(path));
         }
+    }
+
+    [Fact(DisplayName = "shim-package-identity: scoped package owns every alias")]
+    public void ScopedPackageOwnsEveryAlias()
+    {
+        var cli = new CliUnderTest();
+        using var package = JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(CliUnderTest.Root, "package.json")));
+
+        Assert.Equal(
+            "@effortlessapi/cli",
+            package.RootElement.GetProperty("name").GetString());
+        Assert.Equal(
+            new[] { "aic", "aicapture", "effortless", "ssotme" },
+            package.RootElement
+                .GetProperty("bin")
+                .EnumerateObject()
+                .Select(property => property.Name)
+                .Order(StringComparer.Ordinal)
+                .ToArray());
+        Assert.All(
+            package.RootElement.GetProperty("bin").EnumerateObject(),
+            property => Assert.Equal("cli.js", property.Value.GetString()));
     }
 
     [Fact(DisplayName = "shim-aliases: all four bin names work")]

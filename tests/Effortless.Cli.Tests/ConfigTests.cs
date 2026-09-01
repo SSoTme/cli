@@ -30,6 +30,30 @@ public sealed class ConfigTests
         Assert.Equal("app123", account["baseId"]);
     }
 
+    [Fact(DisplayName = "unit-env-write: environment values replace, append, and create")]
+    public void EnvironmentValuesReplaceAppendAndCreate()
+    {
+        using var directory = new TestDirectory();
+        var existing = directory.File("existing.env");
+        var created = directory.File("created.env");
+        File.WriteAllText(
+            existing,
+            $"# retained{Environment.NewLine}API_KEY=old{Environment.NewLine}");
+
+        EnvFile.WriteEnvValue(existing, "api_key", "new");
+        EnvFile.WriteEnvValue(existing, "BASE_ID", "app123");
+        EnvFile.WriteEnvValue(created, "TOKEN", "secret");
+
+        Assert.Equal(
+            [
+                "# retained",
+                "api_key=new",
+                "BASE_ID=app123",
+            ],
+            File.ReadAllLines(existing));
+        Assert.Equal(["TOKEN=secret"], File.ReadAllLines(created));
+    }
+
     [Fact(DisplayName = "unit-jwt-helpers: JWT helpers match legacy behavior")]
     public void JwtHelpersMatchLegacyBehavior()
     {

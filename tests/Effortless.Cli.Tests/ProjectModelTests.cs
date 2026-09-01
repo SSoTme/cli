@@ -49,6 +49,38 @@ public sealed class ProjectModelTests
         Assert.False(nested.IsAtPath("sub/child/grandchild"));
     }
 
+    [Fact(DisplayName = "unit-sync-commandline-version: embedded versions follow the hard pin")]
+    public void EmbeddedCommandLineVersionsFollowTheHardPin()
+    {
+        var withoutPin = new ProjectTranspiler
+        {
+            CommandLine = "common/echo/v2026.01.01.0001 -i input.txt",
+        };
+        var withoutVersion = new ProjectTranspiler
+        {
+            PinnedVersion = "v2026.02.02.0002",
+            CommandLine = "echo -i input.txt",
+        };
+        var matching = new ProjectTranspiler
+        {
+            PinnedVersion = "v2026.02.02.0002",
+            CommandLine = "common/echo/v2026.02.02.0002 -i input.txt",
+        };
+        var stale = new ProjectTranspiler
+        {
+            PinnedVersion = "v2026.02.02.0002",
+            CommandLine = "common/echo/v2026.01.01.0001 -i input.txt",
+        };
+
+        Assert.False(withoutPin.SyncCommandLineVersion());
+        Assert.False(withoutVersion.SyncCommandLineVersion());
+        Assert.False(matching.SyncCommandLineVersion());
+        Assert.True(stale.SyncCommandLineVersion());
+        Assert.Equal(
+            "common/echo/v2026.02.02.0002 -i input.txt",
+            stale.CommandLine);
+    }
+
     [Theory(DisplayName = "unit-commandline-capture: command line prefixes are stripped")]
     [InlineData("/tmp/ssotme.exe install echo -i a.txt", "echo -i a.txt")]
     [InlineData("/tmp/effortless.exe -install echo -i a.txt", "echo -i a.txt")]

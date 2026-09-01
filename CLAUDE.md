@@ -1,8 +1,9 @@
 # Effortless CLI repository guide
 
-This repository builds the REST-only `effortless` CLI. The npm package remains
-`ssotme`, and all four binary names (`effortless`, `ssotme`, `aicapture`, `aic`)
-point at `cli.js`.
+This repository builds the REST-only `effortless` CLI. The official npm package is
+`@effortlessapi/cli`, and all four binary names (`effortless`, `ssotme`,
+`aicapture`, `aic`) point at `cli.js`. The unscoped npm package `effortless` is
+unrelated software and must never be installed as this CLI.
 
 ## Source of truth
 
@@ -17,8 +18,8 @@ manifest:
 2. Run `npm run generate`.
 3. Never hand-edit `*.g.cs` or other generated artifacts.
 
-The generated pipeline is introduced in Step 5. Until then, keep the checked-in
-generated files synchronized with the rulebook changes in the same commit.
+The only way to add or rename a CLI option is to change its rulebook row and
+run `npm run generate`. CI rejects generated-file drift.
 
 ## Repository layout
 
@@ -51,6 +52,8 @@ ssotme -v
 aicapture -v
 aic -v
 ```
+
+The supported public install is `npm install -g @effortlessapi/cli`.
 
 ## Local tool URL debugging
 

@@ -1520,6 +1520,14 @@
     "interactive": false
   },
   {
+    "id": "shim-package-identity",
+    "suite": "e2e-shim",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
     "id": "shim-aliases",
     "suite": "e2e-shim",
     "priority": "P1",

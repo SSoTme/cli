@@ -37,10 +37,13 @@ fixing paths (`scripts/ci/add_latest_version_to_airtable_db.py`). Document the r
 
 ## 4. `scripts/release.sh` (from `release-cli.sh`)
 
-Identical stamping (`date -u +"%Y-%m-%d.%H.%M"` into `package.json`), commit `Release v<version>`, push,
-`gh release create v<version>`. Add guards (`keep-modified`): refuse on a dirty tree, refuse unless on
-`main`, run `dotnet test Effortless.Cli.sln` first, `--dry-run` flag that prints what it would do. Keep the
-"then `npm install -g .`" instruction in its output. `devops-release-dry-run` test covers the guards.
+Stamp the npm-semver-safe UTC version `yyyy.(M*100+d).(H*100+m)` into `package.json`, commit
+`Release v<version>`, push, create the GitHub release, and publish the public
+`@effortlessapi/cli` package. Add guards (`keep-modified`): refuse on a dirty tree, refuse unless on
+`main`, require npm authentication, run `dotnet test Effortless.Cli.sln` plus the package smoke test
+first, and support a `--dry-run` flag that prints what it would do. Print
+`npm install -g @effortlessapi/cli` on success. `devops-release-dry-run` and
+`devops-npm-package` cover the guards and distributable.
 
 ## 5. PR hygiene
 

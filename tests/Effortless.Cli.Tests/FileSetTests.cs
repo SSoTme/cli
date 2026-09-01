@@ -60,6 +60,39 @@ public sealed class FileSetTests
         }
     }
 
+    [Fact(DisplayName = "unit-gzip: text and bytes round-trip through gzip")]
+    public void TextAndBytesRoundTripThroughGzip()
+    {
+        const string unicode = "Effortless café 🚀";
+
+        Assert.Equal(unicode, unicode.Zip().UnzipToString());
+        Assert.Equal(string.Empty, string.Empty.Zip().UnzipToString());
+        Assert.Equal(
+            new byte[] { 0, 1, 2, 127, 128, 255 },
+            new byte[] { 0, 1, 2, 127, 128, 255 }.Zip().Unzip());
+        Assert.Equal(string.Empty, ((byte[])null!).UnzipToString());
+    }
+
+    [Fact(DisplayName = "unit-is-binary: file classification preserves the legacy control-character heuristic")]
+    public void FileClassificationPreservesLegacyControlCharacterHeuristic()
+    {
+        using var directory = new TestDirectory();
+        File.WriteAllText(directory.File("text.txt"), "plain text");
+        File.WriteAllText(
+            directory.File("utf8-bom.txt"),
+            "café",
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        File.WriteAllBytes(
+            directory.File("image.png"),
+            [0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x0E, 0x0A]);
+        File.WriteAllBytes(directory.File("empty.bin"), []);
+
+        Assert.False(new FileInfo(directory.File("text.txt")).IsBinaryFile());
+        Assert.False(new FileInfo(directory.File("utf8-bom.txt")).IsBinaryFile());
+        Assert.True(new FileInfo(directory.File("image.png")).IsBinaryFile());
+        Assert.False(new FileInfo(directory.File("empty.bin")).IsBinaryFile());
+    }
+
     [Fact(DisplayName = "unit-split-fileset-rules: FileSet writer honors overwrite and content rules")]
     public void FileSetWriterHonorsOverwriteAndContentRules()
     {

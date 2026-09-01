@@ -1,8 +1,8 @@
 # Step 04 — Cut the legacy tree and finish the repo shape
 
 **Goal:** the branch contains only the new repo shape (see README "Target repo shape"); the legacy tree is
-gone; `npm install -g .` installs the rebuilt CLI under all four names; installers build from the new
-paths; docs and agent guides describe the new world.
+gone; the `@effortlessapi/cli` package installs the rebuilt CLI under all four names; installers build
+from the new paths; docs and agent guides describe the new world.
 
 Inputs: `SourceModules` (every row: `Disposition` + `NewPath` + `Notes`), `EntryPoints`, `DevopsPipelines`,
 `ProjectFacts`, `ConfigFiles.gitignore` (template stays as-is — it is the *project* template, not the repo's).
@@ -34,7 +34,8 @@ Inputs: `SourceModules` (every row: `Disposition` + `NewPath` + `Notes`), `Entry
 
 ## 2. Documents
 
-- `README.md` (hand-written, ~150 lines): what it is; install (npm from source, MSI, PKG, `-upgradeCli`);
+- `README.md` (hand-written, ~150 lines): what it is; install (`@effortlessapi/cli`, development checkout,
+  MSI, PKG, `-upgradeCli`);
   quick start (`-init`, `install`, `build`, `clean`); the `-continueOnError` section verbatim from the
   legacy README; **exactly one line** under a "Legacy" heading:
   `The last commit of the original SSoTme/RabbitMQ-era CLI is a8f0f320f4417c58fa931cc4bc8164f79cbbbd97 (tag legacy-final, branch legacy/main).`;
@@ -51,7 +52,8 @@ Inputs: `SourceModules` (every row: `Disposition` + `NewPath` + `Notes`), `Entry
 
 ```bash
 git ls-files | grep -E '^(Windows|DSPXml|ODXML|SSoT|ssotme)/' && echo "LEFTOVERS" || echo clean
-npm install -g . && effortless -version && ssotme -v && aicapture -v && aic -v
+npm publish --dry-run --access public
+npm run test:package
 dotnet test Effortless.Cli.sln            # unit + contract + e2e (rebuild mode is now the default dll)
 bash installers/macos/build-package.sh --no-update   # macOS only; unsigned build must at least reach pkgbuild
 ```

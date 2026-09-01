@@ -11,6 +11,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  generate-check:
+    name: Generated files and rulebook
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate rulebook
+        run: node scripts/validate-rulebook.mjs
+
+      - name: Check generated files
+        run: node scripts/generate-from-rulebook.mjs --check
+
+  npm-package:
+    name: Public npm package
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Verify publish metadata
+        run: npm publish --dry-run --access public
+
+      - name: Pack, install, and run every alias
+        run: npm run test:package
+
   characterization:
     name: Characterization (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
