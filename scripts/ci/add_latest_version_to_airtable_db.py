@@ -139,7 +139,10 @@ async def main():
         logger.error("SSOT_BASE_ID environment variable is required")
         return 1
     
-    github_repo = os.getenv("GITHUB_REPOSITORY", "SSoTme/cli")  # fallback to default
+    github_repo = os.getenv("GITHUB_REPOSITORY")
+    if not github_repo:
+        logger.error("GITHUB_REPOSITORY environment variable is required")
+        return 1
     
     try:
         # Initialize Airtable connector
@@ -150,10 +153,12 @@ async def main():
         
         # Check if version already exists
         last_row = await connector.get_last_row_of_table(table_name, "Date")
-
-        should_update = last_row.get("Name").strip() == f"v{args.version.strip()}"
-        logger.info(f"Checking if '{last_row.get('Name').strip()}' == 'v{args.version.strip()}' => {should_update}")
-        if last_row and should_update:
+        last_name = (last_row or {}).get("Name", "").strip()
+        already_exists = last_name == f"v{args.version.strip()}"
+        logger.info(
+            f"Checking if '{last_name}' == 'v{args.version.strip()}' => {already_exists}"
+        )
+        if already_exists:
             logger.info(f"Version {args.version} already exists in Airtable - skipping")
             return 0
         

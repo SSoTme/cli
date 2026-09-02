@@ -1,0 +1,319 @@
+name: Build all installers (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing prerelease tag to receive the installers
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Resolve release
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.release.outputs.ref }}
+      tag: ${{ steps.release.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve release tag and source ref
+        id: release
+        env:
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          TAG="$EVENT_TAG"
+          REF="$EVENT_TAG"
+          if [ -n "$REQUESTED_TAG" ]; then
+            TAG="$REQUESTED_TAG"
+            REF="$REQUESTED_TAG"
+          elif [ -z "$TAG" ]; then
+            TAG="v$(node -p "require('./package.json').version")"
+            REF="$GITHUB_SHA"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+
+      - name: Require an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: gh release view "$TAG"
+
+  verify:
+    name: Verify release commit
+    needs: prepare
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check generated files
+        run: |
+          node scripts/validate-rulebook.mjs
+          node scripts/generate-from-rulebook.mjs --check
+
+      - name: Build and run non-slow tests
+        run: |
+          dotnet build Effortless.Cli.sln --configuration Release
+          dotnet test Effortless.Cli.sln --configuration Release --no-build --filter "Slow!=true"
+
+  mac-x86-64:
+    name: macOS x86_64 installer
+    needs: [prepare, verify]
+    runs-on: macos-15
+    env:
+      ASSET: SSoTme-Installer-x86_64.pkg
+      TAG: ${{ needs.prepare.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Check for existing asset
+        id: asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE="$(gh release view "$TAG" --json assets)"
+          if jq -e --arg name "$ASSET" '.assets | any(.name == $name)' <<<"$RELEASE" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Import signing certificates
+        if: steps.asset.outputs.exists != 'true'
+        env:
+          APP_CERTIFICATE: ${{ secrets.APPCERTIFICATE }}
+          DEV_CERTIFICATE: ${{ secrets.DEVCERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        run: |
+          security create-keychain -p temp_password temp_keychain
+          security set-keychain-settings -lut 21600 temp_keychain
+          security unlock-keychain -p temp_password temp_keychain
+          echo "$APP_CERTIFICATE" | base64 --decode > dev_cert.p12
+          echo "$DEV_CERTIFICATE" | base64 --decode > dev_installer_cert.p12
+          security import dev_cert.p12 -k temp_keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security import dev_installer_cert.p12 -k temp_keychain -P "$CERT_PASSWORD" -T /usr/bin/productsign
+          security list-keychains -s temp_keychain
+          security default-keychain -s temp_keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k temp_password temp_keychain
+          rm dev_cert.p12 dev_installer_cert.p12
+
+      - name: Build installer
+        if: steps.asset.outputs.exists != 'true'
+        run: >-
+          /bin/bash installers/macos/Scripts/build.sh
+          --no-update
+          --arch x86_64
+          "$ASSET"
+          "${{ secrets.DEV_INS_KEYCHAIN_ID }}"
+          "${{ secrets.DEV_APP_KEYCHAIN_ID }}"
+          "${{ secrets.APPLEID }}"
+          "${{ secrets.NOTARY_PASSWORD }}"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          name: SSoTme-Installer-x86_64
+          path: installers/macos/bin/signed/SSoTme-Installer-x86_64.pkg
+
+      - name: Upload installer to release
+        if: steps.asset.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" "installers/macos/bin/signed/$ASSET"
+
+  mac-arm64:
+    name: macOS arm64 installer
+    needs: [prepare, verify]
+    runs-on: macos-15
+    env:
+      ASSET: SSoTme-Installer-arm64.pkg
+      TAG: ${{ needs.prepare.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Check for existing asset
+        id: asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE="$(gh release view "$TAG" --json assets)"
+          if jq -e --arg name "$ASSET" '.assets | any(.name == $name)' <<<"$RELEASE" >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Import signing certificates
+        if: steps.asset.outputs.exists != 'true'
+        env:
+          APP_CERTIFICATE: ${{ secrets.APPCERTIFICATE }}
+          DEV_CERTIFICATE: ${{ secrets.DEVCERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+        run: |
+          security create-keychain -p temp_password temp_keychain
+          security set-keychain-settings -lut 21600 temp_keychain
+          security unlock-keychain -p temp_password temp_keychain
+          echo "$APP_CERTIFICATE" | base64 --decode > dev_cert.p12
+          echo "$DEV_CERTIFICATE" | base64 --decode > dev_installer_cert.p12
+          security import dev_cert.p12 -k temp_keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security import dev_installer_cert.p12 -k temp_keychain -P "$CERT_PASSWORD" -T /usr/bin/productsign
+          security list-keychains -s temp_keychain
+          security default-keychain -s temp_keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k temp_password temp_keychain
+          rm dev_cert.p12 dev_installer_cert.p12
+
+      - name: Build installer
+        if: steps.asset.outputs.exists != 'true'
+        run: >-
+          /bin/bash installers/macos/Scripts/build.sh
+          --no-update
+          --arch arm64
+          "$ASSET"
+          "${{ secrets.DEV_INS_KEYCHAIN_ID }}"
+          "${{ secrets.DEV_APP_KEYCHAIN_ID }}"
+          "${{ secrets.APPLEID }}"
+          "${{ secrets.NOTARY_PASSWORD }}"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          name: SSoTme-Installer-arm64
+          path: installers/macos/bin/signed/SSoTme-Installer-arm64.pkg
+
+      - name: Upload installer to release
+        if: steps.asset.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" "installers/macos/bin/signed/$ASSET"
+
+  windows-x64:
+    name: Windows x64 installer
+    needs: [prepare, verify]
+    runs-on: windows-latest
+    env:
+      ASSET: SSoTme-Installer_win-x64.msi
+      TAG: ${{ needs.prepare.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Check for existing asset
+        id: asset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $release = gh release view $env:TAG --json assets | ConvertFrom-Json
+          $exists = [bool]($release.assets | Where-Object { $_.name -eq $env:ASSET })
+          "exists=$($exists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build installer
+        if: steps.asset.outputs.exists != 'true'
+        shell: pwsh
+        run: >-
+          ./installers/windows/Scripts/build.ps1
+          -NoUpdate
+          -Platform x64
+
+      - uses: actions/upload-artifact@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          name: SSoTme-Installer-win-x64
+          path: installers/windows/bin/Release/SSoTme-Installer_win-x64.msi
+
+      - name: Upload installer to release
+        if: steps.asset.outputs.exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload $env:TAG "installers/windows/bin/Release/$env:ASSET"
+
+  windows-arm64:
+    name: Windows arm64 installer
+    needs: [prepare, verify]
+    runs-on: windows-latest
+    env:
+      ASSET: SSoTme-Installer_win-arm64.msi
+      TAG: ${{ needs.prepare.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.ref }}
+
+      - name: Check for existing asset
+        id: asset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $release = gh release view $env:TAG --json assets | ConvertFrom-Json
+          $exists = [bool]($release.assets | Where-Object { $_.name -eq $env:ASSET })
+          "exists=$($exists.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build installer
+        if: steps.asset.outputs.exists != 'true'
+        shell: pwsh
+        run: >-
+          ./installers/windows/Scripts/build.ps1
+          -NoUpdate
+          -Platform arm64
+
+      - uses: actions/upload-artifact@v4
+        if: steps.asset.outputs.exists != 'true'
+        with:
+          name: SSoTme-Installer-win-arm64
+          path: installers/windows/bin/Release/SSoTme-Installer_win-arm64.msi
+
+      - name: Upload installer to release
+        if: steps.asset.outputs.exists != 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload $env:TAG "installers/windows/bin/Release/$env:ASSET"

@@ -84,6 +84,106 @@ public sealed class DevopsGenerationTests
             $"Missing P0/P1 manifest tests:{Environment.NewLine}{string.Join(Environment.NewLine, missing)}");
     }
 
+    [Fact(DisplayName = "devops-release-dry-run: release guards and dry run are safe")]
+    public async Task ReleaseGuardsAndDryRunAreSafe()
+    {
+        using var directory = new TestDirectory();
+        Directory.CreateDirectory(directory.File("scripts"));
+        File.Copy(
+            Path.Combine(RepositoryRoot, "scripts", "release.sh"),
+            directory.File("scripts/release.sh"));
+        File.WriteAllText(
+            directory.File("package.json"),
+            """{"name":"@effortlessapi/cli","version":"2026.901.1200"}""");
+
+        Assert.Equal(
+            0,
+            (await RunProcess("git", directory.Path, "init", "-b", "main")).ExitCode);
+        Assert.Equal(
+            0,
+            (await RunProcess("git", directory.Path, "add", ".")).ExitCode);
+        Assert.Equal(
+            0,
+            (await RunProcess(
+                "git",
+                directory.Path,
+                "-c",
+                "user.name=Effortless Tests",
+                "-c",
+                "user.email=tests@example.invalid",
+                "commit",
+                "-m",
+                "fixture")).ExitCode);
+
+        var dryRun = await RunProcess(
+            "bash",
+            directory.Path,
+            "scripts/release.sh",
+            "--dry-run");
+
+        Assert.Equal(0, dryRun.ExitCode);
+        Assert.Contains("Dry run:", dryRun.StandardOutput, StringComparison.Ordinal);
+        Assert.Contains("Would publish", dryRun.StandardOutput, StringComparison.Ordinal);
+        Assert.Equal(
+            "2026.901.1200",
+            JsonDocument.Parse(
+                    File.ReadAllText(directory.File("package.json")))
+                .RootElement
+                .GetProperty("version")
+                .GetString());
+
+        Assert.Equal(
+            0,
+            (await RunProcess(
+                "git",
+                directory.Path,
+                "switch",
+                "-c",
+                "feature")).ExitCode);
+        var wrongBranch = await RunProcess(
+            "bash",
+            directory.Path,
+            "scripts/release.sh",
+            "--dry-run");
+        Assert.NotEqual(0, wrongBranch.ExitCode);
+        Assert.Contains(
+            "release must run from main",
+            wrongBranch.StandardError,
+            StringComparison.Ordinal);
+
+        Assert.Equal(
+            0,
+            (await RunProcess("git", directory.Path, "switch", "main")).ExitCode);
+        File.AppendAllText(directory.File("package.json"), Environment.NewLine);
+        var dirtyTree = await RunProcess(
+            "bash",
+            directory.Path,
+            "scripts/release.sh",
+            "--dry-run");
+        Assert.NotEqual(0, dirtyTree.ExitCode);
+        Assert.Contains(
+            "clean working tree",
+            dirtyTree.StandardError,
+            StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "devops-ci-matrix: CI builds and tests all supported operating systems")]
+    public void CiBuildsAndTestsAllSupportedOperatingSystems()
+    {
+        var workflow = File.ReadAllText(
+            Path.Combine(RepositoryRoot, ".github", "workflows", "ci.yml"));
+
+        Assert.Contains("ubuntu-latest", workflow, StringComparison.Ordinal);
+        Assert.Contains("macos-latest", workflow, StringComparison.Ordinal);
+        Assert.Contains("windows-latest", workflow, StringComparison.Ordinal);
+        Assert.Contains("dotnet build Effortless.Cli.sln", workflow, StringComparison.Ordinal);
+        Assert.Contains("dotnet test Effortless.Cli.sln", workflow, StringComparison.Ordinal);
+        Assert.Contains("node scripts/generate-from-rulebook.mjs --check", workflow, StringComparison.Ordinal);
+        Assert.Contains("node scripts/validate-rulebook.mjs", workflow, StringComparison.Ordinal);
+        Assert.Contains("npm run test:package", workflow, StringComparison.Ordinal);
+        Assert.Contains("legacy-parity:", workflow, StringComparison.Ordinal);
+    }
+
     private static JsonDocument LoadRulebook()
     {
         return JsonDocument.Parse(
@@ -110,17 +210,27 @@ public sealed class DevopsGenerationTests
         string script,
         params string[] arguments)
     {
+        return await RunProcess(
+            "node",
+            RepositoryRoot,
+            [script, .. arguments]);
+    }
+
+    private static async Task<ProcessResult> RunProcess(
+        string executable,
+        string workingDirectory,
+        params string[] arguments)
+    {
         using var process = new Process
         {
-            StartInfo = new ProcessStartInfo("node")
+            StartInfo = new ProcessStartInfo(executable)
             {
-                WorkingDirectory = RepositoryRoot,
+                WorkingDirectory = workingDirectory,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
             },
         };
-        process.StartInfo.ArgumentList.Add(script);
         foreach (var argument in arguments)
         {
             process.StartInfo.ArgumentList.Add(argument);
@@ -128,7 +238,8 @@ public sealed class DevopsGenerationTests
 
         if (!process.Start())
         {
-            throw new InvalidOperationException("Could not start Node.js.");
+            throw new InvalidOperationException(
+                $"Could not start '{executable}'.");
         }
 
         var standardOutput = process.StandardOutput.ReadToEndAsync();

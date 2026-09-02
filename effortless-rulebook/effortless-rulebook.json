@@ -7348,8 +7348,8 @@
         "Trigger": "release published/prereleased, workflow_dispatch",
         "Produces": "SSoTme-Installer-arm64.pkg and SSoTme-Installer-x86_64.pkg uploaded to the release.",
         "Disposition": "keep",
-        "NewPath": ".github/workflows/build-installers.yml (mac jobs)",
-        "Description": "Paths inside must move to installers/macos and src/Effortless.Cli."
+        "NewPath": ".github/workflows/build-mac.yml; .github/workflows/build-installers.yml (manual all-platform build)",
+        "Description": "Retained as the automatic native macOS release workflow, with paths moved to installers/macos and src/Effortless.Cli and a release-commit test gate."
       },
       {
         "DevopsPipelineId": "build-windows",
@@ -7357,8 +7357,8 @@
         "Trigger": "release published/prereleased, workflow_dispatch",
         "Produces": "SSoTme-Installer_win-x64.msi and SSoTme-Installer_win-arm64.msi uploaded to the release.",
         "Disposition": "keep",
-        "NewPath": ".github/workflows/build-installers.yml (windows jobs)",
-        "Description": "WiX v6 build via installers/windows/Scripts/build.ps1."
+        "NewPath": ".github/workflows/build-windows.yml; .github/workflows/build-installers.yml (manual all-platform build)",
+        "Description": "Retained as the automatic native Windows release workflow, with an explicit x64/arm64 platform and a release-commit test gate; WiX v6 build via installers/windows/Scripts/build.ps1."
       },
       {
         "DevopsPipelineId": "release-on-pr-merge",
@@ -11210,7 +11210,7 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       },
       {
@@ -11224,7 +11224,7 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "planned",
+        "Status": "rebuild-green",
         "Description": ""
       }
     ]

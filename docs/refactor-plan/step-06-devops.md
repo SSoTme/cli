@@ -20,13 +20,17 @@ Inputs: `DevopsPipelines`, `EntryPoints`, `ProjectFacts` (`version-format-*`, `g
     it, runs the E2E suite in `legacy` mode. Guarantees the safety net itself stays valid.
 - Concurrency group per ref; cancel in-progress.
 
-## 2. `.github/workflows/build-installers.yml`
+## 2. Native installer workflows
 
-Merge `build-mac.yml` + `build-windows.yml` into one workflow with four jobs (mac arm64 / x86_64, win x64 /
-arm64). Same triggers (`release: [prereleased, released]`, `workflow_dispatch`), same "skip if the release
-already has N assets" logic, same secrets, same asset names (`ProjectFacts.installer-asset-names`), paths
-updated to `installers/…` and `src/Effortless.Cli`. Add `needs`-style gating on `ci.yml` success for the
-release commit (use `workflow_run` or re-run the test job first).
+Retain `build-mac.yml` and `build-windows.yml` as the automatic release workflows so the native installer
+paths remain independently operable. Each keeps its `release: [prereleased, released]` and
+`workflow_dispatch` triggers, skip-if-assets-exist logic, signing secrets and canonical asset names
+(`ProjectFacts.installer-asset-names`), with paths updated to `installers/…` and `src/Effortless.Cli`.
+Windows jobs pass the target platform explicitly instead of rewriting the build script.
+
+`build-installers.yml` is a manual all-platform convenience workflow for an existing prerelease tag. It
+has no release trigger, avoiding duplicate uploads with the retained native workflows. All three installer
+workflows rerun generation, build and non-slow tests against the release commit before building assets.
 
 ## 3. `.github/workflows/release.yml` and `update-airtable.yml`
 

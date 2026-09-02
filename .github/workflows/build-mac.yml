@@ -5,8 +5,37 @@ on:
     types: [ prereleased, released ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  verify:
+    name: Verify release commit
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Validate generated files
+      run: |
+        node scripts/validate-rulebook.mjs
+        node scripts/generate-from-rulebook.mjs --check
+
+    - name: Build and run non-slow tests
+      run: |
+        dotnet build Effortless.Cli.sln --configuration Release
+        dotnet test Effortless.Cli.sln --configuration Release --no-build --filter "Slow!=true"
+
   build-intel:
+    needs: verify
     runs-on: macos-15  # Cross-compile to Intel (x86_64) from Apple Silicon
     
     steps:
@@ -122,6 +151,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-arm:
+    needs: verify
     runs-on: macos-15  # Apple Silicon architecture
     
     steps:

@@ -180,13 +180,12 @@ else {
 }
 
 
-$arch = (Get-CimInstance Win32_OperatingSystem).OSArchitecture
-$rid = switch ($arch) {
-    "64-bit" { "win-x64" }
-    "32-bit" { "win-x86" }
-    "ARM 64-bit" { "win-arm64" }
+$rid = switch ($Platform.ToLowerInvariant()) {
+    "x64" { "win-x64" }
+    "x86" { "win-x86" }
+    "arm64" { "win-arm64" }
     default {
-        Write-Error "Unsupported Windows architecture '$arch'"
+        Write-Error "Unsupported Windows platform '$Platform'. Expected x64, x86, or arm64."
         exit 1
     }
 }
