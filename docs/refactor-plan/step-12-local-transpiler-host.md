@@ -13,13 +13,15 @@ CLI's working directory by looking up the client socket's PID with `lsof` and re
 and it returns an empty fileset so the CLI writes nothing. Every project that wants local tools has had
 to rebuild that scaffolding. This step makes it CLI infrastructure and makes it use the real contract.
 
-`-execute` (LocalCommand steps) stays as-is. Local tools are the fileset-aware, ledgered upgrade of it.
+`-execute` (LocalCommand steps) stays as-is and coexists (D26). Local tools are the fileset-aware,
+ledgered option for when a step should behave exactly like a published tool.
 
 ## Design
 
-**Discovery.** From the project root: `effortless-tools/<tool-name>/` with either a `tool.json`
-(`{ "name", "runtime", "entry", "description", "tags" }`) or the convention `transpiler.<ext>` as the
-entry. Tool names must be valid catalog-style lower-hyphen names. Nested effortless projects have their
+**Discovery.** From the project root: `effortless-tools/<tool-name>/` with a `tool.json`
+(`{ "name", "runtime": "dotnet" | "node" | "script", "entry", "description", "tags" }`); when `tool.json`
+is absent, a `*.csproj` means `dotnet`, a `package.json` means `node`, and a single executable
+`transpiler.*` means `script`. Tool names must be valid catalog-style lower-hyphen names. Nested effortless projects have their
 own `effortless-tools/`; a parent's tools are not inherited (same rule as project settings).
 
 **Resolution.** New `R12-local-tool` in `ToolResolutionRules`, evaluated after R1/R2 (explicit URL) and
@@ -37,26 +39,36 @@ behave as for a remote tool. That is the whole point.
 **Host.** `effortless serve [-port N]`:
 
 - Unzips the input fileset into a per-request temp dir, invokes the tool's entry as a child process with
-  a small, documented contract: env `EFFORTLESS_INPUT_DIR`, `EFFORTLESS_OUTPUT_DIR`,
-  `EFFORTLESS_PARAMS` (JSON of `cliParams`), `EFFORTLESS_TOOL_NAME`; stdout/stderr become the tool log.
+  a small, documented contract (script shape): env `EFFORTLESS_INPUT_DIR`, `EFFORTLESS_OUTPUT_DIR`,
+  `EFFORTLESS_OUTPUT_NAME`, `EFFORTLESS_PARAMS` (JSON of `cliParams`), `EFFORTLESS_TOOL_NAME`;
+  stdout/stderr become the tool log.
   Non-zero exit = tool failure with the log in the response. After exit, the output dir is zipped as the
   output fileset.
-- Runtimes by extension or `tool.json.runtime`: `.mjs`/`.js` → `node`, `.ts`/`.tsx` → `node` with
-  type-stripping (or `tsx` when present), `.py` → `python3`, `.sh` → `bash`, `.cs`/`.csproj` →
-  `dotnet run`. Missing runtime = clear error naming the runtime and the tool.
 - Resident mode: `effortless serve` stays up, watches `effortless-tools/`, reloads on change, prints the
   URL per tool, `GET /` lists tools (like the proxy did).
 - Ephemeral mode: `effortless build` that resolves any R12 tool checks `<root>/.effortless/serve.json`
   (port + pid); if no live host, starts one on an ephemeral port for the duration of the build and stops
   it afterwards. Output identical either way.
 
-**Runtime of the host itself — owner decision needed.** Two options:
+**Runtime — decided (D30): native .NET, plus a node/express fileset handler.** The host is
+in-process .NET (Kestrel) inside the CLI binary; the fileset zip/unzip, payload types and ledger code
+already live in `Effortless.Cli.Core`. Three tool shapes, declared by `tool.json.runtime`:
 
-- **A (recommended):** in-process .NET (Kestrel) inside the CLI binary. The fileset zip/unzip, payload
-  types and ledger code already live in `Effortless.Cli.Core`; there is nothing to re-implement, no node
-  dependency for the host, one binary. Tool entries can still be node/python/sh/dotnet.
-- **B:** a node/express host shipped in the npm package. Matches the "local node express service" idea
-  literally, but duplicates the wire contract in JS and makes the MSI/PKG installs depend on node.
+- `dotnet`: the tool is a small web app built on the same tool-side `CLIClassLibrary` contract that every
+  published cloud tool uses. A local tool folder is literally a cloud tool workload run locally. The host
+  starts it (`dotnet run --project`) on an ephemeral port and proxies the payload to it. Because it is the
+  same shape, `publish-tool.sh` can later publish it unchanged.
+- `node`: ship a node module (`lib/fileset-handler.mjs` inside the `@effortlessapi/cli` package,
+  publishable separately later) implementing the same fileset request/response logic. A node tool is an
+  express app with one route that calls the author's `transpile({ inputFiles, params, outputName })` and
+  returns output files; the handler does the zip/unzip and the payload shape. The host starts it and
+  proxies, exactly as for `dotnet`.
+- `script` (`.py`, `.sh`, anything executable): the host does the fileset work itself and hands the tool
+  a directory via the env contract above (`EFFORTLESS_INPUT_DIR`, `EFFORTLESS_OUTPUT_DIR`,
+  `EFFORTLESS_OUTPUT_NAME`, `EFFORTLESS_PARAMS`, `EFFORTLESS_TOOL_NAME`). Lightweight path for one-off tools.
+
+`EFFORTLESS_OUTPUT_NAME` is the `-output` value; the tool decides whether it is a file or a directory
+(D21). Missing runtime = clear error naming the runtime and the tool.
 
 **Out of scope.** Publishing a local tool to the catalog (that is the transpiler-server's job; link to the
 publish flow), and fronting cloud tools through the local host for offline use.
@@ -70,10 +82,10 @@ missing, tool failed. `EnvVariables`: the four `EFFORTLESS_*` tool-contract vari
 
 ## Tests
 
-Fixture project with `effortless-tools/to-upper/transpiler.mjs` and `effortless-tools/echo-params/
-transpiler.sh`. E2E: `local-tool-resolves-before-catalog`, `local-tool-build-writes-output`,
+Fixture project with one tool per shape: `effortless-tools/to-upper-dotnet/` (csproj),
+`effortless-tools/to-upper-node/` (package.json + fileset handler), `effortless-tools/echo-params/transpiler.sh`. E2E: `local-tool-resolves-before-catalog`, `local-tool-build-writes-output`,
 `local-tool-ledger-and-clean`, `local-tool-ephemeral-host-lifecycle`, `local-tool-resident-serve-reuse`,
-`local-tool-params-passthrough`, `local-tool-nonzero-exit-fails-step`, `local-tool-missing-runtime`,
+`local-tool-params-passthrough`, `local-tool-nonzero-exit-fails-step`, `local-tool-missing-runtime`, `local-tool-node-handler-roundtrip`, `local-tool-dotnet-same-shape-as-cloud`,
 `local-tool-seturl-override-wins`, `serve-lists-tools`, `local-tool-not-inherited-by-child-project`.
 Unit: discovery, name validation, runtime mapping.
 

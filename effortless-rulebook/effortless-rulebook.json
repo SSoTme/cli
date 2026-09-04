@@ -11424,14 +11424,14 @@
       {
         "RefactorStepId": "step-09",
         "SortOrder": 10,
-        "Title": "Option taxonomy, tiers, rationale, and filterable help",
-        "Goal": "Every kept option carries an owner-authored rationale, a tier, a parent command when it is a modifier, and clean help text; -help is grouped and filterable instead of one flat list of 54.",
+        "Title": "Option taxonomy, verb families, and the v2 option decisions",
+        "Goal": "Every kept option carries tier, rationale, parent and clean help; build/clean/describe follow one scope family (none/Local/All/WithSubprojects); the owner decisions D12-D27 are encoded: pin verb, upgrade=unpin, latest and dryRun removed, *ToolUrl canonical, enable/disable verbs, acct/tool never fails, login/plan names.",
         "DependsOn": "step-07",
         "InstructionsPath": "docs/refactor-plan/step-09-option-taxonomy.md",
-        "DoneCriteria": "No kept CliOptions row lacks Tier/Rationale/HelpSummary; modifiers name their ParentOption; buildOnTrigger and seeds are recategorized out of legacy/review categories; -help <category|option> works; help typos and bareword quirks fixed as keep-modified; cli-reference.md regenerated grouped by category and tier; help goldens green.",
+        "DoneCriteria": "No kept CliOptions row lacks Tier/Rationale/HelpSummary; modifiers name ParentOption; build/clean/describe families complete (buildWithSubprojects, cleanWithSubprojects, describeLocal, describeWithSubprojects); pin/enable/disable/*ToolUrl rows exist; latest and dryRun are drop-legacy with their tests removed; -help grouped and filterable; README command block generated; typos and reserved-word quirks fixed; drift check and dotnet test green.",
         "Owner": "opus",
-        "Status": "blocked",
-        "Description": "Input is the owner Q&A on the option list (2026-09-04 session). Rulebook rows first, then generator, then the help renderer."
+        "Status": "ready",
+        "Description": "Owner Q&A answered 2026-09-04 (README D12-D27). Next actionable step after step-07."
       },
       {
         "RefactorStepId": "step-10",
@@ -11442,8 +11442,8 @@
         "InstructionsPath": "docs/refactor-plan/step-10-effortless-home-migration.md",
         "DoneCriteria": "First run against a legacy ~/.ssotme copies it to ~/.effortless (marker left behind, source untouched); renamed inner files (effortless.key, effortless-tools.json, effortless.<runAs>.key); SSOTME_CHILD_PROCESS -> EFFORTLESS_CHILD_PROCESS; installers emit Effortless-Installer-*.pkg / EffortlessInstaller.msi and install under Effortless; grep ssotme in src hits only the migration module and the binary alias; migration e2e tests green.",
         "Owner": "opus",
-        "Status": "blocked",
-        "Description": "Owner condition: the rename MUST pick up legacy versions in the field (there are many). Copy, never move; never break a legacy CLI still reading ~/.ssotme."
+        "Status": "ready",
+        "Description": "Owner confirmed option A: the project ledger dir also renames to .effortless with an on-load rename. Global naming rule D31: ssotme survives only as the ssotme:// protocol, the binary alias, the migration constants, the default seed source, and one formerly-SSoT.me line."
       },
       {
         "RefactorStepId": "step-11",
@@ -11454,8 +11454,8 @@
         "InstructionsPath": "docs/refactor-plan/step-11-catalog-freshness-and-search.md",
         "DoneCriteria": "New ToolResolutionRule for refresh-on-timeout (at most one forced refresh per invocation, one retry against a changed head URL, then hard failure); listTools/searchTools accept text + category/account/updated-since/head-only filters and --json; catalog description/tags consumed when present; info prints catalog age; mock-bridge e2e tests green; server-side catalog field additions filed against the bridge repo.",
         "Owner": "opus",
-        "Status": "blocked",
-        "Description": "The 24h auto-refresh is ALREADY implemented as R0-catalog-freshness (step-03a). This step adds the timeout trigger and real search. Description/tags need a bridge-side change, tracked separately."
+        "Status": "ready",
+        "Description": "The 24h auto-refresh is ALREADY R0 (step-03a). Owner confirmed the timeout definition (D29): unreachable workload => refresh catalog, retry at least once; long-running modes at most once per 10 minutes. Description/tags need a bridge-side change, tracked separately."
       },
       {
         "RefactorStepId": "step-12",
@@ -11466,20 +11466,56 @@
         "InstructionsPath": "docs/refactor-plan/step-12-local-transpiler-host.md",
         "DoneCriteria": "effortless serve hosts ./effortless-tools/* over the exact TranspilePayload/FileSet contract cloud tools use; a bare <tool-name> resolves to the local host via a new ToolResolutionRule ahead of the catalog; effortless build auto-starts an ephemeral host when needed; .zfs ledgers and clean behave identically to remote tools; e2e fixture tool green; the legacy-runner ssotme-proxy pattern (lsof cwd sniffing) is documented as superseded.",
         "Owner": "opus",
-        "Status": "blocked",
-        "Description": "Formalizes the pattern in ../effortless-rulebooks/rulebook-examples/legacy-runner/ssotme-proxy (localhost:4242) as CLI infrastructure. Runtime and entry-file convention are open questions for the owner."
+        "Status": "ready",
+        "Description": "Owner decided D30: native .NET host in the CLI; dotnet tools are the same shape as published cloud tools; a node/express fileset handler ships in the npm package; script tools get the env-dir contract. Supersedes the legacy-runner ssotme-proxy."
       },
       {
         "RefactorStepId": "step-13",
         "SortOrder": 14,
+        "Title": "Effortless authentication workload; wire login/projectLogin/logout/plan to it",
+        "Goal": "Publish a scale-to-zero effortless-auth tool from the private api.effortlessapi.com tools repo that always succeeds for now, and make the CLI auth commands call it through the normal catalog path instead of being local stubs.",
+        "DependsOn": "step-09",
+        "InstructionsPath": "docs/refactor-plan/step-13-auth-workload.md",
+        "DoneCriteria": "effortless-auth published via publish-tool.sh and resolvable as [latest]; CPLN min instances 0 with 300s scale-to-zero; login/projectLogin/plan/logout round-trip against it and the E2E mock; tools and buildOnTrigger remain unauthenticated; no usage tracking; tests green.",
+        "Owner": "opus",
+        "Status": "ready",
+        "Description": "Owner D18 (2026-09-04). Cross-repo: tools/effortless/effortless-auth in Versioned-Stable-SSoTme-Tools. Never invent a publish procedure; use publish-tool.sh."
+      },
+      {
+        "RefactorStepId": "step-14",
+        "SortOrder": 15,
+        "Title": "Seeds v2: seed sources, verbs, and the effortless-seeds skill",
+        "Goal": "Seed discovery spans a configurable ordered list of GitHub accounts (defaults ssotme and effortlessapi) with listSeedSources/addSeedSource/removeSeedSource verbs, and a new effortless-seeds skill in ../effortless-skills is written, pushed, and installed.",
+        "DependsOn": "step-10",
+        "InstructionsPath": "docs/refactor-plan/step-14-seeds-v2-and-skill.md",
+        "DoneCriteria": "Source verbs work; listSeeds spans sources; cloneSeed accepts account/repo and bare repo (first match, ambiguity is an error); clone preserves .git and runs nothing; effortless-seeds SKILL.md exists in ../effortless-skills, that repo is pushed and install.sh run; tests green.",
+        "Owner": "opus",
+        "Status": "ready",
+        "Description": "Owner D1/D25. The skills-repo push is the only push permitted before step-16, and it is to a different repo."
+      },
+      {
+        "RefactorStepId": "step-15",
+        "SortOrder": 16,
+        "Title": "Ledger v2: hash manifests replace .zfs; readable ledger keys (proposed, non-blocking)",
+        "Goal": "Per tool, per execution, a manifest with path/length/SHA-256 of every file actually written replaces the gzipped FileSet .zfs, with identical clean/purge/skipClean behavior, readable hyphenated keys, and a one-time migration.",
+        "DependsOn": "step-10",
+        "InstructionsPath": "docs/refactor-plan/step-15-ledger-v2.md",
+        "DoneCriteria": "No .zfs written or read outside the migration; keys readable (http-localhost-4242-tool, not httplocalhost4242tool); preserveLedger with preserveZFS alias; migration idempotent; tests green. May be explicitly deferred to v2.x in the README table instead.",
+        "Owner": "opus",
+        "Status": "proposed",
+        "Description": "Owner D13: not opposed, not critical. Does not block step-16."
+      },
+      {
+        "RefactorStepId": "step-16",
+        "SortOrder": 17,
         "Title": "Parity check, v2 clean cut, and single-commit cutover",
         "Goal": "Prove parity with legacy-final (minus documented keep-modified rows), strip every legacy/RabbitMQ trace that is not the migration story out of the shipping tree, then land v2 on main as ONE squash commit with ONE push.",
-        "DependsOn": "step-12",
-        "InstructionsPath": "docs/refactor-plan/step-13-v2-cut-and-cutover.md",
+        "DependsOn": "step-14",
+        "InstructionsPath": "docs/refactor-plan/step-16-v2-cut-and-cutover.md",
         "DoneCriteria": "parity-check.sh clean on macOS + Windows; the v2 clean-cut checklist is fully ticked (rulebook archive split, no legacy appendix, no rabbit compat test, text sweep passes); single squash commit on main; CI green on that push; installers built from it; release published; all four aliases print the new stamp.",
         "Owner": "opus",
         "Status": "blocked",
-        "Description": "Was step-08. Moved to last so the v2 feature steps (09-12) ship inside the same single commit. The clean-cut checklist implements the owner decision that v2 must not carry v1 explanations."
+        "Description": "Was step-08, then step-13. Last so steps 09-15 ship inside the same single commit and single push. Text sweep encodes D31 (ssotme only as protocol, alias, migration constants, seed source, formerly line). Step-15 may be deferred to v2.x without blocking this."
       }
     ]
   },

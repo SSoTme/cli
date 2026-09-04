@@ -1,10 +1,10 @@
-# Step 13 — Parity check, v2 clean cut, and single-commit cutover
+# Step 16 — Parity check, v2 clean cut, and single-commit cutover
 
 **Goal:** prove the rebuild is behaviorally identical to `legacy-final` except for the documented
 `keep-modified` differences, strip every trace of v1 that is not the migration story out of the shipping
 tree, then land v2 on `main` as **one squash commit** with **one push**.
 
-This step was `step-08`. It moved to the end so the v2 feature steps (09–12) ship inside the same single
+This step was `step-08`, then `step-13`. It is last so the v2 feature steps (09–15) ship inside the same single
 commit. Until this step, **nothing is pushed**; the branch is polished locally.
 
 ## 1. `scripts/parity-check.sh`
@@ -15,7 +15,7 @@ commit. Until this step, **nothing is pushed**; the branch is polished locally.
    new dll — with `EFFORTLESS_RECORD_GOLDENS=1` into two separate golden dirs.
 4. Diff the two golden dirs. The only allowed differences are the ones enumerated in
    `docs/refactor-plan/parity-allowlist.txt` (generated from the rulebook: every `keep-modified` row's test
-   ids, the removed proxy retry lines, and the step-09/10 renames). Exit non-zero on anything else.
+   ids, the removed proxy retry lines, and the step-09/10/14 renames and removals). Exit non-zero on anything else.
 5. Print a summary table: tests run, identical, allowed-different, unexpected.
 
 Run it on macOS and Windows (the installers' platforms). Fix or document every unexpected difference.
@@ -53,14 +53,25 @@ learn how v2 works, not how v1 used to. The migration story lives in exactly one
 
 ### 2d. Text sweep (must pass before the squash)
 
+Owner rule (2026-09-04): the `ssotme` name is removed from everything except the `ssotme://` protocol
+and the binary alias, plus one mention that this was formerly the SSoT.me CLI.
+
 ```bash
-grep -rniE "rabbit|amqp|ssot\.me|dspxml|odxml" src tests scripts docs installers cli.js package.json README.md CLAUDE.md
+grep -rniE "rabbit|amqp|ssot\.me|ssotme|dspxml|odxml" src tests scripts docs installers cli.js package.json README.md CLAUDE.md .github
 ```
 
-Allowed hits, and only these: the migration page (§2b), the step-10 migration module's legacy-path
-constants, the binary aliases (`ssotme`, `aicapture`, `aic`), and the single legacy-commit line in
-`README.md`. Everything else is a defect. Help-text typos (`bing`, `buid`) and the `dryRun` bareword quirk
-are already fixed in step-09.
+Allowed hits, and only these:
+
+- the `ssotme://` protocol scheme wherever the CLI parses or documents it;
+- the binary aliases `ssotme`, `aicapture`, `aic` (package.json `bin`, installers, one README line);
+- the single "formerly the SSoT.me CLI" line in `README.md` and `docs/releasing.md`;
+- the step-10 migration module's legacy path constants (`~/.ssotme`, `.ssotme/`, `ssotme.json`,
+  `ssotme.key`, `ssotme-seed.json`, `ssotme.env`) and their tests;
+- the default seed source account `ssotme` (it is a GitHub organization name, step 14);
+- the migration page (§2b) and the legacy-commit line.
+
+Everything else is a defect. Help-text typos (`bing`, `buid`) and the reserved-word parsing quirks are
+already fixed in step-09.
 
 ## 3. Pre-cutover checklist
 
@@ -71,7 +82,7 @@ are already fixed in step-09.
 - [ ] Installers built locally on macOS (arm64) and Windows (x64); the four aliases work;
       `-upgradeCli` from the previous legacy version finds the new release.
 - [ ] `docs/cli-reference.md`, `README.md`, and the migration page reviewed.
-- [ ] Rulebook `RefactorSteps` all `done` except step-13; `TestCases` all `rebuild-green` or `Skip`-documented.
+- [ ] Rulebook `RefactorSteps` all `done` except step-16; `TestCases` all `rebuild-green` or `Skip`-documented.
 - [ ] The text sweep in §2d passes.
 
 ## 4. Cutover: one commit, one push
@@ -87,7 +98,7 @@ are already fixed in step-09.
    release, publishes `@effortlessapi/cli`) → installers build → `update-airtable.yml` advertises it.
 5. `npm install -g @effortlessapi/cli@latest`; verify all four aliases print the new stamp.
 6. Post-release: `git tag v2-first-release <sha>`; delete `origin/effortless-cli` (it was pushed early in
-   the rebuild and is stale); remove `parity-check.sh`; `RefactorSteps.step-13.Status` → `done` in the
+   the rebuild and is stale); remove `parity-check.sh`; `RefactorSteps.step-16.Status` → `done` in the
    archive copy.
 7. From here on: the v2 rhythm. Feature branches, PRs into `main`, CI on PRs, branch protection on `main`.
 

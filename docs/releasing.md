@@ -1,24 +1,19 @@
 # Releasing Effortless CLI
 
 The public npm package is `@effortlessapi/cli`. It installs the four executable
-aliases `effortless`, `ssotme`, `aicapture`, and `aic`.
+aliases `effortless`, `ssotme`, `aicapture`, and `aic`. The `ssotme` alias is
+kept because this was formerly the SSoT.me CLI; `effortless` is the name used
+everywhere in docs and scripts.
 
 ## Required repository configuration
 
-Configure these GitHub Actions secrets:
+The release operator must be authenticated with `gh` and npm, with permission
+to publish the public `@effortlessapi/cli` package.
 
-- `AIRTABLE_PAT`
-- `SSOT_BASE_ID`
-- `APPCERTIFICATE`
-- `DEVCERTIFICATE`
-- `CERT_PASSWORD`
-- `DEV_INS_KEYCHAIN_ID`
-- `DEV_APP_KEYCHAIN_ID`
-- `APPLEID`
-- `NOTARY_PASSWORD`
-
-The release operator must also be authenticated with `gh` and npm, with
-permission to publish the public `@effortlessapi/cli` package.
+Individual workflows may need their own secrets (code-signing identities for
+the native installers, an Airtable token for the version-advertising workflow).
+Each workflow documents the secrets it needs in a comment at the top of its
+file; none of them are required to build, test, or `npm publish` the CLI.
 
 Protect `main` with squash merges, linear history, and required checks from
 `.github/workflows/ci.yml`:
@@ -27,7 +22,7 @@ Protect `main` with squash merges, linear history, and required checks from
 - Slow tests
 - Generated files and rulebook
 - Public npm package
-- Legacy parity (until Step 13 removes it)
+- Legacy parity (until Step 16 removes it)
 
 Require CODEOWNER review and prevent direct pushes except for the guarded
 release script.
@@ -67,12 +62,12 @@ It never publishes from a dirty tree or a non-`main` branch.
 
 Publishing or prereleasing a GitHub release starts the native
 `.github/workflows/build-mac.yml` and `.github/workflows/build-windows.yml`
-workflows, producing:
+workflows, producing (names as of Step 10; before it they are `SSoTme-Installer*`):
 
-- `SSoTme-Installer_win-x64.msi`
-- `SSoTme-Installer_win-arm64.msi`
-- `SSoTme-Installer-x86_64.pkg`
-- `SSoTme-Installer-arm64.pkg`
+- `Effortless-Installer_win-x64.msi`
+- `Effortless-Installer_win-arm64.msi`
+- `Effortless-Installer-x86_64.pkg`
+- `Effortless-Installer-arm64.pkg`
 
 The workflows skip installer families already present on the release. The
 manual `.github/workflows/build-installers.yml` workflow reruns the release

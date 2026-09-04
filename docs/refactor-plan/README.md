@@ -54,11 +54,14 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | 05 | Rulebook-driven generation | opus | **done** | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |
 | 06 | DevOps: CI matrix, installers, release flow | opus | code landed; live-CI verification deferred to 13 (no push before then) | [step-06-devops.md](step-06-devops.md) |
 | 07 | Resolve open decisions and harden | opus | **in progress** (decisions done; hardening + 22 P2 tests left) | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
-| 09 | Option taxonomy, tiers, rationale, filterable help | opus | blocked (needs the owner's option Q&A) | [step-09-option-taxonomy.md](step-09-option-taxonomy.md) |
-| 10 | `.ssotme` → `.effortless` with in-field migration; rebrand installers | opus | ready (after 07) | [step-10-effortless-home-migration.md](step-10-effortless-home-migration.md) |
+| 09 | Option taxonomy, verb families, and the v2 option decisions (D12–D27) | opus | **ready** (after 07) — next | [step-09-option-taxonomy.md](step-09-option-taxonomy.md) |
+| 10 | `.ssotme` → `.effortless` with in-field migration (option A); rebrand installers | opus | ready (after 07) | [step-10-effortless-home-migration.md](step-10-effortless-home-migration.md) |
 | 11 | Catalog freshness v2 (refresh on timeout) + searchable catalog | opus | ready (after 07) | [step-11-catalog-freshness-and-search.md](step-11-catalog-freshness-and-search.md) |
-| 12 | Local transpiler host: the CLI as a transpiler target | opus | blocked (after 11; runtime decision) | [step-12-local-transpiler-host.md](step-12-local-transpiler-host.md) |
-| 13 | Parity check, **v2 clean cut**, single-commit cutover (was 08) | opus | blocked (after 12) | [step-13-v2-cut-and-cutover.md](step-13-v2-cut-and-cutover.md) |
+| 12 | Local transpiler host: native .NET + node/express fileset handler | opus | ready (after 11) | [step-12-local-transpiler-host.md](step-12-local-transpiler-host.md) |
+| 13 | Effortless authentication workload (api.effortlessapi.com) + wire auth commands | opus | ready (after 09; cross-repo) | [step-13-auth-workload.md](step-13-auth-workload.md) |
+| 14 | Seeds v2: seed sources, verbs, `effortless-seeds` skill | opus | ready (after 10; cross-repo) | [step-14-seeds-v2-and-skill.md](step-14-seeds-v2-and-skill.md) |
+| 15 | Ledger v2: hash manifests replace `.zfs`, readable keys | opus | proposed, non-blocking (may defer to v2.x) | [step-15-ledger-v2.md](step-15-ledger-v2.md) |
+| 16 | Parity check, **v2 clean cut**, single-commit cutover (was 08) | opus | blocked (after 14) | [step-16-v2-cut-and-cutover.md](step-16-v2-cut-and-cutover.md) |
 
 ## The v2 operating model (decided 2026-09-04)
 
@@ -76,6 +79,11 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
   owner's per-option reasoning in the rulebook before any code changes.
 - **Every step is the same shape.** Rulebook rows (options, rules, messages, files, test cases) →
   `npm run generate` → implement → `dotnet test` green → step status `done`.
+- **The `ssotme` name goes away** (D31) except the `ssotme://` protocol, the `ssotme` binary alias, and one
+  "formerly the SSoT.me CLI" line. Directories, files, env vars, installers, help text, workflow names
+  and docs are all renamed, with in-field migration where state is involved.
+- **Cross-repo steps push their own repos only.** Step 13 publishes a tool from
+  `api.effortlessapi.com`; step 14 pushes `effortless-skills`. This repo is not pushed before step 16.
 
 Ground rules that apply to every step:
 
@@ -111,6 +119,27 @@ decide. Until then Steps 1–6 proceed under the recommendation.
 | D9 | `-updateUrls` (bridge-v2 host no longer resolves) | this whole feature needs to be made consistent in it's nameing, but it still needs to support the full list of adding a tool, listing a tool, removing a custom tool url. |
 | D10 | Keep **Plossum.CommandLine.Core** as the parser. Its tokenizer defines how `effortless.json` `CommandLine` strings parse; swapping it would change behavior. | Keep (not in scope). | `Dependencies.Plossum.CommandLine.Core` |
 | D11 | The new parameter parsing should allow globally for any of the key parameters to support no -, or double hyphen. In other words, either `effortless build` or `effortless -build` or `effortless --build`.  Any of those key words are reserved, and should NEVER be treated as a transpiler.||
+| D12 | **Verb families.** | Every project-scoped verb follows `foo` (this folder + children) / `fooLocal` (exactly here) / `fooAll` (as if from the root) / `fooWithSubprojects` (`All` + nested effortless projects, normally excluded). Applies to `build`, `clean`, `describe`. `describe` becomes downstream (was local); `describeLocal` added. | step 09 |
+| D13 | **Ledger format.** `.zfs` keeps exact bytes for byte-for-byte compare/restore; never leveraged. | Replacing it with a per-tool, per-execution manifest hashing every file actually written is acceptable, same behavior otherwise. Also fix the key naming (`httplocalhost4242tool` → `http-localhost-4242-tool`). Not critical. | step 15 |
+| D14 | `-transpilerGroup` | Keep; it is how you run only the postgres steps. | step 09 |
+| D15 | `-targetUrl` vs bare URL | Keep both. Tool name + `-targetUrl` is a temporary override that keeps the tool's identity. | step 09 |
+| D16 | `setUrl` family naming | `ToolUrl` is canonical (`setToolUrl`, `removeToolUrl`, `viewToolUrl`, `listToolUrls`); `setUrl` was a mistake, kept as hidden alias. | step 09 |
+| D17 | **Pinning.** | A step is pinned (to a catalog version or a URL, per project) or it follows HEAD. New `pin` verb; `upgrade` = remove the pin (alias `unpin`); `upgradeAll` = remove all. `latest` removed (an attribute, not a command). Default stays unpinned; pin-on-install not assumed. | step 09 |
+| D18 | **Auth commands.** | Keep them visible. Publish a real `effortless-auth` workload from the private `api.effortlessapi.com` tools repo, CPLN scale-to-zero after 5 min, always succeeds for now; CLI calls it through the catalog. No usage tracking. Display names `login`/`plan` (aliases `authenticate`/`subscription`) chosen by default; flip if wanted. | step 13 |
+| D19 | **Account keys.** `-setAccountAPIKey foo=bar` | Keep. The key is stored separately and injected automatically as a parameter when a tool in that account runs (`effortless foo/whatever -p x=5` also sends `foo=bar`); `-account foo` selects it explicitly. Storage location is fungible (moves to `~/.effortless`). Alias `setAccountKey`. | step 09 / 10 |
+| D20 | `acct/tool` extraction | Never fail. If `acct/tool` is not in the catalog, resolve `tool` with `-account acct`. | step 09 |
+| D21 | `-output` | Whatever the tool decides; passed as `OutputFileName`. File or directory is the tool's call. | step 09 / 12 |
+| D22 | Disabled steps | Add `enable` / `disable` verbs (targeted like `uninstall`). Document all new/changed terms in README and `-help`. | step 09 |
+| D23 | `info` / `listSettings` / `describe` | Confirmed split (user state / project settings / steps). `info` also shows catalog age (time since the tool list was last refreshed). | step 09 / 11 |
+| D24 | `-buildOnTrigger` | Keep, category `build`. It polls a tiny no-auth/no-DB bridge workload: `/set?secret=…` is called by the trigger (Airtable), the CLI polls `/get?secret=…`; `true` = build once, then resets. Record the real routes in `HttpEndpoints`. | step 09 |
+| D25 | **Seeds.** | Seed sources are an ordered list of GitHub accounts, defaults `ssotme` and `effortlessapi`, with add/remove/list verbs. Write an `effortless-seeds` skill in `../effortless-skills`, push that repo, install it. | step 14 |
+| D26 | `-execute` vs local tools | Keep both. `execute` is a shell step with no fileset; local tools are the fileset-aware path. | step 09 / 12 |
+| D27 | `-dryRun` | **Remove.** Early steps write what later steps read; "run but do not write" is not a build. Git on a clean tree is the dry run. | step 09 |
+| D28 | Project ledger dir | Option A: `<root>/.ssotme/` → `<root>/.effortless/` with an on-load rename. | step 10 |
+| D29 | "Completely times out" | DNS failure, connection refused, TLS failure, or no response bytes within `waitTimeout` after the connection retries = workload offline. Refresh the catalog and retry at least once; long-running modes at most once per 10 minutes. | step 11 |
+| D30 | Local host runtime | Native .NET host in the CLI. `dotnet` tools are the same shape as published cloud tools; a node/express fileset handler with the same logic ships for node tools; scripts get an env-dir contract. | step 12 |
+| D31 | **Global naming.** | `ssotme` survives only as the `ssotme://` protocol, the binary alias, migration constants, the default seed source account, and one "formerly the SSoT.me CLI" line. | step 10 / 16 |
+| D32 | `docs/releasing.md` secrets list | Removed. Those secrets are per-workflow (signing, Airtable) and not required to build, test, or publish; each workflow documents its own. | done 2026-09-04 |
 
 The owner also confirmed removal of the legacy Airtable metadata endpoint used
 for seed-replacement guessing. This does not remove seed discovery, cloning,

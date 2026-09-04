@@ -32,7 +32,7 @@ replacement, and `buildOnTrigger` remain retained.
 - Enable `<Nullable>enable</Nullable>` file by file in Core; no logic changes.
 - Implement the remaining `unit-core` P1 rows and any P2 e2e rows still `planned` (or mark them `Skip`
   with a reason in the manifest).
-- Delete `scripts/test-legacy.sh` **only** in Step 13.
+- Delete `scripts/test-legacy.sh` **only** in Step 16.
 
 **Done when:** `jq '.Dispositions.data[] | select(.NeedsUserConfirmation)'` returns nothing (or rows no
 option/module/endpoint references), no `blocked-by-decision` statuses remain, CI green,

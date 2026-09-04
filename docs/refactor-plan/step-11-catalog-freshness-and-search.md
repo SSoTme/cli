@@ -10,7 +10,7 @@ confirmed within the preceding 24 hours, and that project tools track it. That *
 or so" rule. `help`/`version`/auth/URL management/settings/describe/clean stay offline. Direct-URL,
 `-execute`, and (after step-12) local tools are not catalog-versioned and are excluded.
 
-## New: refresh on complete timeout
+## New: refresh on complete timeout (D29, confirmed)
 
 New rule `R11-refresh-on-timeout`, added to `ToolResolutionRules`:
 
@@ -21,7 +21,10 @@ New rule `R11-refresh-on-timeout`, added to `ToolResolutionRules`:
 - Action: force one catalog refresh (ignoring the 24h stamp). If the tool's head URL changed, print
   `Tool <name> moved; retrying against <new-url>` and retry once. If unchanged, or the retry fails the
   same way, fail hard with the existing message plus the catalog age.
-- Bound: at most one forced refresh per CLI invocation, no matter how many steps time out.
+- Bound: at most one forced refresh per CLI invocation for one-shot commands, no matter how many steps
+  time out. Long-running modes (`buildOnTrigger`, `serve`) may force a refresh at most once per
+  10 minutes. Owner (D29): a workload that cannot be reached after the connection retries is offline;
+  check the latest build numbers and try the build again at least once.
 - Excluded: `-targetUrl`, bare URLs, `tool_urls.json` overrides, local tools. Those never consult the
   catalog, so a refresh cannot help.
 - Refresh failure during this path is fatal, same as today. No stale-catalog fallback.
@@ -42,7 +45,8 @@ CLI half (this repo):
 - `-sort name|updated|popular` (popular = `monthlyRequestCount`).
 - `-json` emits the filtered entries as JSON for scripts and skills.
 - Table output: name, head version, head date, versions, key-required, and description when present.
-- `info` prints the catalog `fetchedAt`, its age, and when the next automatic refresh is due.
+- `info` prints the catalog `fetchedAt`, its age ("catalog age" = time since the tool list was last
+  refreshed), and when the next automatic refresh is due (D23).
 - Search is always answered from the local cache (which R0 keeps ≤ 24h old); it never goes to the network
   by itself. `-refreshTools` remains the explicit "now".
 

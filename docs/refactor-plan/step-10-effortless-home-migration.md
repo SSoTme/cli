@@ -27,18 +27,19 @@ Migration rule (one `UserConfigMigration` module, the only place allowed to know
 3. Writes (`setAccountAPIKey`, tokens, tool URLs, catalog cache) go only to `~/.effortless/`.
 4. Migration failure is fatal with a clear message; the CLI never runs half-migrated.
 
-Nothing else in `src` may mention `ssotme` except the binary alias registration and this module.
+Global naming rule (D31): after this step the `ssotme` name survives only as the `ssotme://` protocol
+scheme, the `ssotme` binary alias, this migration module's legacy constants, the default seed source
+account (step 14), and one "formerly the SSoT.me CLI" line in `README.md` and `docs/releasing.md`.
+Everything else in `src`, `installers`, `.github`, scripts, and docs is renamed.
 
-## Project-level directory — owner decision needed
+## Project-level directory — decided: option A (D28)
 
-The per-project ledger dir `<root>/.ssotme/` (zfs ledgers, temp filesets) appears in every existing
-project's `.gitignore` and in `init`'s template. Two options:
-
-- **A (default in this plan):** rename to `<root>/.effortless/`. On project load, if `.effortless/` is
-  absent and `.ssotme/` exists, rename the directory (it is gitignored build state, so a rename is safe).
-  `init` writes `/**/.effortless/**/*` and keeps the `.ssotme` line in the template so old clones stay
-  clean. `clean`/`purge` look in both until the rename has happened.
-- **B:** leave `<root>/.ssotme/` alone. Zero churn in the field, one permanent `ssotme` in the tree.
+The per-project ledger dir `<root>/.ssotme/` (zfs ledgers, temp filesets) is renamed to
+`<root>/.effortless/`. On project load, if `.effortless/` is absent and `.ssotme/` exists, rename the
+directory (it is gitignored build state, so a rename is safe). `init` writes `/**/.effortless/**/*` and
+keeps the `.ssotme` line in the template so old clones stay clean. `clean`/`purge` look in both until the
+rename has happened. Ledger **file names inside** are not changed here; step 15 owns the ledger format
+and key naming, with its own migration.
 
 Also rename `ssotme-seed.json` → `effortless-seed.json` (both accepted, v2 writes the new one).
 
@@ -48,6 +49,9 @@ Also rename `ssotme-seed.json` → `effortless-seed.json` (both accepted, v2 wri
 - Windows: `EffortlessInstaller.wixproj`, `Effortless-Installer_win-x64.msi`, `CreateEffortlessHomedir.ps1`
   creates `~/.effortless`.
 - Both keep installing the four binary aliases.
+- Workflows: rename `SSOT*`-prefixed secrets and step names when each workflow is touched; each workflow
+  documents its own required secrets in a header comment. `docs/releasing.md` no longer lists secrets
+  (D32; none are required to build, test, or publish the CLI).
 
 ## Tests
 
