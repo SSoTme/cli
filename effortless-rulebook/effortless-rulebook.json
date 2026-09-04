@@ -11404,10 +11404,10 @@
         "Goal": "ci.yml (3 OS), build-installers.yml, release.yml, update-airtable.yml, scripts/release.sh with guards; PR template + branch protection notes.",
         "DependsOn": "step-04",
         "InstructionsPath": "docs/refactor-plan/step-06-devops.md",
-        "DoneCriteria": "Green CI on the branch; installer workflows run on workflow_dispatch and produce the four assets; release.sh dry-run guard tests pass.",
+        "DoneCriteria": "Workflows authored (ci, build-installers, release, update-airtable); the same steps run green locally via scripts/ci/*; scripts/release.sh --dry-run works. Live CI and the installer workflow_dispatch are verified in step-13 immediately after the single v2 push, because nothing is pushed before then.",
         "Owner": "opus",
         "Status": "ready",
-        "Description": "Can run in parallel with step-05."
+        "Description": "Code landed (a853589). Cannot be closed by a live CI run until the step-13 push; close it on local CI-equivalence, then re-verify at cutover."
       },
       {
         "RefactorStepId": "step-07",
@@ -11419,19 +11419,67 @@
         "DoneCriteria": "Dispositions table has no NeedsUserConfirmation rows left in use; blocked-by-decision tests are implemented or deleted; unit-core P1 green.",
         "Owner": "opus",
         "Status": "ready",
-        "Description": "Owner decisions are resolved; remaining work is the Step 7 hardening and planned P2 coverage."
+        "Description": "Owner decisions are resolved. Remaining: per-invocation state instead of static BuildErrorLog/CliLog.SuppressFileLog, nullable enable in Core, the 22 planned P2 test rows implemented or Skip-documented."
       },
       {
-        "RefactorStepId": "step-08",
-        "SortOrder": 9,
-        "Title": "Parity check and squash-merge cutover",
-        "Goal": "Run the whole suite against legacy-final and the rebuild, diff goldens, write migration notes, squash-merge effortless-cli into main, release.",
+        "RefactorStepId": "step-09",
+        "SortOrder": 10,
+        "Title": "Option taxonomy, tiers, rationale, and filterable help",
+        "Goal": "Every kept option carries an owner-authored rationale, a tier, a parent command when it is a modifier, and clean help text; -help is grouped and filterable instead of one flat list of 54.",
         "DependsOn": "step-07",
-        "InstructionsPath": "docs/refactor-plan/step-08-parity-and-cutover.md",
-        "DoneCriteria": "scripts/parity-check.sh reports only the documented keep-modified differences; PR merged as one commit; npm-semver-safe release published to GitHub and @effortlessapi/cli; installers uploaded; all four npm aliases verified on macOS + Windows.",
+        "InstructionsPath": "docs/refactor-plan/step-09-option-taxonomy.md",
+        "DoneCriteria": "No kept CliOptions row lacks Tier/Rationale/HelpSummary; modifiers name their ParentOption; buildOnTrigger and seeds are recategorized out of legacy/review categories; -help <category|option> works; help typos and bareword quirks fixed as keep-modified; cli-reference.md regenerated grouped by category and tier; help goldens green.",
         "Owner": "opus",
         "Status": "blocked",
-        "Description": "The single pivot commit the owner asked for."
+        "Description": "Input is the owner Q&A on the option list (2026-09-04 session). Rulebook rows first, then generator, then the help renderer."
+      },
+      {
+        "RefactorStepId": "step-10",
+        "SortOrder": 11,
+        "Title": "Rename .ssotme to .effortless with in-field migration; rebrand installers",
+        "Goal": "~/.effortless replaces ~/.ssotme (and the project .effortless ledger dir replaces .ssotme, pending owner confirmation) with an automatic first-run migration that picks up every legacy install in the field; installers and install paths say Effortless.",
+        "DependsOn": "step-07",
+        "InstructionsPath": "docs/refactor-plan/step-10-effortless-home-migration.md",
+        "DoneCriteria": "First run against a legacy ~/.ssotme copies it to ~/.effortless (marker left behind, source untouched); renamed inner files (effortless.key, effortless-tools.json, effortless.<runAs>.key); SSOTME_CHILD_PROCESS -> EFFORTLESS_CHILD_PROCESS; installers emit Effortless-Installer-*.pkg / EffortlessInstaller.msi and install under Effortless; grep ssotme in src hits only the migration module and the binary alias; migration e2e tests green.",
+        "Owner": "opus",
+        "Status": "blocked",
+        "Description": "Owner condition: the rename MUST pick up legacy versions in the field (there are many). Copy, never move; never break a legacy CLI still reading ~/.ssotme."
+      },
+      {
+        "RefactorStepId": "step-11",
+        "SortOrder": 12,
+        "Title": "Catalog freshness v2 and a searchable tool catalog",
+        "Goal": "The catalog stays current without -upgrade (24h rule already in R0, plus a forced refresh when a catalog-resolved tool completely times out), and the tool list is searchable and filterable by more than a name substring.",
+        "DependsOn": "step-07",
+        "InstructionsPath": "docs/refactor-plan/step-11-catalog-freshness-and-search.md",
+        "DoneCriteria": "New ToolResolutionRule for refresh-on-timeout (at most one forced refresh per invocation, one retry against a changed head URL, then hard failure); listTools/searchTools accept text + category/account/updated-since/head-only filters and --json; catalog description/tags consumed when present; info prints catalog age; mock-bridge e2e tests green; server-side catalog field additions filed against the bridge repo.",
+        "Owner": "opus",
+        "Status": "blocked",
+        "Description": "The 24h auto-refresh is ALREADY implemented as R0-catalog-freshness (step-03a). This step adds the timeout trigger and real search. Description/tags need a bridge-side change, tracked separately."
+      },
+      {
+        "RefactorStepId": "step-12",
+        "SortOrder": 13,
+        "Title": "Local transpiler host: the CLI as a transpiler target",
+        "Goal": "A project can drop a tool at ./effortless-tools/<tool-name>/ and reference <tool-name> in effortless.json like any catalog tool; the CLI provides the HTTP host that speaks the real wire contract, so authors only write the tool.",
+        "DependsOn": "step-11",
+        "InstructionsPath": "docs/refactor-plan/step-12-local-transpiler-host.md",
+        "DoneCriteria": "effortless serve hosts ./effortless-tools/* over the exact TranspilePayload/FileSet contract cloud tools use; a bare <tool-name> resolves to the local host via a new ToolResolutionRule ahead of the catalog; effortless build auto-starts an ephemeral host when needed; .zfs ledgers and clean behave identically to remote tools; e2e fixture tool green; the legacy-runner ssotme-proxy pattern (lsof cwd sniffing) is documented as superseded.",
+        "Owner": "opus",
+        "Status": "blocked",
+        "Description": "Formalizes the pattern in ../effortless-rulebooks/rulebook-examples/legacy-runner/ssotme-proxy (localhost:4242) as CLI infrastructure. Runtime and entry-file convention are open questions for the owner."
+      },
+      {
+        "RefactorStepId": "step-13",
+        "SortOrder": 14,
+        "Title": "Parity check, v2 clean cut, and single-commit cutover",
+        "Goal": "Prove parity with legacy-final (minus documented keep-modified rows), strip every legacy/RabbitMQ trace that is not the migration story out of the shipping tree, then land v2 on main as ONE squash commit with ONE push.",
+        "DependsOn": "step-12",
+        "InstructionsPath": "docs/refactor-plan/step-13-v2-cut-and-cutover.md",
+        "DoneCriteria": "parity-check.sh clean on macOS + Windows; the v2 clean-cut checklist is fully ticked (rulebook archive split, no legacy appendix, no rabbit compat test, text sweep passes); single squash commit on main; CI green on that push; installers built from it; release published; all four aliases print the new stamp.",
+        "Owner": "opus",
+        "Status": "blocked",
+        "Description": "Was step-08. Moved to last so the v2 feature steps (09-12) ship inside the same single commit. The clean-cut checklist implements the owner decision that v2 must not carry v1 explanations."
       }
     ]
   },

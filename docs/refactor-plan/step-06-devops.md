@@ -16,7 +16,7 @@ Inputs: `DevopsPipelines`, `EntryPoints`, `ProjectFacts` (`version-format-*`, `g
     "Slow!=true"` (unit + contract + e2e), upload TestResults on failure.
   - `slow` (ubuntu): `dotnet test --filter "Slow=true"`.
   - `generate-check` (ubuntu): `node scripts/generate-from-rulebook.mjs --check` + rulebook validation.
-  - `legacy-parity` (ubuntu, until Step 8 removes it): checks out `legacy-final` into a sibling dir, builds
+  - `legacy-parity` (ubuntu, until Step 13 removes it): checks out `legacy-final` into a sibling dir, builds
     it, runs the E2E suite in `legacy` mode. Guarantees the safety net itself stays valid.
 - Concurrency group per ref; cancel in-progress.
 

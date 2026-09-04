@@ -29,7 +29,7 @@ Inputs: `SourceModules` (every row: `Disposition` + `NewPath` + `Notes`), `Entry
    (`spawn('dotnet', [outputPath, ...process.argv.slice(2)], { stdio: 'inherit' })`) and **propagate the
    exit code** (`child.on('exit', code => process.exit(code ?? 1))`) — D5, `keep-modified`.
 6. `package.json`: keep `name`, `bin`, `version` format; `scripts.build` → the new sln; add `test`,
-   `test:legacy` (kept until Step 8), `generate` (Step 5). Remove `cloud_bridge_url` (nothing reads it).
+   `test:legacy` (kept until Step 13), `generate` (Step 5). Remove `cloud_bridge_url` (nothing reads it).
 7. `.gitignore` per `SourceModules.gitignore-root`.
 
 ## 2. Documents

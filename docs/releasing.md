@@ -27,7 +27,7 @@ Protect `main` with squash merges, linear history, and required checks from
 - Slow tests
 - Generated files and rulebook
 - Public npm package
-- Legacy parity (until Step 8 removes it)
+- Legacy parity (until Step 13 removes it)
 
 Require CODEOWNER review and prevent direct pushes except for the guarded
 release script.

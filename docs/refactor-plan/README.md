@@ -49,12 +49,33 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | 01 | Characterization test harness against the **legacy** binary | opus | **done** | [step-01-characterization-tests.md](step-01-characterization-tests.md) |
 | 02 | New solution skeleton + ported core library | opus | **done** | [step-02-core-library.md](step-02-core-library.md) |
 | 03 | Ported CLI: options, dispatcher, resolver, REST client | opus | **done** | [step-03-cli-port.md](step-03-cli-port.md) |
-| 03A | **Automatic tool freshness and catalog discovery (new behavior)** | opus | ready (after 03) | [step-03a-tool-freshness-and-discovery.md](step-03a-tool-freshness-and-discovery.md) |
+| 03A | **Automatic tool freshness and catalog discovery (new behavior)** | opus | **done** | [step-03a-tool-freshness-and-discovery.md](step-03a-tool-freshness-and-discovery.md) |
 | 04 | Cut the legacy tree and finish the repo shape | opus | **done** | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
-| 05 | Rulebook-driven generation | opus | ready (after 04) | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |
-| 06 | DevOps: CI matrix, installers, release flow | opus | ready (after 04, parallel with 05) | [step-06-devops.md](step-06-devops.md) |
-| 07 | Resolve open decisions and harden | opus | ready | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
-| 08 | Parity check and squash-merge cutover | opus | blocked (after 07) | [step-08-parity-and-cutover.md](step-08-parity-and-cutover.md) |
+| 05 | Rulebook-driven generation | opus | **done** | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |
+| 06 | DevOps: CI matrix, installers, release flow | opus | code landed; live-CI verification deferred to 13 (no push before then) | [step-06-devops.md](step-06-devops.md) |
+| 07 | Resolve open decisions and harden | opus | **in progress** (decisions done; hardening + 22 P2 tests left) | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
+| 09 | Option taxonomy, tiers, rationale, filterable help | opus | blocked (needs the owner's option Q&A) | [step-09-option-taxonomy.md](step-09-option-taxonomy.md) |
+| 10 | `.ssotme` → `.effortless` with in-field migration; rebrand installers | opus | ready (after 07) | [step-10-effortless-home-migration.md](step-10-effortless-home-migration.md) |
+| 11 | Catalog freshness v2 (refresh on timeout) + searchable catalog | opus | ready (after 07) | [step-11-catalog-freshness-and-search.md](step-11-catalog-freshness-and-search.md) |
+| 12 | Local transpiler host: the CLI as a transpiler target | opus | blocked (after 11; runtime decision) | [step-12-local-transpiler-host.md](step-12-local-transpiler-host.md) |
+| 13 | Parity check, **v2 clean cut**, single-commit cutover (was 08) | opus | blocked (after 12) | [step-13-v2-cut-and-cutover.md](step-13-v2-cut-and-cutover.md) |
+
+## The v2 operating model (decided 2026-09-04)
+
+- **This is v1 → v2 for the world** (internally v51 → v52). The package rename, the transport change, and
+  the dependency cut from 16 to 2 are a major version; say so in the release notes and README.
+- **Nothing is pushed until step 13.** The branch is massaged, tweaked, and polished locally. Steps 07–12
+  all ship inside the same single squash commit on top of `main` HEAD, then one push, then the regular v2
+  rhythm (feature branches, PRs, CI on PRs, branch protection).
+- **Parity first, then the cut.** Steps 01–08 optimized for byte-identical behavior so the port could be
+  proven. Steps 09–13 are where v2 is allowed to differ on purpose: every deliberate difference is a
+  `keep-modified` rulebook row with a test, and the clean-cut checklist in step 13 removes v1's
+  explanations from the shipping tree. v2 must not carry v1's story except in one migration page.
+- **The 54 kept options stay, better explained.** The owner's position: few can be removed, most need
+  updating, and they need tiers and a hierarchy so `-help` is not one list of 54. Step 09 encodes the
+  owner's per-option reasoning in the rulebook before any code changes.
+- **Every step is the same shape.** Rulebook rows (options, rules, messages, files, test cases) →
+  `npm run generate` → implement → `dotnet test` green → step status `done`.
 
 Ground rules that apply to every step:
 
