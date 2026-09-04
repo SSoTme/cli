@@ -1,5 +1,6 @@
 using Effortless.Cli.Commands;
 using Effortless.Cli.Project;
+using System.Reflection;
 
 namespace Effortless.Cli.Tests;
 
@@ -34,5 +35,14 @@ public sealed class CommandDispatcherTests
         Assert.False(buildInvocation.SkipRemoteToolsLookup);
         Assert.False(buildInvocation.SuppressVersionLabel);
         Assert.False(buildInvocation.ContinueOnError);
+        Assert.DoesNotContain(
+            typeof(CloudBridgeClient).GetMethods(
+                BindingFlags.Instance | BindingFlags.Public),
+            method => method.Name.Contains(
+                "Auth",
+                StringComparison.OrdinalIgnoreCase)
+                || method.Name.Contains(
+                    "InvokeAndGetOutput",
+                    StringComparison.Ordinal));
     }
 }

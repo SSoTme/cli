@@ -424,7 +424,7 @@ Magic-link login, project login, subscription, API keys.
 - Aliases: `auth`, `login`
 - Bareword forms: `auth`, `login`, `authenticate`
 - Value type: `bool`
-- Help text: Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.
+- Help text: Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).
 - Description: Email magic-link login.
 
 ### `-projectLogin`
@@ -432,7 +432,7 @@ Magic-link login, project login, subscription, API keys.
 - Aliases: `projectAuth`
 - Bareword forms: `projectlogin`, `projectauth`
 - Value type: `bool`
-- Help text: Authenticate the ssotme CLI for this specific project (overrides global user login)
+- Help text: Authenticate this project with EffortlessAPI (currently unavailable; reserved for future service enablement).
 - Description: Project-scoped login.
 
 ### `-logout`
@@ -448,7 +448,7 @@ Magic-link login, project login, subscription, API keys.
 - Aliases: `plan`
 - Bareword forms: `subscription`, `plan`
 - Value type: `bool`
-- Help text: View your account's EffortlessAPI subscription plan
+- Help text: View the authenticated EffortlessAPI subscription plan (currently unavailable).
 - Description: Show the account plan.
 
 ## Seeds (legacy scaffolding)
@@ -512,6 +512,8 @@ Bridges and agents that pre-date the rulebook/REST model.
 - `~/.ssotme/github_version_check.json` — { lastCheck, latestVersion } 24h cache of the GitHub latest release tag. Only reachable through the disabled CheckForUpdateNotice; kept because -upgradeCli shares the parsing.
 - `~/.ssotme/effortlessapi_token.txt` — Global JWT.
 - `~/.ssotme/effortlessapi_token_info.json` — { Token, Email, CreatedAt, ExpiresAt(+24h) }.
+- `~/.ssotme/seed_cache/<seed>/cache/**` — Files copied into a cloned seed. Retained seed cache used by cloneSeed; independent of Airtable metadata guessing.
+- `<root>/ssotme-seed.json (+ seed-config-values.json, seed-secrets-values.json)` — Seed replacement tokens ($key$) and interactive answers. Retained explicit $key$ replacement contract. Missing required values fail clearly; Airtable schema guessing is removed.
 
 ## Environment variables and keys
 
@@ -521,9 +523,7 @@ Bridges and agents that pre-date the rulebook/REST model.
 - `EFFORTLESS_JWT` (effortless.env) — Project-scoped JWT written by "effortless projectLogin"; takes precedence over the global token and is sent as cliJwt. Read via SsotmeEnvFile.TryLoadFromNearestProject; quotes stripped; comments (#) ignored.
 - `{ACCOUNT}_PAT | _API_KEY | _APIKEY | _KEY` (effortless.env) — With -account X, the first matching X_{suffix} value is injected as apiKey=... (case-insensitive key lookup). Precedence: effortless.env beats ~/.ssotme/ssotme.key APIKeys[X]; both beat a same-named ProjectSetting.
 - `{ACCOUNT}_BASEID | _BASE_ID` (effortless.env) — With -account X, injected as baseId=... Same rules as the apiKey mapping.
-- `AIRTABLE_PAT / AIRTABLE_API_KEY` (effortless.env) — Used by seed replacement Airtable hints (ReplacementExtensions.GetAirtableSchemaFromBaseId). Only referenced by the seeds subsystem; goes with it.
 - `EFFORTLESS_SEED_GITHUB_ACCOUNT` (process-env) — Default GitHub account used by listSeeds and cloneSeed when the invocation does not provide an account. Defaults to ssotme when unset.
-- `DEBUG (compile define)` (build-define) — Switches AICaptureHost to https://localhost:7033 for the dead auth0 flow. Only used by unreachable auth0 code.
 
 ## Removed in the rebuild
 

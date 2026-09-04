@@ -20,20 +20,17 @@ public sealed class AuthCommands
 
     public int Login()
     {
-        _auth.Login();
-        return 0;
+        return _auth.Login();
     }
 
     public int ProjectLogin()
     {
-        _auth.ProjectLogin();
-        return 0;
+        return _auth.ProjectLogin();
     }
 
     public int Subscription(string jwt)
     {
-        _auth.Subscription(jwt);
-        return 0;
+        return _auth.Subscription(jwt);
     }
 
     public int Logout()

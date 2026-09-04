@@ -302,7 +302,9 @@ function generateCliReference(
   }
 
   lines.push("", "## Environment variables and keys", "");
-  for (const variable of rulebook.EnvVariables.data) {
+  for (const variable of rulebook.EnvVariables.data.filter(
+    (row) => dispositions.get(row.Disposition)?.IsRetained === true,
+  )) {
     lines.push(
       `- \`${variable.EnvVariableId}\` (${variable.Source}) — ${variable.Purpose} ${variable.Description}`.trimEnd(),
     );

@@ -121,10 +121,10 @@ public class CliOptions
     [CommandLineOption(Description = "Add an account api key", MinOccurs = 0, Aliases = "api")]
     public string setAccountAPIKey { get; set; }
 
-    [CommandLineOption(Description = "Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.", MinOccurs = 0, Aliases = "auth,login")]
+    [CommandLineOption(Description = "Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).", MinOccurs = 0, Aliases = "auth,login")]
     public bool authenticate { get; set; }
 
-    [CommandLineOption(Description = "Authenticate the ssotme CLI for this specific project (overrides global user login)", MinOccurs = 0, Aliases = "projectAuth")]
+    [CommandLineOption(Description = "Authenticate this project with EffortlessAPI (currently unavailable; reserved for future service enablement).", MinOccurs = 0, Aliases = "projectAuth")]
     public bool projectLogin { get; set; }
 
     [CommandLineOption(Description = "Logout of your cli user account", MinOccurs = 0, Aliases = "signout")]
@@ -175,7 +175,7 @@ public class CliOptions
     [CommandLineOption(Description = "Run this tool using the current head version and update its pinned version for this project", MinOccurs = 0, Aliases = "lat")]
     public bool latest { get; set; }
 
-    [CommandLineOption(Description = "View your account's EffortlessAPI subscription plan", MinOccurs = 0, Aliases = "plan")]
+    [CommandLineOption(Description = "View the authenticated EffortlessAPI subscription plan (currently unavailable).", MinOccurs = 0, Aliases = "plan")]
     public bool subscription { get; set; }
 
     [CommandLineOption(Description = "Upgrade the effortless CLI to the latest version", MinOccurs = 0, Aliases = "uc,update")]

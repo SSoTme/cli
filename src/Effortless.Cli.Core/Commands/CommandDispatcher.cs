@@ -43,9 +43,8 @@ public sealed class CommandDispatcher
         _projectCommands = new ProjectCommands();
         _toolUrlCommands = new ToolUrlCommands();
         _versionCommands = new VersionCommands(_remoteTools);
-        var bridge = new CloudBridgeClient(RunBridgeCommandLine);
         _authCommands = new AuthCommands(
-            new MagicLinkAuth(bridge));
+            new MagicLinkAuth());
         _infoCommand = new InfoCommand();
         _upgradeCliCommand = new UpgradeCliCommand();
         _executeCommand = new ExecuteCommand();

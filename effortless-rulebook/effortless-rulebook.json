@@ -120,15 +120,15 @@
         "DispositionId": "review-drop",
         "Label": "Review — recommended DROP",
         "IsRetained": false,
-        "NeedsUserConfirmation": true,
-        "Description": "Not RabbitMQ-specific, but not something we would build today. Recommendation is to drop; the owner must confirm. If the owner flips this to keep, the plan step that touches it lists what to port."
+        "NeedsUserConfirmation": false,
+        "Description": "Historical review disposition. All rows that used it have been resolved to an explicit keep or drop disposition."
       },
       {
         "DispositionId": "review-keep",
         "Label": "Review — recommended KEEP",
         "IsRetained": true,
-        "NeedsUserConfirmation": true,
-        "Description": "Kept by default, but the owner should consciously confirm because the feature is either currently broken in the legacy build (e.g. auth is short-circuited) or has an odd dependency (spawning \"effortless\" from PATH)."
+        "NeedsUserConfirmation": false,
+        "Description": "Historical review disposition. All rows that used it have been resolved to an explicit keep or drop disposition."
       }
     ]
   },
@@ -1090,14 +1090,14 @@
         "Aliases": "auth,login",
         "BarewordForms": "auth,login,authenticate",
         "ValueType": "bool",
-        "HelpText": "Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.",
+        "HelpText": "Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).",
         "Category": "auth",
-        "Disposition": "review-keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 6,
-        "HandlerNotes": "MyEffortlessAPIService.HandleAuth: magic-link flow via cli-cloud-bridge modes auth/verify; stores ~/.ssotme/effortlessapi_token.txt + effortlessapi_token_info.json (600). CURRENTLY SHORT-CIRCUITED: InvokeToolAndGetOutput returns null (2026-04-25) so login prints \"Failed to send verification code: No response from auth service\".",
-        "DispositionReason": "Keep the command and the bridge contract; owner must decide whether the rebuild re-enables the bridge call for EXPLICIT auth commands only (recommended) or preserves the short-circuit. Build path stays bridge-free either way.",
+        "HandlerNotes": "Retained as an explicit non-networking stub until the server-side magic-link endpoint is enabled. It exits nonzero with a clear unavailable message and never creates token files or calls the bridge.",
+        "DispositionReason": "Keep and clean the command surface for future magic-link authentication, but do not implement or call authentication infrastructure yet. Tool builds and buildOnTrigger remain unauthenticated.",
         "Description": "Email magic-link login."
       },
       {
@@ -1106,14 +1106,14 @@
         "Aliases": "projectAuth",
         "BarewordForms": "projectlogin,projectauth",
         "ValueType": "bool",
-        "HelpText": "Authenticate the ssotme CLI for this specific project (overrides global user login)",
+        "HelpText": "Authenticate this project with EffortlessAPI (currently unavailable; reserved for future service enablement).",
         "Category": "auth",
-        "Disposition": "review-keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
-        "HandlerNotes": "Same magic-link flow; writes EFFORTLESS_JWT=... into <projectRoot>/effortless.env (WriteEnvValue replaces or appends).",
-        "DispositionReason": "Same decision as authenticate.",
+        "HandlerNotes": "Retained as an explicit non-networking stub. Future behavior may write EFFORTLESS_JWT to effortless.env after service-side authentication is enabled; current behavior never modifies the project.",
+        "DispositionReason": "Keep the project-auth command surface without pretending authentication is currently available.",
         "Description": "Project-scoped login."
       },
       {
@@ -1458,14 +1458,14 @@
         "Aliases": "plan",
         "BarewordForms": "subscription,plan",
         "ValueType": "bool",
-        "HelpText": "View your account's EffortlessAPI subscription plan",
+        "HelpText": "View the authenticated EffortlessAPI subscription plan (currently unavailable).",
         "Category": "auth",
-        "Disposition": "review-keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 3,
-        "HandlerNotes": "HandleSubscription(jwt): no jwt => \"You are not logged in. Use `effortless login` first.\"; else bridge mode viewPlan (short-circuited today => \"Failed to fetch subscription: Unknown error\").",
-        "DispositionReason": "Same decision as authenticate.",
+        "HandlerNotes": "Retained as an explicit non-networking stub until account authentication and plan lookup are enabled server-side.",
+        "DispositionReason": "Keep the account-plan command surface without issuing auth bridge calls yet.",
         "Description": "Show the account plan."
       },
       {
@@ -2944,36 +2944,36 @@
         "Phase": "transpile-dispatch",
         "SortOrder": 1,
         "Condition": "authenticate",
-        "Action": "HandleAuth().Wait(); return 0.",
+        "Action": "Print the explicit authentication-unavailable message; return nonzero without a bridge call.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
-        "ExitCode": "0",
-        "Disposition": "review-keep",
-        "Description": ""
+        "ExitCode": "-1",
+        "Disposition": "keep-modified",
+        "Description": "Retains the future magic-link command surface as a clear non-networking stub."
       },
       {
         "DispatchRuleId": "T02-project-login",
         "Phase": "transpile-dispatch",
         "SortOrder": 2,
         "Condition": "projectLogin",
-        "Action": "HandleProjectAuth().Wait(); return 0.",
+        "Action": "Print the explicit project-authentication-unavailable message; return nonzero without modifying effortless.env.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
-        "ExitCode": "0",
-        "Disposition": "review-keep",
-        "Description": ""
+        "ExitCode": "-1",
+        "Disposition": "keep-modified",
+        "Description": "Reserves project-scoped authentication without implementing the server flow."
       },
       {
         "DispatchRuleId": "T03-subscription",
         "Phase": "transpile-dispatch",
         "SortOrder": 3,
         "Condition": "subscription",
-        "Action": "HandleSubscription(jwt); return 0.",
+        "Action": "Print the explicit subscription-unavailable message; return nonzero without a bridge call.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
-        "ExitCode": "0",
-        "Disposition": "review-keep",
-        "Description": ""
+        "ExitCode": "-1",
+        "Disposition": "keep-modified",
+        "Description": "Reserves authenticated plan lookup until authentication is enabled."
       },
       {
         "DispatchRuleId": "T04-logout",
@@ -3056,8 +3056,8 @@
         "ProjectRequired": false,
         "SuppressesTranspile": true,
         "ExitCode": "0",
-        "Disposition": "review-drop",
-        "Description": ""
+        "Disposition": "keep",
+        "Description": "Retained seed discovery command; independent of Airtable metadata guessing."
       },
       {
         "DispatchRuleId": "T11-clone-seed",
@@ -3068,8 +3068,8 @@
         "ProjectRequired": false,
         "SuppressesTranspile": true,
         "ExitCode": "0",
-        "Disposition": "review-drop",
-        "Description": ""
+        "Disposition": "keep",
+        "Description": "Retained seed clone command; explicit replacement keys remain supported."
       },
       {
         "DispatchRuleId": "T12-view-url",
@@ -4270,8 +4270,8 @@
         "UsedByOption": "authenticate, projectLogin, subscription, info (plan)",
         "LivenessOn20260830": "alive",
         "TimeoutMs": 180000,
-        "Disposition": "review-keep",
-        "Description": "Short-circuited in a8f0f32 (InvokeToolAndGetOutput returns null). Decision required: re-enable for explicit auth commands only."
+        "Disposition": "keep-modified",
+        "Description": "Reserved contract for future explicit magic-link and plan commands. The current CLI exposes clean stubs and makes no authentication calls; catalog refresh remains a separate bridge operation."
       },
       {
         "HttpEndpointId": "github-latest-release",
@@ -4391,8 +4391,8 @@
         "UsedByOption": "seed replacements",
         "LivenessOn20260830": "alive",
         "TimeoutMs": 100000,
-        "Disposition": "review-drop",
-        "Description": ""
+        "Disposition": "drop-legacy",
+        "Description": "Removed with legacy Airtable-specific replacement guessing. Explicit seed replacement keys, seed discovery/cloning, and buildOnTrigger remain supported."
       },
       {
         "HttpEndpointId": "bases-dashboard-hint",
@@ -4822,8 +4822,8 @@
         "WrittenBy": "external",
         "IsSecret": false,
         "UnixMode": "",
-        "Disposition": "review-drop",
-        "Description": "Seeds subsystem."
+        "Disposition": "keep",
+        "Description": "Retained seed cache used by cloneSeed; independent of Airtable metadata guessing."
       },
       {
         "ConfigFileId": "seed-json",
@@ -4835,8 +4835,8 @@
         "WrittenBy": "ApplySeedReplacementsAsync (prompts on stdin for missing values)",
         "IsSecret": true,
         "UnixMode": "",
-        "Disposition": "review-drop",
-        "Description": "Hidden cost: every project load scans the tree when ssotme-seed.json exists. Goes with the seeds subsystem."
+        "Disposition": "keep-modified",
+        "Description": "Retained explicit $key$ replacement contract. Missing required values fail clearly; Airtable schema guessing is removed."
       },
       {
         "ConfigFileId": "auth0-key",
@@ -6072,13 +6072,13 @@
       },
       {
         "UserMessageId": "auth-flow",
-        "Template": "=== EffortlessAPI Authentication === | Enter your email address:  | Sending verification code to {email}... | Verification code sent to your email. | Enter the verification code you received:  | Verifying code... | Authentication successful! | Failed to send verification code: {err|Unknown error} | Verification failed: {err|Invalid or expired code}",
+        "Template": "EffortlessAPI authentication is not available yet. The login command is reserved for future magic-link authentication; tools and buildOnTrigger currently run without login.",
         "Color": "default",
         "Trigger": "login",
-        "Stream": "stdout",
+        "Stream": "stderr",
         "IsGoldenForTests": true,
-        "Disposition": "review-keep",
-        "Description": "With the bridge short-circuited the flow ends at \"Failed to send verification code: No response from auth service\"."
+        "Disposition": "keep-modified",
+        "Description": "Explicit non-networking stub until the server-side authentication endpoint is enabled."
       },
       {
         "UserMessageId": "not-logged-in",
@@ -6325,8 +6325,8 @@
         "EnvVariableId": "AIRTABLE_PAT / AIRTABLE_API_KEY",
         "Source": "effortless.env",
         "Purpose": "Used by seed replacement Airtable hints (ReplacementExtensions.GetAirtableSchemaFromBaseId).",
-        "Disposition": "review-drop",
-        "Description": "Only referenced by the seeds subsystem; goes with it."
+        "Disposition": "drop-legacy",
+        "Description": "No longer read by the CLI after Airtable-specific seed guessing was removed. Airtable release automation has its own CI secret contract."
       },
       {
         "EnvVariableId": "EFFORTLESS_SEED_GITHUB_ACCOUNT",
@@ -6429,8 +6429,8 @@
         "Kind": "pip",
         "Invocation": "pip install git+https://github.com/ssotme/cli ; python shim runs dotnet on the built dll",
         "ArgPassing": "Python subprocess passes sys.argv[1:] unchanged.",
-        "Disposition": "review-drop",
-        "Description": "setup.py builds the .NET solution at pip-install time and manages a private dotnet SDK. Recommended drop: three install paths is two too many; npm + native installers cover every platform. If kept, it needs its own CI job (setup.yml) and path fixes."
+        "Disposition": "drop-legacy",
+        "Description": "Removed. The official npm package and native MSI/PKG installers cover supported distribution without retaining a Python shim or private .NET SDK manager."
       },
       {
         "EntryPointId": "dotnet-dll",
@@ -6600,9 +6600,9 @@
         "Ecosystem": "nuget",
         "LegacyVersion": "1.0.0.5",
         "NewVersion": "",
-        "Disposition": "review-drop",
+        "Disposition": "drop-legacy",
         "Reason": "Only used by seed replacement Airtable hints and transpiler-side CSV helpers.",
-        "Description": "English pluralization."
+        "Description": "Removed with legacy Airtable-specific seed guessing; retained seed features do not require it."
       },
       {
         "DependencyId": "System.Configuration.ConfigurationManager",
@@ -7123,10 +7123,10 @@
         "LegacyPath": "ssotme/ (cli.py, __init__.py, build-cli.sh, entitlements.plist), setup.py, MANIFEST.in, requirements.txt, build-installer.ps1",
         "Kind": "dir",
         "ApproxLines": 700,
-        "Disposition": "review-drop",
+        "Disposition": "drop-legacy",
         "NewPath": "installers/macos/entitlements.plist (the plist only — it is used by codesign)",
-        "Notes": "pip path; entitlements.plist must survive regardless.",
-        "Description": "pip packaging."
+        "Notes": "Python packaging is removed; entitlements.plist survives independently for native macOS codesigning.",
+        "Description": "Removed Python/pip packaging."
       },
       {
         "SourceModuleId": "dspxml-dir",
@@ -7374,9 +7374,9 @@
         "LegacyPath": ".github/workflows/setup.yml",
         "Trigger": "push main / any PR",
         "Produces": "flake8 + pip install on mac/linux/windows + \"ssotme -h\" smoke test.",
-        "Disposition": "review-drop",
+        "Disposition": "drop-legacy",
         "NewPath": "",
-        "Description": "Goes with the pip entry point. Replaced by ci.yml (dotnet build + test matrix)."
+        "Description": "Removed with the pip entry point; replaced by ci.yml (.NET matrix), npm package validation, and native installer workflows."
       },
       {
         "DevopsPipelineId": "update-airtable",
@@ -10489,43 +10489,43 @@
         "TestCaseId": "auth-login-flow",
         "Suite": "e2e-auth",
         "PrimaryOption": "authenticate",
-        "Title": "login via mock bridge",
-        "Given": "sandbox; bridge mock modes auth/verify",
-        "When": "effortless login <stdin: a@b.c, 123456>",
-        "Then": "prompts; mock receives mode=auth email=a@b.c then mode=verify code=123456; effortlessapi_token.txt (600) and _info.json written; \"Authentication successful!\"",
+        "Title": "login command is an explicit future-auth stub",
+        "Given": "authentication endpoint is not enabled",
+        "When": "effortless login",
+        "Then": "rebuild exits nonzero with a clear unavailable message, makes no bridge request, and writes no token; legacy remains characterized separately",
         "Priority": "P0",
         "Interactive": true,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "blocked-by-decision while the legacy build short-circuits the bridge: legacy golden is \"Failed to send verification code: No response from auth service\"."
+        "Description": "Owner decision D3: retain the command surface without implementing live authentication yet."
       },
       {
         "TestCaseId": "auth-login-already",
         "Suite": "e2e-auth",
         "PrimaryOption": "authenticate",
-        "Title": "login when already authenticated",
+        "Title": "login stub preserves existing local token",
         "Given": "valid token",
-        "When": "effortless login <stdin: n>",
-        "Then": "\"You are already authenticated as x@y.z.\" + \"Do you want to re-authenticate? (y/N): \" + \"Authentication cancelled.\"",
+        "When": "effortless login",
+        "Then": "rebuild reports authentication unavailable without prompting and leaves the token unchanged; legacy re-authentication cancellation remains characterized",
         "Priority": "P1",
         "Interactive": true,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "The stub never impersonates a successful session mutation."
       },
       {
         "TestCaseId": "auth-project-login",
         "Suite": "e2e-auth",
         "PrimaryOption": "projectLogin",
-        "Title": "projectLogin writes the env file",
-        "Given": "project; bridge mock",
-        "When": "effortless projectlogin <stdin: a@b.c, 123456>",
-        "Then": "effortless.env has EFFORTLESS_JWT=<token>; existing keys preserved; \"Project authentication successful!\"",
+        "Title": "projectLogin is an explicit future-auth stub",
+        "Given": "project and authentication endpoint is not enabled",
+        "When": "effortless projectlogin",
+        "Then": "rebuild exits nonzero with a clear unavailable message, makes no bridge request, and does not write EFFORTLESS_JWT",
         "Priority": "P0",
         "Interactive": true,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "blocked-by-decision as above."
+        "Description": "Owner decision D3: reserve project-scoped login without modifying project data."
       },
       {
         "TestCaseId": "auth-logout",
@@ -10545,29 +10545,29 @@
         "TestCaseId": "auth-subscription-no-token",
         "Suite": "e2e-auth",
         "PrimaryOption": "subscription",
-        "Title": "subscription without login",
+        "Title": "subscription command is stubbed without login",
         "Given": "no token",
         "When": "effortless plan ; -subscription",
-        "Then": "\"You are not logged in. Use `effortless login` first.\"",
+        "Then": "rebuild exits nonzero and reports account authentication unavailable; legacy login requirement remains characterized",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "Plan lookup remains reserved until authentication is enabled."
       },
       {
         "TestCaseId": "auth-subscription",
         "Suite": "e2e-auth",
         "PrimaryOption": "subscription",
-        "Title": "subscription with a token",
-        "Given": "token; bridge mock viewPlan => free",
+        "Title": "subscription command does not use a stored token while stubbed",
+        "Given": "stored token and authentication endpoint is not enabled",
         "When": "effortless plan",
-        "Then": "with a token, legacy auth bridge short-circuit prints No response from auth service; no bridge request is made",
+        "Then": "rebuild exits nonzero with a clear unavailable message and makes no bridge request; legacy short-circuit remains characterized",
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "Legacy D3 behavior; rebuild branch assertions cover the re-enabled explicit auth command."
+        "Description": "Owner decision D3: no plan lookup until service-side authentication is enabled."
       },
       {
         "TestCaseId": "auth-set-api-key",
@@ -11418,8 +11418,8 @@
         "InstructionsPath": "docs/refactor-plan/step-07-decisions-and-hardening.md",
         "DoneCriteria": "Dispositions table has no NeedsUserConfirmation rows left in use; blocked-by-decision tests are implemented or deleted; unit-core P1 green.",
         "Owner": "opus",
-        "Status": "blocked",
-        "Description": "Blocked on the owner answering the questions in docs/refactor-plan/README.md#decisions."
+        "Status": "ready",
+        "Description": "Owner decisions are resolved; remaining work is the Step 7 hardening and planned P2 coverage."
       },
       {
         "RefactorStepId": "step-08",

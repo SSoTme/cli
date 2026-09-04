@@ -3,10 +3,9 @@
 **Goal:** no `review-*` dispositions remain in use; every `blocked-by-decision` test is implemented or
 deleted; the internal seams have unit coverage; the leftover static state is cleaned up.
 
-**Blocked until the owner answers D1–D11 in [README.md#decisions](README.md#decisions).** Record each
-answer by editing the rulebook: change the `Disposition` on the affected rows to `keep`/`keep-modified`/
-`drop-legacy`, and set `Dispositions.review-drop/review-keep.NeedsUserConfirmation` to `false` once no row
-uses them (or delete the rows).
+**Owner decisions are resolved.** The rulebook now uses explicit `keep`,
+`keep-modified`, and `drop-legacy` dispositions, and the historical
+`review-drop`/`review-keep` rows no longer require confirmation.
 
 ## Per decision
 
@@ -14,12 +13,16 @@ uses them (or delete the rows).
 |---|---|---|
 | D1 seeds | Nothing to do (already excluded in Step 3). Delete `TestCases` rows for `listSeeds`/`cloneSeed` (none exist). | Port `ReplacementExtensions`, `RepositoryManager`, `DirectoryExtensions.StartSeedBuild/CheckSSoTmeCache`, `ListSeeds/CloneSeed/GetSeedUrl/InitiateCloneSeedingProcess`, `IsCurrentSeedRoot` into `src/Effortless.Cli.Core/Seeds/`; re-add `PluralizeService.Core`; hook `ApplySeedReplacementsAsync` into `ProjectLocator` and the reverse call into `CleanCommand`; add e2e tests with a local git seed fixture. |
 | D2 buildOnTrigger | Nothing. | Port `ListenForChangesAndRebuild`/`CheckChanged` (without copilot) into `BuildCommand`; add a mock `/check` endpoint to `MockToolServer`; one e2e test with a short poll interval. |
-| D3 auth bridge | Keep `CloudBridgeClient.AuthCallsEnabled = false`; tests `auth-login-flow`, `auth-project-login`, `auth-subscription` stay `blocked-by-decision` → change to `Skip` with the reason. | Set `AuthCallsEnabled = true` **only** for `login`, `projectLogin`, `subscription`, `info` plan lookup and token refresh; keep the temp-dir/minimal-project mechanism (or call the bridge URL directly with the same payload — the wire contract is the same); restore `CheckLoginStatus`-style refresh in `info`; implement the three tests against the mock bridge; never call the bridge from build/transpile paths (add a unit test that asserts `TranspileClient` has no reference to `CloudBridgeClient`). |
-| D4 pip | Nothing (already deleted in Step 4). | Restore `setup.py`, `ssotme/cli.py`, `setup.yml` with new paths. |
+| D3 auth bridge | **Resolved:** retain `login`, `projectLogin`, and `plan` as explicit non-networking stubs until the service endpoint is enabled; retain local `logout`; keep tools and `buildOnTrigger` unauthenticated. | Future work reimplements the magic-link service behind the retained command seam. |
+| D4 pip | **Resolved:** removed. npm plus native MSI/PKG installers are the supported distribution paths. | — |
 | D5 shim | Already done in Step 4. | (revert to join-and-ignore — not recommended) |
 | D6 child spawn | Already done in Step 2. | (revert to PATH lookup — not recommended) |
 | D7–D10 | Confirm rows; no code. | — |
 | D11 parser forms | Normalize reserved commands so bareword, single-dash, and double-dash forms select the same option before a remaining argument can be treated as a transpiler. Apply this to `listTools` and `searchTools` too. | — |
+
+The legacy Airtable metadata endpoint and its seed-replacement guessing are
+also resolved as `drop-legacy`. Seed discovery, cloning, explicit `$key$`
+replacement, and `buildOnTrigger` remain retained.
 
 ## Hardening
 

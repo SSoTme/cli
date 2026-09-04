@@ -53,7 +53,7 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | 04 | Cut the legacy tree and finish the repo shape | opus | **done** | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
 | 05 | Rulebook-driven generation | opus | ready (after 04) | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |
 | 06 | DevOps: CI matrix, installers, release flow | opus | ready (after 04, parallel with 05) | [step-06-devops.md](step-06-devops.md) |
-| 07 | Resolve open decisions and harden | opus | **blocked on decisions below** | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
+| 07 | Resolve open decisions and harden | opus | ready | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
 | 08 | Parity check and squash-merge cutover | opus | blocked (after 07) | [step-08-parity-and-cutover.md](step-08-parity-and-cutover.md) |
 
 Ground rules that apply to every step:
@@ -81,8 +81,8 @@ decide. Until then Steps 1–6 proceed under the recommendation.
 |---|---|---|---|
 | D1 | **Seeds subsystem** (`-listSeeds`, `-cloneSeed`, `ssotme-seed.json` token replacement that runs on *every* project load, `~/.ssotme/seed_cache`, `RepositoryManager`, `PluralizeService`) | DO NOT DROP - it needs to be moved into the rulebook as seeds.  These are root or child effortless repositories with a full effortless stack in the root.  In fact - add a ../effortless-skills/ skill - so that this can be more formally supported.  It is driven by finding public repositories under a github account that have an effortless.json file in the root.  After that though - that s a seed, and the clone seed functionality totally still applies conecptually |
 | D2 | **`-buildOnTrigger`** Airtable change-watch loop (host still alive) | DO NOT DROP.  This is totally separate from the editor which can ALSO detect build changes - but this is a separate cloud based trigger.  There may be other ways in the fture - but once again, conceptually this should be something a CLI can monitor from the command line without a whole docker instance behhind the scenes.  That is WAY overengineered for a number of use cases for this general purpose parameter. |
-| D3 | **Auth bridge short-circuit.** In a8f0f32 `InvokeToolAndGetOutput` returns `null` unconditionally, so `login`, `projectLogin`, `plan` and the `info` plan lookup are non-functional ("No response from auth service"). | **Re-enable the bridge call for the explicit user commands only** (login / projectLogin / subscription / token refresh); keep the build path 100% bridge-free (no quota, no project registration). YES - but I think that this is also connected to the build on trigger parameter, no?| `CliOptions.authenticate/projectLogin/subscription`, `HttpEndpoints.bridge-auth`, `TestCases` with Status `blocked-by-decision` |
-| D4 | **pip install path** (`setup.py`, `ssotme/`, `setup.yml`) | **Drop.** npm + MSI + PKG cover every platform; the pip path builds .NET at install time and manages a private SDK. `ssotme/entitlements.plist` moves to `installers/macos/` regardless. | `EntryPoints.pip`, `DevopsPipelines.pip-ci`, `SourceModules.ssotme-py` |
+| D3 | **Authentication while the service endpoint is not enabled.** | **Confirmed:** retain clean `login`, `projectLogin`, `logout`, and `plan` command surfaces. Login/project-login/plan are explicit non-networking stubs for now; logout still clears local tokens. Tool execution and `buildOnTrigger` remain unauthenticated. Implement the magic-link flow later when the server endpoint is enabled. | `CliOptions.authenticate/projectLogin/subscription`, `HttpEndpoints.bridge-auth`, `TestCases auth-*` |
+| D4 | **pip install path** (`setup.py`, `ssotme/`, `setup.yml`) | **Confirmed drop.** npm + native MSI/PKG installers cover distribution without retaining a Python shim or private SDK manager. `installers/macos/entitlements.plist` remains for native codesigning. | `EntryPoints.pip`, `DevopsPipelines.pip-ci`, `SourceModules.ssotme-py` |
 | D5 | **npm shim argument handling.** Legacy `cli.js` joins argv into one string (loses quoting, makes `init force` impossible) and ignores the child exit code. | **Fix both** (pass argv through; propagate exit code). Marked `keep-modified`. | `EntryPoints.npm-shim`, `SourceModules.cli-js`, tests `shim-*` |
 | D6 | **Child-process builds** (`buildAll`, `cleanAll`, nested-project parent build) spawn `effortless` **from PATH**. | buildAll/cleanAll is actually for running a full build for the project itself, based NOT on the current flder - but rather, behaving as though the effortless -build was being run from the root, sibling to the effortless.json.  This COULD also add a 2nd parameter to indicate that it should do a buildall including sub-effortless projects, which are generally NOT included in a build.| `EnvVariables.PATH`, `LifecycleStates.B01/B08/C05` |
 | D7 | `-runAs` (alternate `~/.ssotme/ssotme.<user>.key`) | Keep (cheap, coherent with `-setAccountAPIKey`). | `CliOptions.runAs` |
@@ -90,6 +90,10 @@ decide. Until then Steps 1–6 proceed under the recommendation.
 | D9 | `-updateUrls` (bridge-v2 host no longer resolves) | this whole feature needs to be made consistent in it's nameing, but it still needs to support the full list of adding a tool, listing a tool, removing a custom tool url. |
 | D10 | Keep **Plossum.CommandLine.Core** as the parser. Its tokenizer defines how `effortless.json` `CommandLine` strings parse; swapping it would change behavior. | Keep (not in scope). | `Dependencies.Plossum.CommandLine.Core` |
 | D11 | The new parameter parsing should allow globally for any of the key parameters to support no -, or double hyphen. In other words, either `effortless build` or `effortless -build` or `effortless --build`.  Any of those key words are reserved, and should NEVER be treated as a transpiler.||
+
+The owner also confirmed removal of the legacy Airtable metadata endpoint used
+for seed-replacement guessing. This does not remove seed discovery, cloning,
+explicit `$key$` replacement, or unauthenticated `buildOnTrigger`.
 
 Two documentation discrepancies found while authoring (fix in Step 4):
 

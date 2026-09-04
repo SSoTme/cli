@@ -78,6 +78,16 @@ refresh failure is a hard failure.
 - D2 keeps `build -buildOnTrigger <baseId>` as a lightweight cloud-trigger
   monitor independent of the rulebook editor. Polling failures are fatal; never
   hide them as an unchanged trigger.
+- Airtable schema guessing for seed replacements is removed. Do not remove seed
+  discovery, cloning, explicit `ssotme-seed.json` `$key$` replacements, or
+  `buildOnTrigger`.
+
+## Authentication status
+
+`login`, `projectLogin`, and `plan` are intentionally non-networking stubs until
+the server-side magic-link endpoint is enabled. They must fail clearly and must
+not write tokens or call the bridge. `logout` still clears local tokens. Normal
+tool execution and `buildOnTrigger` do not require authentication.
 
 ## Project save and upgrade invariants
 

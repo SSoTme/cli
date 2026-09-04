@@ -4,8 +4,6 @@ namespace Effortless.Cli;
 
 public sealed class CloudBridgeClient
 {
-    public static readonly bool AuthCallsEnabled = true;
-
     private readonly Func<string, EffortlessProject, bool, int>
         _runCommandLine;
 
@@ -24,33 +22,6 @@ public sealed class CloudBridgeClient
             request.WorkingDirectory,
             request.IndexFile.Name,
             out _);
-    }
-
-    public string InvokeAndGetOutput(
-        string parameters,
-        string outputFileName = "auth-result.json")
-    {
-        if (!AuthCallsEnabled)
-        {
-            return null;
-        }
-
-        var workingDirectory = Path.Combine(
-            Config.UserConfigDir.SSoTmeDir.FullName,
-            "remote_tools");
-        var bridgeUrl =
-            Config.ToolUrls.TryGetUrlFromFileUrls(
-                RemoteToolsIndex.BridgeToolName)
-            ?? RemoteToolsIndex.BootstrapBridgeUrl;
-        var commandLine =
-            $"{bridgeUrl} {parameters} -o {outputFileName}";
-        return Run(
-            commandLine,
-            workingDirectory,
-            outputFileName,
-            out var output)
-            ? output
-            : null;
     }
 
     private bool Run(

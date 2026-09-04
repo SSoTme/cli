@@ -23,14 +23,13 @@ public sealed class AuthTests
             sandbox,
             stdin: $"{Email}{Environment.NewLine}123456{Environment.NewLine}");
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains("=== EffortlessAPI Authentication ===", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains($"Sending verification code to {Email}...", result.Stdout, StringComparison.Ordinal);
-
         var tokenPath = HomeConfigPath(sandbox, "effortlessapi_token.txt");
         var infoPath = HomeConfigPath(sandbox, "effortlessapi_token_info.json");
         if (Behavior.IsLegacy)
         {
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("=== EffortlessAPI Authentication ===", result.Stdout, StringComparison.Ordinal);
+            Assert.Contains($"Sending verification code to {Email}...", result.Stdout, StringComparison.Ordinal);
             Assert.Contains(
                 "Failed to send verification code: No response from auth service",
                 result.Stdout,
@@ -41,16 +40,14 @@ public sealed class AuthTests
         }
         else
         {
-            Assert.Contains("Authentication successful!", result.Stdout, StringComparison.Ordinal);
-            Assert.Equal(["auth", "verify"], bridge.Requests.Select(request => request.Mode));
-            Assert.Equal(Email, bridge.Requests.ElementAt(0).Parameters["email"]);
-            Assert.Equal(Email, bridge.Requests.ElementAt(1).Parameters["email"]);
-            Assert.Equal("123456", bridge.Requests.ElementAt(1).Parameters["code"]);
-            Assert.Equal(CreateJwt(Email), File.ReadAllText(tokenPath));
-            using var info = JsonDocument.Parse(File.ReadAllText(infoPath));
-            Assert.Equal(Email, info.RootElement.GetProperty("Email").GetString());
-            AssertSecretFileMode(tokenPath);
-            AssertSecretFileMode(infoPath);
+            Assert.True(result.Failed);
+            Assert.Contains(
+                "EffortlessAPI authentication is not available yet.",
+                result.Stderr,
+                StringComparison.Ordinal);
+            Assert.Empty(bridge.Requests);
+            Assert.False(File.Exists(tokenPath));
+            Assert.False(File.Exists(infoPath));
         }
 
         bridge.ThrowIfFaulted();
@@ -70,16 +67,31 @@ public sealed class AuthTests
             sandbox,
             stdin: $"n{Environment.NewLine}");
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains(
-            $"You are already authenticated as {ExistingEmail}.",
-            result.Stdout,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "Do you want to re-authenticate? (y/N): ",
-            result.Stdout,
-            StringComparison.Ordinal);
-        Assert.Contains("Authentication cancelled.", result.Stdout, StringComparison.Ordinal);
+        if (Behavior.IsLegacy)
+        {
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains(
+                $"You are already authenticated as {ExistingEmail}.",
+                result.Stdout,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "Do you want to re-authenticate? (y/N): ",
+                result.Stdout,
+                StringComparison.Ordinal);
+            Assert.Contains("Authentication cancelled.", result.Stdout, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.True(result.Failed);
+            Assert.Contains(
+                "EffortlessAPI authentication is not available yet.",
+                result.Stderr,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain(
+                "Do you want to re-authenticate?",
+                result.Combined,
+                StringComparison.Ordinal);
+        }
         Assert.Equal(token, File.ReadAllText(HomeConfigPath(sandbox, "effortlessapi_token.txt")));
     }
 
@@ -99,14 +111,14 @@ public sealed class AuthTests
             sandbox,
             stdin: $"{Email}{Environment.NewLine}123456{Environment.NewLine}");
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Contains("=== Project Authentication ===", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains($"Sending verification code to {Email}...", result.Stdout, StringComparison.Ordinal);
         var env = sandbox.ReadFile("effortless.env");
         Assert.Contains("EXISTING_KEY=keep", env, StringComparison.Ordinal);
 
         if (Behavior.IsLegacy)
         {
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("=== Project Authentication ===", result.Stdout, StringComparison.Ordinal);
+            Assert.Contains($"Sending verification code to {Email}...", result.Stdout, StringComparison.Ordinal);
             Assert.Contains(
                 "Failed to send verification code: No response from auth service",
                 result.Stdout,
@@ -116,9 +128,13 @@ public sealed class AuthTests
         }
         else
         {
-            Assert.Contains("Project authentication successful!", result.Stdout, StringComparison.Ordinal);
-            Assert.Contains($"EFFORTLESS_JWT={CreateJwt(Email)}", env, StringComparison.Ordinal);
-            Assert.Equal(["auth", "verify"], bridge.Requests.Select(request => request.Mode));
+            Assert.True(result.Failed);
+            Assert.Contains(
+                "EffortlessAPI project authentication is not available yet.",
+                result.Stderr,
+                StringComparison.Ordinal);
+            Assert.DoesNotContain("EFFORTLESS_JWT=", env, StringComparison.Ordinal);
+            Assert.Empty(bridge.Requests);
         }
 
         bridge.ThrowIfFaulted();
@@ -188,11 +204,22 @@ public sealed class AuthTests
         {
             var result = await cli.Run([argument], sandbox.ProjectPath, sandbox);
 
-            Assert.Equal(0, result.ExitCode);
-            Assert.Contains(
-                "You are not logged in. Use `effortless login` first.",
-                result.Stdout,
-                StringComparison.Ordinal);
+            if (Behavior.IsLegacy)
+            {
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains(
+                    "You are not logged in. Use `effortless login` first.",
+                    result.Stdout,
+                    StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.True(result.Failed);
+                Assert.Contains(
+                    "EffortlessAPI subscription lookup is not available yet",
+                    result.Stderr,
+                    StringComparison.Ordinal);
+            }
         }
     }
 
@@ -209,9 +236,9 @@ public sealed class AuthTests
 
         var result = await cli.Run(["plan"], sandbox.ProjectPath, sandbox);
 
-        Assert.Equal(0, result.ExitCode);
         if (Behavior.IsLegacy)
         {
+            Assert.Equal(0, result.ExitCode);
             Assert.Contains(
                 "Failed to fetch subscription: No response from auth service",
                 result.Stdout,
@@ -220,19 +247,12 @@ public sealed class AuthTests
         }
         else
         {
-            Assert.Contains($"Account: {ExistingEmail}", result.Stdout, StringComparison.Ordinal);
-            Assert.Contains("Subscription plan: free", result.Stdout, StringComparison.Ordinal);
+            Assert.True(result.Failed);
             Assert.Contains(
-                "Some tools may be unavailable on the free tier.",
-                result.Stdout,
+                "EffortlessAPI subscription lookup is not available yet",
+                result.Stderr,
                 StringComparison.Ordinal);
-            Assert.Contains(
-                "https://bases.effortlessapi.com/dashboard/contact",
-                result.Stdout,
-                StringComparison.Ordinal);
-            var request = Assert.Single(bridge.Requests);
-            Assert.Equal("viewPlan", request.Mode);
-            Assert.Equal(token, request.Parameters["jwt"]);
+            Assert.Empty(bridge.Requests);
         }
 
         bridge.ThrowIfFaulted();
