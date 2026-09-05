@@ -69,6 +69,35 @@ public sealed class InstallTests
         Assert.Single(server.Requests);
     }
 
+    [Fact(DisplayName = "inst-account-prefix: an acct/tool user-set override injects the account")]
+    public async Task AccountToolUserSetOverrideInjectsAccount()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = Sandbox.Create(cli);
+        sandbox.SeedEmptyHome();
+        ToolUrlTestSupport.WriteMinimalProject(sandbox);
+        ToolUrlTestSupport.WriteToolUrls(
+            sandbox,
+            new Dictionary<string, string>
+            {
+                ["acme/echo"] = server.ToolUri("echo").ToString(),
+            });
+        sandbox.WriteFile("in.txt", "hello");
+        server.Enqueue("echo", ToolBehavior.Files());
+
+        var result = await cli.Run(
+            ["install", "acme/echo", "-i", "in.txt"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("acme/echo [user-set]", result.Stdout, StringComparison.Ordinal);
+        var request = Assert.Single(server.Requests);
+        Assert.Equal("acme", request.CliAccount);
+        server.ThrowIfFaulted();
+    }
+
     [Fact(DisplayName = "inst-prefix-strip-aliases: every executable alias records the same command")]
     public async Task EveryAliasRecordsSameCommand()
     {
@@ -309,6 +338,31 @@ public sealed class InstallTests
             WorkflowTestSupport.RequiredString(step, "CommandLine"));
         Assert.Equal("-execute", WorkflowTestSupport.RequiredString(step, "Name"));
         Assert.True(File.Exists(Path.Combine(sandbox.ProjectPath, "errors.json")));
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact(DisplayName = "inst-execute-timeout: a slow local command is killed and reported as timed out")]
+    [Trait("Slow", "true")]
+    public async Task SlowLocalCommandIsKilledAndReportedAsTimedOut()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(cli, server);
+        sandbox.WriteFile(
+            "sleep.js",
+            "setTimeout(() => {}, parseInt(process.argv[2], 10));\n");
+
+        var result = await cli.Run(
+            ["-execute", "node sleep.js 5000", "-w", "500"],
+            sandbox.ProjectPath,
+            sandbox,
+            timeoutMs: 20_000);
+
+        Assert.True(result.Failed);
+        Assert.Contains(
+            "Timed out waiting for process to complete",
+            result.Combined,
+            StringComparison.Ordinal);
         Assert.Empty(server.Requests);
     }
 

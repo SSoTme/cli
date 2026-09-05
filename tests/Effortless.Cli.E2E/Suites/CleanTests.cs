@@ -140,6 +140,30 @@ public sealed class CleanTests
         Assert.Empty(WorkflowTestSupport.ZfsFiles(sandbox, "sub"));
     }
 
+    [Fact(DisplayName = "clean-deleted-cwd: clean survives its own cwd being pruned away")]
+    public async Task CleanSurvivesItsOwnCwdBeingPrunedAway()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Sub", "/sub", "echo"));
+        var sub = Directory.CreateDirectory(Path.Combine(sandbox.ProjectPath, "sub")).FullName;
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("sub.txt", "sub", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+
+        var result = await cli.Run(["clean"], sub, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sub, "sub.txt")));
+        Assert.False(Directory.Exists(sub));
+    }
+
     [Fact(DisplayName = "clean-all: cleanAll cleans root and nested projects")]
     [Trait("Slow", "true")]
     public async Task CleanAllCleansNestedProjects()
@@ -256,6 +280,70 @@ public sealed class CleanTests
         Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "remote.txt")));
         Assert.False(File.Exists(ledger));
         Assert.Single(server.Requests);
+    }
+
+    [Fact(DisplayName = "clean-zfs-fallback-single: clean falls back to the only ledger present")]
+    public async Task CleanFallsBackToTheOnlyLedgerPresent()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Original", "", "to-uppercase"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("out.txt", "value", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+        var ledger = Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+        var renamed = Path.Combine(Path.GetDirectoryName(ledger)!, "unexpected-name.zfs");
+        File.Move(ledger, renamed);
+
+        var result = await cli.Run(["clean", "-debug"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("DEBUG: Expected ZFS", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains(
+            $"not found, using '",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "unexpected-name.zfs",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "out.txt")));
+        Assert.False(File.Exists(renamed));
+    }
+
+    [Fact(DisplayName = "clean-zfs-input: -clean -i cleans a ledger file passed directly")]
+    public async Task CleanWithInputLedgerCleansThatLedgerDirectly()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Original", "", "to-uppercase"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("out.txt", "value", alwaysOverwrite: true)));
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, build.ExitCode);
+        var ledger = Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox));
+        File.Copy(ledger, Path.Combine(sandbox.ProjectPath, "copy.zfs"));
+
+        var result = await cli.Run(
+            ["-clean", "-i", "copy.zfs"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "out.txt")));
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "copy.zfs")));
+        Assert.True(File.Exists(ledger));
     }
 
     [Fact(DisplayName = "clean-tool-flag: direct tool -clean cleans instead of writing")]

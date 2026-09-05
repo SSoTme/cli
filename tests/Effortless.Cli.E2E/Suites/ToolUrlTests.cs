@@ -212,4 +212,27 @@ public sealed class ToolUrlTests
             ResolutionTestSupport.BootstrapBridgeUrl,
             urls["cli-cloud-bridge"]?.GetValue<string>());
     }
+
+    [Fact(DisplayName = "urls-bareword-rt-quirk: bareword rt removes a URL instead of refreshing")]
+    public async Task BarewordRtRemovesUrlInsteadOfRefreshing()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+        ToolUrlTestSupport.WriteToolUrls(
+            sandbox,
+            new Dictionary<string, string> { ["a"] = "http://x" });
+
+        var result = await cli.Run(["rt", "a"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(
+            "Tool 'a' URL has been removed from your user configuration.",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            "CLOUD-BRIDGE CALL TRIGGERED",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Null(ToolUrlTestSupport.ReadToolUrls(sandbox)["a"]);
+    }
 }

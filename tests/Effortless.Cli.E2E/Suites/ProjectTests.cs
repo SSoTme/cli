@@ -117,6 +117,24 @@ public sealed class ProjectTests
         Assert.Equal("New", SettingValue(project, "project-name"));
     }
 
+    [Fact(DisplayName = "proj-init-implies-build: init on a prepared project runs its registered step")]
+    public async Task InitOnAPreparedProjectRunsItsRegisteredStep()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Step", "", "to-uppercase"));
+        server.Enqueue("to-uppercase", ToolBehavior.Files());
+
+        var result = await cli.Run(["-init"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Single(server.Requests);
+        server.ThrowIfFaulted();
+    }
+
     [Fact(DisplayName = "proj-init-force-subproject: native argv force creates a nested project")]
     public async Task InitForceCreatesNestedProjectWithoutChangingParent()
     {
@@ -180,6 +198,22 @@ public sealed class ProjectTests
         Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "ssotme.env")));
         Assert.Equal(projectJson, sandbox.ReadFile("effortless.json"));
         Assert.Equal(environment, sandbox.ReadFile("effortless.env"));
+    }
+
+    [Fact(DisplayName = "proj-invalid-candidate: an existing effortless.json blocks the ssotme.json rename")]
+    public async Task ExistingEffortlessJsonBlocksSsotmeJsonRename()
+    {
+        using var sandbox = Sandbox.Create(_cli);
+        var projectJson = MinimalProjectJson("Valid Ssotme Project");
+        sandbox.WriteFile("effortless.json", "{}");
+        sandbox.WriteFile("ssotme.json", projectJson);
+
+        var result = await _cli.Run(["-describe"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(File.Exists(Path.Combine(sandbox.ProjectPath, "ssotme.json")));
+        Assert.Equal("{}", sandbox.ReadFile("effortless.json"));
+        Assert.Contains("======  Valid Ssotme Project", result.Stdout);
     }
 
     [Fact(DisplayName = "proj-legacy-names: aicapture.json and SSoTmeProject.json still load")]

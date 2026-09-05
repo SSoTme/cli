@@ -1,3 +1,4 @@
+#nullable enable
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Effortless.Cli;
@@ -19,18 +20,17 @@ public class TranspilerStepFailedException : Exception
     }
 }
 
-public static class BuildErrorLog
+public sealed class BuildErrorLog
 {
     public const string ErrorsFileName = "errors.json";
     public const string SchemaId = "effortless-build-errors/v1";
 
-    // TODO(step-07): instance
-    private static bool _active;
-    private static string _projectRoot;
-    private static bool _continueOnError;
-    private static string _buildCommand;
-    private static DateTime _startedAtUtc;
-    private static readonly List<StepRecord> _steps =
+    private bool _active;
+    private string? _projectRoot;
+    private bool _continueOnError;
+    private string? _buildCommand;
+    private DateTime _startedAtUtc;
+    private readonly List<StepRecord> _steps =
         new List<StepRecord>();
 
     private static readonly JsonSerializerSettings CamelCase =
@@ -42,22 +42,22 @@ public static class BuildErrorLog
             NullValueHandling = NullValueHandling.Ignore,
         };
 
-    public static bool IsActive
+    public bool IsActive
     {
         get { return _active; }
     }
 
-    public static bool HasFailures
+    public bool HasFailures
     {
         get { return _steps.Any(s => s.Status == "failed"); }
     }
 
-    public static int FailureCount
+    public int FailureCount
     {
         get { return _steps.Count(s => s.Status == "failed"); }
     }
 
-    public static void Begin(
+    public void Begin(
         string projectRoot,
         bool continueOnError,
         string buildCommand)
@@ -70,7 +70,7 @@ public static class BuildErrorLog
         _steps.Clear();
     }
 
-    public static void RecordSuccess(ProjectTranspiler projectTranspiler)
+    public void RecordSuccess(ProjectTranspiler projectTranspiler)
     {
         if (!_active || ReferenceEquals(projectTranspiler, null))
         {
@@ -87,7 +87,7 @@ public static class BuildErrorLog
         });
     }
 
-    public static void RecordSkipped(
+    public void RecordSkipped(
         ProjectTranspiler projectTranspiler,
         string reason)
     {
@@ -107,13 +107,13 @@ public static class BuildErrorLog
         });
     }
 
-    public static void RecordFailure(
-        ProjectTranspiler projectTranspiler,
+    public void RecordFailure(
+        ProjectTranspiler? projectTranspiler,
         int exitCode,
-        Exception transpilerException,
-        Exception thrownException,
-        string resolvedVersion,
-        string resolvedUrl)
+        Exception? transpilerException,
+        Exception? thrownException,
+        string? resolvedVersion,
+        string? resolvedUrl)
     {
         if (!_active)
         {
@@ -144,7 +144,7 @@ public static class BuildErrorLog
         });
     }
 
-    public static string Finish()
+    public string? Finish()
     {
         if (!_active)
         {
@@ -234,9 +234,9 @@ public static class BuildErrorLog
         }
     }
 
-    private static void PrintSummary(
+    private void PrintSummary(
         List<StepRecord> failures,
-        string errorsPath)
+        string? errorsPath)
     {
         var succeeded =
             _steps.Count(s => s.Status == "succeeded");
@@ -283,7 +283,7 @@ public static class BuildErrorLog
         Console.WriteLine();
     }
 
-    private static string FirstNonBlank(params string[] candidates)
+    private static string? FirstNonBlank(params string?[] candidates)
     {
         foreach (var candidate in candidates)
         {
@@ -296,7 +296,7 @@ public static class BuildErrorLog
         return null;
     }
 
-    private static ExceptionRecord Describe(Exception exception)
+    private static ExceptionRecord? Describe(Exception? exception)
     {
         if (ReferenceEquals(exception, null))
         {
@@ -316,24 +316,24 @@ public static class BuildErrorLog
 
     public class StepRecord
     {
-        public string Name { get; set; }
-        public string RelativePath { get; set; }
-        public string CommandLine { get; set; }
-        public string Status { get; set; }
+        public string? Name { get; set; }
+        public string? RelativePath { get; set; }
+        public string? CommandLine { get; set; }
+        public string? Status { get; set; }
         public int? ExitCode { get; set; }
-        public string Message { get; set; }
-        public string ResolvedVersion { get; set; }
-        public string ResolvedUrl { get; set; }
-        public string FinishedAt { get; set; }
-        public ExceptionRecord TranspilerException { get; set; }
-        public ExceptionRecord CliException { get; set; }
+        public string? Message { get; set; }
+        public string? ResolvedVersion { get; set; }
+        public string? ResolvedUrl { get; set; }
+        public string? FinishedAt { get; set; }
+        public ExceptionRecord? TranspilerException { get; set; }
+        public ExceptionRecord? CliException { get; set; }
     }
 
     public class ExceptionRecord
     {
-        public string Type { get; set; }
-        public string Message { get; set; }
-        public string StackTrace { get; set; }
-        public ExceptionRecord Inner { get; set; }
+        public string? Type { get; set; }
+        public string? Message { get; set; }
+        public string? StackTrace { get; set; }
+        public ExceptionRecord? Inner { get; set; }
     }
 }

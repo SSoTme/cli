@@ -330,6 +330,27 @@ public sealed class AuthTests
         AssertSecretFileMode(namedPath);
     }
 
+    [Fact(DisplayName = "auth-key-permissions: the config dir and key file are locked down")]
+    public async Task ConfigDirAndKeyFileAreLockedDown()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var result = await cli.Run(["-api", "acme/k"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        var configDir = Path.Combine(sandbox.HomePath, ".ssotme");
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+            File.GetUnixFileMode(configDir));
+        AssertSecretFileMode(HomeConfigPath(sandbox, "ssotme.key"));
+    }
+
     private static AuthTestBridge CreateBridge()
     {
         var bridge = new AuthTestBridge();

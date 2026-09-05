@@ -1,3 +1,4 @@
+#nullable enable
 using Effortless.Cli.FileSets;
 using Effortless.Cli.Project;
 
@@ -15,35 +16,38 @@ public class CliInvocation
         UsageHeader = string.Empty;
         UsageOptions = string.Empty;
         CurrentDirectory = GetCurrentDirectory();
+        BuildErrorLog = new BuildErrorLog();
     }
 
     public CliOptions Options { get; set; }
 
+    public BuildErrorLog BuildErrorLog { get; set; }
+
     public List<string> RemainingArguments { get; set; }
 
-    public string RawTranspilerArg { get; set; }
+    public string? RawTranspilerArg { get; set; }
 
-    public string TargetUrl { get; set; }
+    public string? TargetUrl { get; set; }
 
     public string Transpiler { get; set; }
 
     public string Account { get; set; }
 
-    public string ResolvedVersionKey { get; set; }
+    public string? ResolvedVersionKey { get; set; }
 
-    public string ResolvedVersionUrl { get; set; }
+    public string? ResolvedVersionUrl { get; set; }
 
-    public string ResolvedVersionLabel { get; set; }
+    public string? ResolvedVersionLabel { get; set; }
 
-    public string ResolvedToolName { get; set; }
+    public string? ResolvedToolName { get; set; }
 
-    public EffortlessProject Project { get; set; }
+    public EffortlessProject? Project { get; set; }
 
-    public FileSet InputFileSet { get; set; }
+    public FileSet? InputFileSet { get; set; }
 
-    public string InputFileSetXml { get; set; }
+    public string? InputFileSetXml { get; set; }
 
-    public string Jwt { get; set; }
+    public string? Jwt { get; set; }
 
     public bool SuppressTranspile { get; set; }
 
@@ -57,7 +61,7 @@ public class CliInvocation
 
     public bool SuppressTranspilerErrorOutput { get; set; }
 
-    public string CurrentDirectory { get; set; }
+    public string? CurrentDirectory { get; set; }
 
     public bool ContinueOnError { get; set; }
 
@@ -75,7 +79,7 @@ public class CliInvocation
 
     public string UsageOptions { get; set; }
 
-    private static string GetCurrentDirectory()
+    private static string? GetCurrentDirectory()
     {
         try
         {

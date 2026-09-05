@@ -1,3 +1,4 @@
+#nullable enable
 using Effortless.Cli.Options;
 using Effortless.Cli.Project;
 
@@ -5,13 +6,13 @@ namespace Effortless.Cli.Commands;
 
 public sealed class BuildCommand
 {
-    private readonly Func<string, EffortlessProject, bool, int>
+    private readonly Func<string, EffortlessProject, bool, BuildErrorLog, int>
         _runCommandLine;
     private readonly TriggerBuildWatcher _triggerWatcher;
 
     public BuildCommand(
-        Func<string, EffortlessProject, bool, int> runCommandLine,
-        TriggerBuildWatcher triggerWatcher = null)
+        Func<string, EffortlessProject, bool, BuildErrorLog, int> runCommandLine,
+        TriggerBuildWatcher? triggerWatcher = null)
     {
         _runCommandLine = runCommandLine;
         _triggerWatcher =
@@ -48,19 +49,22 @@ public sealed class BuildCommand
         CliInvocation invocation,
         bool all)
     {
-        var project = invocation.Project;
+        var project = invocation.Project!;
         var command = all
             ? "buildAll"
             : invocation.Options.buildLocal
                 ? "build -buildLocal"
                 : "build";
-        BuildErrorLog.Begin(
+        invocation.BuildErrorLog.Begin(
             project.RootPath,
             invocation.Options.continueOnError,
             command);
         try
         {
-            var runner = new BuildRunner(project, _runCommandLine);
+            var runner = new BuildRunner(
+                project,
+                _runCommandLine,
+                invocation.BuildErrorLog);
             if (all)
             {
                 runner.RebuildAll(
@@ -74,7 +78,7 @@ public sealed class BuildCommand
             else
             {
                 runner.Rebuild(
-                    invocation.CurrentDirectory,
+                    invocation.CurrentDirectory!,
                     invocation.Options.includeDisabled,
                     invocation.Options.transpilerGroup,
                     invocation.Options.buildLocal,
@@ -87,7 +91,7 @@ public sealed class BuildCommand
         }
         finally
         {
-            BuildErrorLog.Finish();
+            invocation.BuildErrorLog.Finish();
         }
     }
 }

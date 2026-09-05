@@ -53,8 +53,8 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | 04 | Cut the legacy tree and finish the repo shape | opus | **done** | [step-04-repo-cutover.md](step-04-repo-cutover.md) |
 | 05 | Rulebook-driven generation | opus | **done** | [step-05-rulebook-generation.md](step-05-rulebook-generation.md) |
 | 06 | DevOps: CI matrix, installers, release flow | opus | code landed; live-CI verification deferred to 13 (no push before then) | [step-06-devops.md](step-06-devops.md) |
-| 07 | Resolve open decisions and harden | opus | **in progress** (decisions done; hardening + 22 P2 tests left) | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
-| 09 | Option taxonomy, verb families, and the v2 option decisions (D12–D27) | opus | **ready** (after 07) — next | [step-09-option-taxonomy.md](step-09-option-taxonomy.md) |
+| 07 | Resolve open decisions and harden | opus | **done** | [step-07-decisions-and-hardening.md](step-07-decisions-and-hardening.md) |
+| 09 | Option taxonomy, verb families, and the v2 option decisions (D12–D27) | opus | **ready** — next | [step-09-option-taxonomy.md](step-09-option-taxonomy.md) |
 | 10 | `.ssotme` → `.effortless` with in-field migration (option A); rebrand installers | opus | ready (after 07) | [step-10-effortless-home-migration.md](step-10-effortless-home-migration.md) |
 | 11 | Catalog freshness v2 (refresh on timeout) + searchable catalog | opus | ready (after 07) | [step-11-catalog-freshness-and-search.md](step-11-catalog-freshness-and-search.md) |
 | 12 | Local transpiler host: native .NET + node/express fileset handler | opus | ready (after 11) | [step-12-local-transpiler-host.md](step-12-local-transpiler-host.md) |

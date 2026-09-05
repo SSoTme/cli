@@ -1,15 +1,14 @@
+#nullable enable
 namespace Effortless.Cli;
 
 public static class CliLog
 {
-    // TODO(step-07): instance
-    [ThreadStatic]
-    private static bool _suppressFileLog;
+    private static readonly AsyncLocal<bool> _suppressFileLog = new();
 
     public static bool SuppressFileLog
     {
-        get => _suppressFileLog;
-        set => _suppressFileLog = value;
+        get => _suppressFileLog.Value;
+        set => _suppressFileLog.Value = value;
     }
 
     public static void Writing(string path)
@@ -67,7 +66,7 @@ public static class CliLog
         ConsoleColor actionColor,
         string commandLine,
         string relativePath,
-        string transpilerGroup)
+        string? transpilerGroup)
     {
         Console.ForegroundColor = CliLogIdColor;
         Console.Write("[cli] ");

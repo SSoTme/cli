@@ -588,6 +588,36 @@ public sealed class TranspileBehaviorTests
         server.ThrowIfFaulted();
     }
 
+    [Fact(DisplayName = "tx-retry-400-ssl: a 400 response with an SSL body is retried before success")]
+    [Trait("Slow", "true")]
+    public async Task BadRequestWithSslBodyIsRetriedBeforeSuccess()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = CreateSandbox(cli, server);
+        sandbox.WriteFile("in.txt", "input");
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Status(400, """{"error":"SSL connection could not be established"}"""),
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("ready.txt", "ready", alwaysOverwrite: true)));
+
+        var result = await cli.Run(
+            ["echo", "-i", "in.txt"],
+            sandbox.ProjectPath,
+            sandbox,
+            timeoutMs: 30_000);
+
+        AssertSuccess(result);
+        Assert.Contains(
+            "[cli] [echo] Remote transpiler SSL error. Retrying in 6 seconds... (attempt 1/10)",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Equal("ready", sandbox.ReadFile("ready.txt"));
+        Assert.Equal(2, server.Requests.Count);
+        server.ThrowIfFaulted();
+    }
+
     [Fact(DisplayName = "tx-retry-host-not-found: unknown hosts log a retry then hit the requested wait bound")]
     [Trait("Slow", "true")]
     public async Task UnknownHostRetriesThenTimesOut()
@@ -610,6 +640,35 @@ public sealed class TranspileBehaviorTests
         Assert.True(result.Failed);
         Assert.Contains(
             "Host not found: nonexistent.invalid. Retrying in 6 seconds...",
+            result.Combined,
+            StringComparison.Ordinal);
+        Assert.Contains("Timed out waiting for cook", result.Combined, StringComparison.Ordinal);
+        Assert.Empty(server.Requests);
+        server.ThrowIfFaulted();
+    }
+
+    [Fact(DisplayName = "tx-exception-ssl-hint: an SSL handshake exception is retried with an SSL-specific message")]
+    [Trait("Slow", "true")]
+    public async Task SslHandshakeExceptionIsRetriedWithSslSpecificMessage()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = CreateSandbox(cli, server);
+        sandbox.WriteFile("in.txt", "input");
+        WriteToolUrls(
+            sandbox,
+            server,
+            new KeyValuePair<string, string>("insecure", $"https://127.0.0.1:{server.Port}/"));
+
+        var result = await cli.Run(
+            ["insecure", "-i", "in.txt", "-w", "8000"],
+            sandbox.ProjectPath,
+            sandbox,
+            timeoutMs: 20_000);
+
+        Assert.True(result.Failed);
+        Assert.Contains(
+            "SSL connection error. Retrying in 6 seconds... (attempt 1/10)",
             result.Combined,
             StringComparison.Ordinal);
         Assert.Contains("Timed out waiting for cook", result.Combined, StringComparison.Ordinal);
@@ -680,6 +739,33 @@ public sealed class TranspileBehaviorTests
         server.ThrowIfFaulted();
     }
 
+    [Fact(DisplayName = "tx-boot-spinner: a slow cold-start shows the boot-up spinner then succeeds")]
+    [Trait("Slow", "true")]
+    public async Task SlowColdStartShowsBootSpinnerThenSucceeds()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = CreateSandbox(cli, server);
+        sandbox.WriteFile("in.txt", "input");
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Delay(17_000, SuccessFiles()));
+
+        var result = await cli.Run(
+            ["echo", "-i", "in.txt", "-w", "60000"],
+            sandbox.ProjectPath,
+            sandbox,
+            timeoutMs: 40_000);
+
+        AssertSuccess(result);
+        Assert.Contains(
+            "Waiting for the remote transpiler '",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains("to boot up", result.Stdout, StringComparison.Ordinal);
+        server.ThrowIfFaulted();
+    }
+
     [Fact(DisplayName = "tx-async-completed: pending async responses are polled until files are returned")]
     [Trait("Slow", "true")]
     public async Task PendingAsyncResponseIsPolledUntilCompleted()
@@ -743,6 +829,60 @@ public sealed class TranspileBehaviorTests
         Assert.Contains("ERROR: async exploded", result.Combined, StringComparison.Ordinal);
         Assert.Contains("async failure stack", result.Combined, StringComparison.Ordinal);
         Assert.Single(server.Requests);
+        server.ThrowIfFaulted();
+    }
+
+    [Fact(DisplayName = "tx-async-404: a 404 poll response reports the task as no longer found")]
+    [Trait("Slow", "true")]
+    public async Task AsyncPollNotFoundReportsTaskGone()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = CreateSandbox(cli, server);
+        sandbox.WriteFile("in.txt", "input");
+        server.Enqueue("echo", ToolBehavior.AsyncNotFound());
+
+        var result = await cli.Run(
+            ["echo", "-i", "in.txt"],
+            sandbox.ProjectPath,
+            sandbox,
+            timeoutMs: 15_000);
+
+        Assert.True(result.Failed);
+        Assert.Contains(
+            "ERROR: Async task not found on transpiler (container may have restarted). Please retry.",
+            result.Combined,
+            StringComparison.Ordinal);
+        Assert.Single(server.Requests);
+        server.ThrowIfFaulted();
+    }
+
+    [Fact(DisplayName = "tx-async-timeout: an always-pending poll times out at the requested wait bound")]
+    [Trait("Slow", "true")]
+    public async Task AsyncPollAlwaysPendingTimesOutAtWaitBound()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = CreateSandbox(cli, server);
+        sandbox.WriteFile("in.txt", "input");
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Async(
+                pendingPolls: int.MaxValue,
+                ToolBehavior.Files(
+                    FileSetEntry.TextFile("async.txt", "complete", alwaysOverwrite: true))));
+
+        var result = await cli.Run(
+            ["echo", "-i", "in.txt", "-w", "7000"],
+            sandbox.ProjectPath,
+            sandbox,
+            timeoutMs: 15_000);
+
+        Assert.True(result.Failed);
+        Assert.Contains(
+            "ERROR: Timed out waiting for async transpiler task to complete",
+            result.Combined,
+            StringComparison.Ordinal);
         server.ThrowIfFaulted();
     }
 

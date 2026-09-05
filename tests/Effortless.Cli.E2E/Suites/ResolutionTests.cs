@@ -544,6 +544,57 @@ public sealed class ResolutionTests
         Assert.NotNull(request.TranspilerName);
     }
 
+    [Fact(DisplayName = "res-bridge-list-transpilers-removed: refresh drops the legacy list-transpilers mapping")]
+    public async Task RefreshRemovesLegacyListTranspilersMapping()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        bridge.IndexJson = index.Json;
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index, bridge.BridgeUri);
+        var urls = ResolutionTestSupport.ReadHomeObject(sandbox, ".ssotme/tool_urls.json");
+        urls["list-transpilers"] = "http://example.invalid/legacy";
+        sandbox.WriteHomeFile(".ssotme/tool_urls.json", urls.ToJsonString());
+
+        var result = await cli.Run(["-refreshTools"], sandbox.ProjectPath, sandbox);
+
+        Assert.True(result.ExitCode == 0, result.Combined);
+        var afterUrls = ResolutionTestSupport.ReadHomeObject(sandbox, ".ssotme/tool_urls.json");
+        Assert.Null(afterUrls["list-transpilers"]);
+    }
+
+    [Fact(DisplayName = "res-update-available-file: bridge cliUpdateAvailable is written and cleared")]
+    public async Task BridgeUpdateAvailableIsWrittenThenCleared()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        bridge.IndexJson = WithUpdateAvailable(index.Json, "2026.09.01.0001");
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index, bridge.BridgeUri);
+
+        var withUpdate = await cli.Run(["-refreshTools"], sandbox.ProjectPath, sandbox);
+
+        Assert.True(withUpdate.ExitCode == 0, withUpdate.Combined);
+        var updatePath = Path.Combine(sandbox.HomePath, ".ssotme", "update_available.json");
+        Assert.True(File.Exists(updatePath));
+        var written = JsonNode.Parse(File.ReadAllText(updatePath))!.AsObject();
+        Assert.Equal("2026.09.01.0001", written["name"]?.GetValue<string>());
+
+        bridge.IndexJson = index.Json;
+        sandbox.WriteHomeFile(".ssotme/remote_tools/ssotme-tools.json", """{"transpilerVersions":{}}""");
+        ResolutionTestSupport.SeedProject(sandbox);
+        toolServer.Enqueue("to-uppercase", ToolBehavior.Echo());
+
+        var withoutUpdate = await cli.Run(["to-uppercase", "-i", "in.txt"], sandbox.ProjectPath, sandbox);
+
+        Assert.True(withoutUpdate.ExitCode == 0, withoutUpdate.Combined);
+        Assert.False(File.Exists(updatePath));
+    }
+
     [Fact(DisplayName = "res-list-versions: listVersions output")]
     public async Task ListVersionsAliasesShowSortedVersionsAndOverride()
     {
@@ -674,6 +725,48 @@ public sealed class ResolutionTests
             Assert.Empty(toolServer.Requests);
             Assert.Single(bridge.Requests);
         }
+    }
+
+    [Fact(DisplayName = "res-upgrade-cwd-disambiguation: upgrade from a subdirectory unpins only that step")]
+    public async Task UpgradeFromSubdirectoryUnpinsOnlyThatStep()
+    {
+        var cli = new CliUnderTest();
+        await using var toolServer = new MockToolServer();
+        await using var bridge = new ResolutionBridgeServer();
+        var index = IndexFixture.Load(toolServer);
+        bridge.IndexJson = index.Json;
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index, bridge.BridgeUri);
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "Root",
+                "",
+                "to-uppercase -i in.txt",
+                ResolutionTestSupport.OldVersion),
+            new ResolutionProjectStep(
+                "Sub",
+                "/sub",
+                "to-uppercase -i in.txt",
+                ResolutionTestSupport.OldVersion));
+        var sub = Directory.CreateDirectory(Path.Combine(sandbox.ProjectPath, "sub")).FullName;
+
+        var result = await cli.Run(["upgrade", "to-uppercase"], sub, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(
+            $"Upgraded to-uppercase: {ResolutionTestSupport.OldVersion} → HEAD ({ResolutionTestSupport.HeadVersion}, unpinned — will track latest)",
+            result.Stdout,
+            StringComparison.Ordinal);
+        var project = ResolutionTestSupport.ReadProject(sandbox);
+        var steps = project["ProjectTranspilers"]!.AsArray();
+        var rootStep = steps.Select(node => node!.AsObject())
+            .Single(step => step["RelativePath"]?.GetValue<string>() == "");
+        var subStep = steps.Select(node => node!.AsObject())
+            .Single(step => step["RelativePath"]?.GetValue<string>() == "/sub");
+        Assert.Equal(ResolutionTestSupport.OldVersion, rootStep["PinnedVersion"]?.GetValue<string>());
+        Assert.Null(subStep["PinnedVersion"]);
+        Assert.Equal(ResolutionTestSupport.HeadVersion, subStep["LastVersionUsed"]?.GetValue<string>());
     }
 
     [Fact(DisplayName = "res-upgrade-not-installed: upgrade of an uninstalled tool")]
@@ -1291,6 +1384,18 @@ public sealed class ResolutionTests
             ["version"] = $"v{versionIndex}",
             ["url"] = bridgeUri.ToString().TrimEnd('/'),
             ["versionIndex"] = versionIndex,
+        };
+        return root.ToJsonString();
+    }
+
+    private static string WithUpdateAvailable(string indexJson, string version)
+    {
+        var root = JsonNode.Parse(indexJson)?.AsObject()
+            ?? throw new InvalidDataException("Index fixture is not a JSON object.");
+        root["cliUpdateAvailable"] = new JsonObject
+        {
+            ["name"] = version,
+            ["installLinks"] = new JsonObject(),
         };
         return root.ToJsonString();
     }

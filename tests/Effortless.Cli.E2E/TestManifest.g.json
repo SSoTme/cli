@@ -19,7 +19,7 @@
     "id": "meta-help-width",
     "suite": "e2e-meta",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -155,7 +155,7 @@
     "id": "proj-init-implies-build",
     "suite": "e2e-project",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -187,7 +187,7 @@
     "id": "proj-invalid-candidate",
     "suite": "e2e-project",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -360,14 +360,6 @@
     "interactive": false
   },
   {
-    "id": "inst-dry-run-bareword-quirk",
-    "suite": "e2e-install",
-    "priority": "P2",
-    "status": "planned",
-    "slow": false,
-    "interactive": false
-  },
-  {
     "id": "inst-url",
     "suite": "e2e-install",
     "priority": "P1",
@@ -403,7 +395,7 @@
     "id": "inst-execute-timeout",
     "suite": "e2e-install",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": true,
     "interactive": false
   },
@@ -419,7 +411,7 @@
     "id": "inst-account-prefix",
     "suite": "e2e-install",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -715,7 +707,7 @@
     "id": "clean-zfs-fallback-single",
     "suite": "e2e-clean",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -723,7 +715,7 @@
     "id": "clean-zfs-input",
     "suite": "e2e-clean",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -739,7 +731,7 @@
     "id": "clean-deleted-cwd",
     "suite": "e2e-clean",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -899,8 +891,8 @@
     "id": "tx-exception-ssl-hint",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "planned",
-    "slow": false,
+    "status": "rebuild-green",
+    "slow": true,
     "interactive": false
   },
   {
@@ -939,7 +931,7 @@
     "id": "tx-retry-400-ssl",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": true,
     "interactive": false
   },
@@ -971,7 +963,7 @@
     "id": "tx-boot-spinner",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": true,
     "interactive": false
   },
@@ -995,7 +987,7 @@
     "id": "tx-async-404",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": true,
     "interactive": false
   },
@@ -1003,7 +995,7 @@
     "id": "tx-async-timeout",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": true,
     "interactive": false
   },
@@ -1195,7 +1187,7 @@
     "id": "res-bridge-list-transpilers-removed",
     "suite": "e2e-resolution",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1203,7 +1195,7 @@
     "id": "res-update-available-file",
     "suite": "e2e-resolution",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1347,7 +1339,7 @@
     "id": "res-upgrade-cwd-disambiguation",
     "suite": "e2e-resolution",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1419,7 +1411,7 @@
     "id": "urls-bareword-rt-quirk",
     "suite": "e2e-tool-urls",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1491,7 +1483,7 @@
     "id": "auth-key-permissions",
     "suite": "e2e-auth",
     "priority": "P2",
-    "status": "planned",
+    "status": "rebuild-green",
     "slow": false,
     "interactive": false
   },
@@ -1539,7 +1531,7 @@
     "id": "net-upgrade-cli-check",
     "suite": "e2e-network",
     "priority": "P2",
-    "status": "planned",
+    "status": "skipped-external",
     "slow": true,
     "interactive": false
   },
@@ -1547,7 +1539,7 @@
     "id": "net-live-bridge-list",
     "suite": "e2e-network",
     "priority": "P2",
-    "status": "planned",
+    "status": "skipped-external",
     "slow": true,
     "interactive": false
   },
@@ -1555,7 +1547,7 @@
     "id": "net-live-tool-run",
     "suite": "e2e-network",
     "priority": "P2",
-    "status": "planned",
+    "status": "skipped-external",
     "slow": true,
     "interactive": false
   }

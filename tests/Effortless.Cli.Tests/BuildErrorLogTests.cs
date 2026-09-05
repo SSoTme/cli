@@ -13,9 +13,10 @@ public sealed class BuildErrorLogTests
         var failed = Step("Failed");
         var skipped = Step("Skipped");
 
-        BuildErrorLog.Begin(directory.Path, continueOnError: true, buildCommand: "build");
-        BuildErrorLog.RecordSuccess(succeeded);
-        BuildErrorLog.RecordFailure(
+        var log = new BuildErrorLog();
+        log.Begin(directory.Path, continueOnError: true, buildCommand: "build");
+        log.RecordSuccess(succeeded);
+        log.RecordFailure(
             failed,
             exitCode: 7,
             transpilerException: new InvalidOperationException(
@@ -24,9 +25,9 @@ public sealed class BuildErrorLogTests
             thrownException: null,
             resolvedVersion: "v2026.08.30.1725",
             resolvedUrl: "https://example.test/tool/");
-        BuildErrorLog.RecordSkipped(skipped, "disabled");
+        log.RecordSkipped(skipped, "disabled");
 
-        var reportPath = BuildErrorLog.Finish();
+        var reportPath = log.Finish();
 
         Assert.Equal(directory.File(BuildErrorLog.ErrorsFileName), reportPath);
         var report = JObject.Parse(File.ReadAllText(reportPath!));
@@ -51,9 +52,9 @@ public sealed class BuildErrorLogTests
             report.Properties(),
             property => Assert.True(char.IsLower(property.Name[0]), property.Name));
 
-        BuildErrorLog.Begin(directory.Path, continueOnError: false, buildCommand: "build");
-        BuildErrorLog.RecordSuccess(succeeded);
-        Assert.Null(BuildErrorLog.Finish());
+        log.Begin(directory.Path, continueOnError: false, buildCommand: "build");
+        log.RecordSuccess(succeeded);
+        Assert.Null(log.Finish());
         Assert.False(File.Exists(reportPath));
     }
 

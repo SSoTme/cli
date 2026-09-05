@@ -49,6 +49,23 @@ public sealed class MetaTests
         }
     }
 
+    [Fact(DisplayName = "meta-help-width: help output fits an 80-column terminal")]
+    public async Task HelpOutputFitsAnEightyColumnTerminal()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var result = await cli.Run(["-help"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        var lines = result.Stdout.Split('\n');
+        Assert.All(
+            lines,
+            line => Assert.True(
+                line.TrimEnd('\r').Length <= 80,
+                $"line exceeds 80 chars ({line.TrimEnd('\r').Length}): {line}"));
+    }
+
     [Fact(DisplayName = "meta-unknown-option: unknown option reports parser errors")]
     public async Task UnknownOptionReportsParserError()
     {

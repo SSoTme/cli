@@ -62,12 +62,14 @@ public sealed class CommandDispatcher
     public int RunCommandLine(
         string commandLine,
         EffortlessProject project,
-        bool continueOnError)
+        bool continueOnError,
+        BuildErrorLog buildErrorLog)
     {
         var invocation = ParseBuildInvocation(
             commandLine,
             project,
             continueOnError);
+        invocation.BuildErrorLog = buildErrorLog;
         var comparable = commandLine.EndsWith(
             " -debug",
             StringComparison.Ordinal)
@@ -266,7 +268,8 @@ public sealed class CommandDispatcher
             {
                 new BuildRunner(
                         invocation.Project,
-                        RunCommandLine)
+                        RunCommandLine,
+                        invocation.BuildErrorLog)
                     .Rebuild(
                         invocation.CurrentDirectory,
                         invocation.Options.includeDisabled,
@@ -619,7 +622,7 @@ public sealed class CommandDispatcher
 
             if (activeStep is not null)
             {
-                BuildErrorLog.RecordFailure(
+                invocation.BuildErrorLog.RecordFailure(
                     activeStep,
                     -1,
                     exception,

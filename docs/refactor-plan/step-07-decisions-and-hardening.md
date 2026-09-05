@@ -26,14 +26,32 @@ replacement, and `buildOnTrigger` remain retained.
 
 ## Hardening
 
-- Replace the static mutable state left in Step 2 (`BuildErrorLog`, `_hasRunRemoteToolsUpdate`,
-  `_cloudBridgeRecoveryAttempted`, `CliLog.SuppressFileLog`) with per-invocation instances passed through
-  `CliInvocation`; keep behavior identical (the E2E suite proves it).
-- Enable `<Nullable>enable</Nullable>` file by file in Core; no logic changes.
-- Implement the remaining `unit-core` P1 rows and any P2 e2e rows still `planned` (or mark them `Skip`
-  with a reason in the manifest).
+- **Done.** `BuildErrorLog` is now `sealed class BuildErrorLog` (instance, not static), held as
+  `CliInvocation.BuildErrorLog` and threaded explicitly through `BuildRunner`'s constructor and the
+  `RunCommandLine` delegate (`Func<string, EffortlessProject, bool, BuildErrorLog, int>`) so the
+  per-step dispatcher call (`CommandDispatcher.Transpile`) records failures onto the *same* log the
+  outer `BuildCommand` began and finishes — the legacy static field was implicitly process-wide shared
+  state, so a naive per-invocation instance broke `-continueOnError`'s summary until this was threaded
+  through explicitly. `CliLog.SuppressFileLog` became an `AsyncLocal<bool>`-backed property with zero
+  call-site changes (its `[ThreadStatic]` field was already scoped per-thread; this makes it correctly
+  scoped per async flow instead).
+- **Moot.** `_hasRunRemoteToolsUpdate` and `_cloudBridgeRecoveryAttempted` do not exist anywhere in the
+  ported code — Step 2 never created them (the closest real "has run X" latch,
+  `CommandDispatcher._projectCatalogChecked`, was already a correctly-scoped instance field). Nothing to
+  convert.
+- **Partial.** `<Nullable>enable</Nullable>` on the whole `Effortless.Cli.Core.csproj` produces 766
+  warnings across 48 of 59 files — not a "no logic changes" flip. Enabled via file-scoped `#nullable
+  enable` pragma on the 5 files touched by this pass (`BuildErrorLog.cs`, `CliLog.cs`, `BuildRunner.cs`,
+  `BuildCommand.cs`, `CliInvocation.cs`); the remaining ~54 files and ~700 warnings are follow-up work,
+  one file (or small batch) at a time, same mechanism.
+- **Done.** The 22 P2 test cases: `inst-dry-run-bareword-quirk` was deleted (conflicts with step-09 D27,
+  which removes `-dryRun` entirely — implementing it would be throwaway). 3 live-network cases
+  (`net-live-bridge-list`, `net-live-tool-run`, `net-upgrade-cli-check`) are `[Fact(Skip = "...")]` stubs
+  in the new `tests/Effortless.Cli.E2E/Suites/NetworkTests.cs`, rulebook `Status: skipped-external`,
+  mirroring the existing `res-dead-bridge-recovery` precedent. The other 18 are implemented and green.
 - Delete `scripts/test-legacy.sh` **only** in Step 16.
 
 **Done when:** `jq '.Dispositions.data[] | select(.NeedsUserConfirmation)'` returns nothing (or rows no
 option/module/endpoint references), no `blocked-by-decision` statuses remain, CI green,
-`RefactorSteps.step-07.Status` → `done`.
+`RefactorSteps.step-07.Status` → `done`. **All satisfied as of 2026-09-04**, with the nullable rollout
+explicitly partial (5/59 files) — tracked as follow-up, not silently dropped.

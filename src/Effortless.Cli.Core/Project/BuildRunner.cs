@@ -1,3 +1,4 @@
+#nullable enable
 using Effortless.Cli;
 
 namespace Effortless.Cli.Project;
@@ -5,16 +6,19 @@ namespace Effortless.Cli.Project;
 public class BuildRunner
 {
     private readonly EffortlessProject _project;
-    private readonly Func<string, EffortlessProject, bool, int>
+    private readonly Func<string, EffortlessProject, bool, BuildErrorLog, int>
         _runCommandLine;
+    private readonly BuildErrorLog _buildErrorLog;
     private List<string> _projectFiles = new List<string>();
 
     public BuildRunner(
         EffortlessProject project,
-        Func<string, EffortlessProject, bool, int> runCommandLine)
+        Func<string, EffortlessProject, bool, BuildErrorLog, int> runCommandLine,
+        BuildErrorLog buildErrorLog)
     {
         _project = project;
         _runCommandLine = runCommandLine;
+        _buildErrorLog = buildErrorLog;
     }
 
     public void RebuildAll(
@@ -134,7 +138,7 @@ public class BuildRunner
                             throw;
                         }
 
-                        BuildErrorLog.RecordFailure(
+                        _buildErrorLog.RecordFailure(
                             projectTranspiler,
                             -1,
                             null,
@@ -151,7 +155,7 @@ public class BuildRunner
                 }
                 else
                 {
-                    BuildErrorLog.RecordSkipped(
+                    _buildErrorLog.RecordSkipped(
                         projectTranspiler,
                         "IsDisabled is true in effortless.json");
                     Console.WriteLine(
@@ -216,10 +220,11 @@ public class BuildRunner
             var cliResult = _runCommandLine(
                 commandLineToRun,
                 _project,
-                continueOnError);
+                continueOnError,
+                _buildErrorLog);
             if (cliResult != 0)
             {
-                BuildErrorLog.RecordFailure(
+                _buildErrorLog.RecordFailure(
                     projectTranspiler,
                     cliResult,
                     null,
@@ -233,7 +238,7 @@ public class BuildRunner
                     $"Transpiler '{projectTranspiler.Name}' failed: {errorMessage}");
             }
 
-            BuildErrorLog.RecordSuccess(projectTranspiler);
+            _buildErrorLog.RecordSuccess(projectTranspiler);
         }
         finally
         {
@@ -306,7 +311,7 @@ public class BuildRunner
 
     private static void RebuildProjectFile(string projectFile)
     {
-        string directory = Path.GetDirectoryName(projectFile);
+        string directory = Path.GetDirectoryName(projectFile)!;
         var directoryInfo = new DirectoryInfo(directory);
         directoryInfo.InvokeSSoTmeBuild();
     }
