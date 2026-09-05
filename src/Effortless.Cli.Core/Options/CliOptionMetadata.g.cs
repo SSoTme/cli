@@ -542,7 +542,7 @@ public static class CliOptionMetadata
                     "auth,authenticate",
                     "auth,login,authenticate",
                     "Log in with an email magic link",
-                    "Authenticates with EffortlessAPI using an emailed magic link. Currently a non-networking stub: it prints an explicit unavailable message and exits nonzero without writing token files or calling the bridge, until the step-13 auth workload is live.",
+                    "Prompts for an email address and signs in against the published effortless-auth tool, which is resolved through the normal catalog (a tool_urls.json override wins, so a local build can be used with -setToolUrl effortless-auth=http://localhost:30080). Stores the returned token in ~/.effortless. The service is a preview: every sign-in succeeds and nothing is enforced yet, and the output says so. Tools and buildOnTrigger never require login.",
                     "effortless login"),
                 new(
                     "projectLogin",
@@ -555,7 +555,7 @@ public static class CliOptionMetadata
                     "projectAuth",
                     "projectlogin,projectauth",
                     "Authenticate this project with EffortlessAPI",
-                    "Authenticates this specific project (as opposed to the global user login) with EffortlessAPI. Currently a non-networking stub that never modifies the project; future behavior may write EFFORTLESS_JWT to effortless.env once the service is enabled.",
+                    "Signs the current effortless.json project in against the effortless-auth tool (POST /project-login with the project id) and writes the returned token as EFFORTLESS_JWT in the project's effortless.env, keeping every other line. Preview: always succeeds, nothing enforced.",
                     "effortless projectLogin"),
                 new(
                     "logout",
@@ -568,7 +568,7 @@ public static class CliOptionMetadata
                     "signout",
                     "logout,signout",
                     "Clear the stored login token",
-                    "Prints the logged-in account (if any) and asks for confirmation before deleting the global and project token files.",
+                    "Prints the logged-in account (if any) and asks for confirmation before deleting the global token files; then tells the effortless-auth service best-effort (POST /logout, cache-only resolution, failures ignored).",
                     "effortless logout"),
                 new(
                     "info",
@@ -750,7 +750,7 @@ public static class CliOptionMetadata
                     "subscription",
                     "subscription,plan",
                     "Show the authenticated account's plan",
-                    "Displays the account's EffortlessAPI subscription plan. Currently a non-networking stub: it prints an explicit unavailable message and exits nonzero without calling the auth bridge, until the server-side endpoint from step 13 is live.",
+                    "GET {auth}/plan on the effortless-auth tool and prints the plan and whether it is enforced (\"Plan: preview (not enforced yet ...)\"), plus the signed-in email when a token is stored. Works without a token because the service does not require one yet.",
                     "effortless plan"),
                 new(
                     "upgradeCli",

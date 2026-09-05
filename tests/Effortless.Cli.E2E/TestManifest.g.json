@@ -1878,5 +1878,69 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "auth-login-calls-tool-and-stores-token",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-project-login-writes-env",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-plan-prints-preview",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-logout-clears-then-calls",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-tool-missing-from-catalog-is-clear-error",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-tool-5xx-is-clear-error",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tools-still-run-without-login",
+    "suite": "e2e-auth",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "auth-local-override-used-for-dev",
+    "suite": "e2e-auth",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]

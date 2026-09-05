@@ -121,10 +121,10 @@ public class CliOptions
     [CommandLineOption(Description = "Add an account api key", MinOccurs = 0, Aliases = "api,setAccountKey")]
     public string setAccountAPIKey { get; set; }
 
-    [CommandLineOption(Description = "Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).", MinOccurs = 0, Aliases = "auth,authenticate")]
+    [CommandLineOption(Description = "Sign in to EffortlessAPI (preview: the service does not enforce accounts yet)", MinOccurs = 0, Aliases = "auth,authenticate")]
     public bool login { get; set; }
 
-    [CommandLineOption(Description = "Authenticate this project with EffortlessAPI (currently unavailable; reserved for future service enablement).", MinOccurs = 0, Aliases = "projectAuth")]
+    [CommandLineOption(Description = "Sign this project in to EffortlessAPI (preview: nothing is enforced yet)", MinOccurs = 0, Aliases = "projectAuth")]
     public bool projectLogin { get; set; }
 
     [CommandLineOption(Description = "Logout of your cli user account", MinOccurs = 0, Aliases = "signout")]
@@ -169,7 +169,7 @@ public class CliOptions
     [CommandLineOption(Description = "Update the pinned version of this tool to the current head version (does not run the tool)", MinOccurs = 0, Aliases = "up")]
     public bool upgrade { get; set; }
 
-    [CommandLineOption(Description = "View the authenticated EffortlessAPI subscription plan (currently unavailable).", MinOccurs = 0, Aliases = "subscription")]
+    [CommandLineOption(Description = "Show the EffortlessAPI plan for this account (preview plan until subscriptions exist)", MinOccurs = 0, Aliases = "subscription")]
     public bool plan { get; set; }
 
     [CommandLineOption(Description = "Upgrade the effortless CLI to the latest version", MinOccurs = 0, Aliases = "uc,update")]

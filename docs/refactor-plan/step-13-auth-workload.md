@@ -53,3 +53,33 @@ Mock auth tool in the E2E mock server. `auth-login-calls-tool-and-stores-token`,
 
 The workload is published and `[latest]` resolves to it; all four commands round-trip against it and
 against the mock; scale-to-zero verified in CPLN; tests green; `RefactorSteps.step-13.Status` → `done`.
+
+## Done 2026-09-05
+
+- **Workload.** `tools/effortless/effortless-auth/` in `api.effortlessapi.com/Versioned-Stable-SSoTme-Tools`
+  (scaffolded with `create-ssotme-tool`, dev port 30080, `start.sh`). Routes as specified, plus the standard
+  transpile contract on `POST /` (`-p mode=login|verify|project-login|plan|logout` → `auth-result.json`).
+  Tokens are unsigned `preview.<base64url json>` strings; nothing verifies them yet.
+- **CPLN.** `minScale 0`, `scaleToZeroDelay 300`, `maxScale 1`, 200m/256Mi, container port 30000 (the
+  convention every published tool uses; the dev port stays 30080). Published three times with
+  `publish-tool.sh` after creating the Airtable record through the transpiler-server's
+  `POST /api/transpilers/import-existing` (the tool had never been created in the UI). `[latest]` resolves
+  to `v2026.09.05.1228` through the live bridge (`effortless effortless-auth -listVersions`).
+- **OPEN: the workload has not come online.** Every version (100m/128Mi on 30080, 200m/256Mi on 30080,
+  200m/256Mi on 30000) sits at "Health Check Failed", the edge answers 421, and the container writes no
+  logs, although the pushed image runs and answers `/plan` locally (63 MiB). The two other tools the owner
+  published earlier on 2026-09-05 (`rulebook-to-progress-report` 02:10, `rulebook-to-node-postgres-api`
+  03:22) show the same "Health Check Failed" while everything published on or before 2026-09-02 is ready,
+  so this looks like a Control Plane-side problem today rather than the tool. Re-check with
+  `cpln workload get-deployments effortless-effortless-auth-v2026-09-05-1228 --gvc ssotme-tools`; if it stays
+  down once the other two recover, the next thing to try is a redeploy from the UI. Until then the CLI
+  commands report "Could not reach the authentication service" (a clear error, no token written); tools
+  and builds are unaffected because they never call it.
+- **CLI.** `MagicLinkAuth` now makes the REST calls; `AuthCommands` is unchanged apart from passing the
+  invocation to `projectLogin`. Resolution is the ordinary catalog path: a `tool_urls.json` override for
+  `effortless-auth` wins (local dev loop), else R0 freshness and the catalog head. `logout` clears local
+  tokens first and calls `/logout` best-effort using cache-only resolution so it never triggers a refresh.
+  `plan` works without a token because the service does not require one; the output says so.
+- **Tests.** `MockAuthTool` harness; `AuthTests` rewritten (`AuthTestBridge` removed); eight new cases
+  including `tools-still-run-without-login` and `auth-local-override-used-for-dev`.
+- `bridge-auth` was replaced in `HttpEndpoints` by the five `auth-*` routes.

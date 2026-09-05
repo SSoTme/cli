@@ -520,7 +520,7 @@ Magic-link login, project login, subscription, API keys.
 - Aliases: `auth`, `authenticate`
 - Bareword forms: `auth`, `login`, `authenticate`
 - Value type: `bool`
-- Help text: Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).
+- Help text: Sign in to EffortlessAPI (preview: the service does not enforce accounts yet)
 - Description: Email magic-link login.
 
 ### `-projectLogin`
@@ -528,7 +528,7 @@ Magic-link login, project login, subscription, API keys.
 - Aliases: `projectAuth`
 - Bareword forms: `projectlogin`, `projectauth`
 - Value type: `bool`
-- Help text: Authenticate this project with EffortlessAPI (currently unavailable; reserved for future service enablement).
+- Help text: Sign this project in to EffortlessAPI (preview: nothing is enforced yet)
 - Description: Project-scoped login.
 
 ### `-logout`
@@ -544,7 +544,7 @@ Magic-link login, project login, subscription, API keys.
 - Aliases: `subscription`
 - Bareword forms: `subscription`, `plan`
 - Value type: `bool`
-- Help text: View the authenticated EffortlessAPI subscription plan (currently unavailable).
+- Help text: Show the EffortlessAPI plan for this account (preview plan until subscriptions exist)
 - Description: Show the account plan.
 
 ## Seeds (legacy scaffolding)

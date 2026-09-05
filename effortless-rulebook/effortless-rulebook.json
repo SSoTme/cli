@@ -1398,19 +1398,19 @@
         "Aliases": "auth,authenticate",
         "BarewordForms": "auth,login,authenticate",
         "ValueType": "bool",
-        "HelpText": "Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).",
+        "HelpText": "Sign in to EffortlessAPI (preview: the service does not enforce accounts yet)",
         "Category": "auth",
         "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 6,
-        "HandlerNotes": "Retained as an explicit non-networking stub until the server-side magic-link endpoint is enabled. It exits nonzero with a clear unavailable message and never creates token files or calls the bridge.",
+        "HandlerNotes": "MagicLinkAuth.Login: if already authenticated ask \"Do you want to re-authenticate? (y/N)\"; prompt \"Email: \"; POST {auth}/login {email}; any 2xx with a token => JwtStore.StoreJWTToken; print \"Signed in (preview: ...)\". Missing catalog entry, non-2xx, or unreachable service => clear stderr error, exit -1, no token written.",
         "DispositionReason": "Keep and clean the command surface for future magic-link authentication, but do not implement or call authentication infrastructure yet. Tool builds and buildOnTrigger remain unauthenticated.",
         "Description": "Email magic-link login.",
         "Tier": "secondary",
         "Rationale": "D18: shown in help under its plain-English display name; 'authenticate' is kept as an alias since the owner did not insist on removing it. Wiring to the real effortless-auth workload is step 13.",
         "HelpSummary": "Log in with an email magic link",
-        "HelpDetail": "Authenticates with EffortlessAPI using an emailed magic link. Currently a non-networking stub: it prints an explicit unavailable message and exits nonzero without writing token files or calling the bridge, until the step-13 auth workload is live.",
+        "HelpDetail": "Prompts for an email address and signs in against the published effortless-auth tool, which is resolved through the normal catalog (a tool_urls.json override wins, so a local build can be used with -setToolUrl effortless-auth=http://localhost:30080). Stores the returned token in ~/.effortless. The service is a preview: every sign-in succeeds and nothing is enforced yet, and the output says so. Tools and buildOnTrigger never require login.",
         "Example": "effortless login"
       },
       {
@@ -1419,19 +1419,19 @@
         "Aliases": "projectAuth",
         "BarewordForms": "projectlogin,projectauth",
         "ValueType": "bool",
-        "HelpText": "Authenticate this project with EffortlessAPI (currently unavailable; reserved for future service enablement).",
+        "HelpText": "Sign this project in to EffortlessAPI (preview: nothing is enforced yet)",
         "Category": "auth",
         "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
-        "HandlerNotes": "Retained as an explicit non-networking stub. Future behavior may write EFFORTLESS_JWT to effortless.env after service-side authentication is enabled; current behavior never modifies the project.",
+        "HandlerNotes": "MagicLinkAuth.ProjectLogin(project): needs a project (clear error otherwise); POST {auth}/project-login {projectId, projectName}; EnvFile.WriteEnvValue(effortless.env, EFFORTLESS_JWT, token); print \"Project signed in (preview: ...)\".",
         "DispositionReason": "Keep the project-auth command surface without pretending authentication is currently available.",
         "Description": "Project-scoped login.",
         "Tier": "secondary",
         "Rationale": "D18: kept visible as a real command surface for project-scoped auth; wiring to the real workload is step 13.",
         "HelpSummary": "Authenticate this project with EffortlessAPI",
-        "HelpDetail": "Authenticates this specific project (as opposed to the global user login) with EffortlessAPI. Currently a non-networking stub that never modifies the project; future behavior may write EFFORTLESS_JWT to effortless.env once the service is enabled.",
+        "HelpDetail": "Signs the current effortless.json project in against the effortless-auth tool (POST /project-login with the project id) and writes the returned token as EFFORTLESS_JWT in the project's effortless.env, keeping every other line. Preview: always succeeds, nothing enforced.",
         "Example": "effortless projectLogin"
       },
       {
@@ -1442,17 +1442,17 @@
         "ValueType": "bool",
         "HelpText": "Logout of your cli user account",
         "Category": "auth",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 4,
-        "HandlerNotes": "If not authenticated: \"No active session found.\"; else prints email and asks \"Are you sure you want to log out? (y/N): \"; deletes the two token files on y/yes.",
+        "HandlerNotes": "If not authenticated: \"No active session found.\"; else prints email and asks \"Are you sure you want to log out? (y/N): \"; deletes the two token files on y/yes. Step 13: after clearing, POST {auth}/logout best-effort (never refreshes the catalog, never fails the command).",
         "DispositionReason": "Local-only; works today.",
         "Description": "Clear the global token.",
         "Tier": "secondary",
         "Rationale": "The one auth command that already works fully locally today: it only clears stored tokens.",
         "HelpSummary": "Clear the stored login token",
-        "HelpDetail": "Prints the logged-in account (if any) and asks for confirmation before deleting the global and project token files.",
+        "HelpDetail": "Prints the logged-in account (if any) and asks for confirmation before deleting the global token files; then tells the effortless-auth service best-effort (POST /logout, cache-only resolution, failures ignored).",
         "Example": "effortless logout"
       },
       {
@@ -1847,19 +1847,19 @@
         "Aliases": "subscription",
         "BarewordForms": "subscription,plan",
         "ValueType": "bool",
-        "HelpText": "View the authenticated EffortlessAPI subscription plan (currently unavailable).",
+        "HelpText": "Show the EffortlessAPI plan for this account (preview plan until subscriptions exist)",
         "Category": "auth",
         "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 3,
-        "HandlerNotes": "Retained as an explicit non-networking stub until account authentication and plan lookup are enabled server-side.",
+        "HandlerNotes": "MagicLinkAuth.Subscription(jwt): GET {auth}/plan with an optional Bearer token; prints plan/enforced and \"Signed in as {email}.\" or \"Not signed in; the service does not require it yet.\"",
         "DispositionReason": "Keep the account-plan command surface without issuing auth bridge calls yet.",
         "Description": "Show the account plan.",
         "Tier": "secondary",
         "Rationale": "D18: kept visible as a real, if currently stubbed, command surface for the account plan; wiring to the live effortless-auth workload happens in step 13.",
         "HelpSummary": "Show the authenticated account's plan",
-        "HelpDetail": "Displays the account's EffortlessAPI subscription plan. Currently a non-networking stub: it prints an explicit unavailable message and exits nonzero without calling the auth bridge, until the server-side endpoint from step 13 is live.",
+        "HelpDetail": "GET {auth}/plan on the effortless-auth tool and prints the plan and whether it is enforced (\"Plan: preview (not enforced yet ...)\"), plus the signed-in email when a token is stored. Works without a token because the service does not require one yet.",
         "Example": "effortless plan"
       },
       {
@@ -5009,17 +5009,6 @@
         "Description": "Invoked through the normal transpile mechanism with cwd=~/.effortless/remote_tools."
       },
       {
-        "HttpEndpointId": "bridge-auth",
-        "Method": "POST",
-        "UrlPattern": "{bridge} -p mode=auth|verify|refresh|viewPlan|checkProject|registerProject|getQuota|updateQuota",
-        "Purpose": "Magic-link auth and (disabled) telemetry; output file auth-result.json.",
-        "UsedByOption": "login, projectLogin, plan, info (plan)",
-        "LivenessOn20260830": "alive",
-        "TimeoutMs": 180000,
-        "Disposition": "keep-modified",
-        "Description": "Reserved contract for future explicit magic-link and plan commands. The current CLI exposes clean stubs and makes no authentication calls; catalog refresh remains a separate bridge operation."
-      },
-      {
         "HttpEndpointId": "github-latest-release",
         "Method": "GET",
         "UrlPattern": "https://api.github.com/repos/EffortlessAPI/cli/releases/latest",
@@ -5150,6 +5139,61 @@
         "TimeoutMs": 0,
         "Disposition": "keep",
         "Description": "Text only."
+      },
+      {
+        "HttpEndpointId": "auth-login",
+        "Method": "POST",
+        "UrlPattern": "{catalog: effortless/effortless/effortless-auth head urls.post}/login",
+        "Purpose": "{email} -> {ok, token, email, plan:\"preview\", enforced:false}",
+        "UsedByOption": "login",
+        "LivenessOn20260830": "n/a (created 2026-09-05; probed locally on port 30080 and on the published workload)",
+        "TimeoutMs": 60000,
+        "Disposition": "keep-modified",
+        "Description": "Step 13. Preview token \"preview.<base64url json>\"; nothing verifies it yet."
+      },
+      {
+        "HttpEndpointId": "auth-verify",
+        "Method": "POST",
+        "UrlPattern": "{catalog: effortless/effortless/effortless-auth head urls.post}/verify",
+        "Purpose": "{email, code} -> same as /login",
+        "UsedByOption": "(reserved for the real magic-link flow)",
+        "LivenessOn20260830": "n/a (created 2026-09-05; probed locally on port 30080 and on the published workload)",
+        "TimeoutMs": 60000,
+        "Disposition": "keep-modified",
+        "Description": "Step 13. Not called by the CLI yet: /login already returns a token in the preview service."
+      },
+      {
+        "HttpEndpointId": "auth-project-login",
+        "Method": "POST",
+        "UrlPattern": "{catalog: effortless/effortless/effortless-auth head urls.post}/project-login",
+        "Purpose": "{projectId, projectName} -> {ok, token, projectId, plan, enforced:false}",
+        "UsedByOption": "projectLogin",
+        "LivenessOn20260830": "n/a (created 2026-09-05; probed locally on port 30080 and on the published workload)",
+        "TimeoutMs": 60000,
+        "Disposition": "keep-modified",
+        "Description": "Step 13."
+      },
+      {
+        "HttpEndpointId": "auth-plan",
+        "Method": "GET",
+        "UrlPattern": "{catalog: effortless/effortless/effortless-auth head urls.post}/plan",
+        "Purpose": "-> {ok, plan:\"preview\", enforced:false}",
+        "UsedByOption": "plan",
+        "LivenessOn20260830": "n/a (created 2026-09-05; probed locally on port 30080 and on the published workload)",
+        "TimeoutMs": 60000,
+        "Disposition": "keep-modified",
+        "Description": "Step 13. Optional Authorization: Bearer <token>."
+      },
+      {
+        "HttpEndpointId": "auth-logout",
+        "Method": "POST",
+        "UrlPattern": "{catalog: effortless/effortless/effortless-auth head urls.post}/logout",
+        "Purpose": "-> {ok:true}",
+        "UsedByOption": "logout (best effort)",
+        "LivenessOn20260830": "n/a (created 2026-09-05; probed locally on port 30080 and on the published workload)",
+        "TimeoutMs": 60000,
+        "Disposition": "keep-modified",
+        "Description": "Step 13. Local tokens are cleared first; this call never fails the command."
       }
     ]
   },
@@ -6857,23 +6901,23 @@
       },
       {
         "UserMessageId": "auth-flow",
-        "Template": "EffortlessAPI authentication is not available yet. The login command is reserved for future magic-link authentication; tools and buildOnTrigger currently run without login.",
+        "Template": "Email: | You are already authenticated as {email}.\\nDo you want to re-authenticate? (y/N): | Authentication cancelled. | Signed in (preview: the authentication service does not enforce accounts yet). Signed in as {email}.",
         "Color": "default",
         "Trigger": "login",
-        "Stream": "stderr",
+        "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep-modified",
-        "Description": "Explicit non-networking stub until the server-side authentication endpoint is enabled."
+        "Description": "Step 13: the stub is gone; login talks to effortless-auth and says plainly that nothing is enforced yet."
       },
       {
         "UserMessageId": "not-logged-in",
-        "Template": "You are not logged in. Use `effortless login` first.",
+        "Template": "Not signed in; the service does not require it yet.",
         "Color": "default",
         "Trigger": "subscription without a token",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
-        "Description": ""
+        "Disposition": "keep-modified",
+        "Description": "Step 13: plan works without a token; this line replaces the old \"Use `effortless login` first.\" refusal."
       },
       {
         "UserMessageId": "api-key-syntax",
@@ -6984,6 +7028,46 @@
         "IsGoldenForTests": true,
         "Disposition": "keep-modified",
         "Description": "Step 11 / D23. info stays offline; it reads the cached stamp only."
+      },
+      {
+        "UserMessageId": "auth-preview-plan",
+        "Template": "Plan: {plan} (not enforced yet: the authentication service does not enforce accounts). | Plan: {plan} (enforced).",
+        "Color": "default",
+        "Trigger": "plan",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 13."
+      },
+      {
+        "UserMessageId": "auth-project-signed-in",
+        "Template": "Project signed in (preview: the authentication service does not enforce accounts yet). Wrote EFFORTLESS_JWT to {path}.",
+        "Color": "default",
+        "Trigger": "projectLogin",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 13."
+      },
+      {
+        "UserMessageId": "auth-tool-missing",
+        "Template": "The authentication tool 'effortless/effortless/effortless-auth' is not in the remote tools catalog. Run 'effortless -refreshTools' and try again, or point at a local build with 'effortless -setToolUrl effortless-auth=http://localhost:30080'.",
+        "Color": "default",
+        "Trigger": "login/projectLogin/plan when the catalog lacks the tool",
+        "Stream": "stderr",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 13. Exit -1."
+      },
+      {
+        "UserMessageId": "auth-service-error",
+        "Template": "The authentication service returned {status} {reason} for {method} {url}: {body} | Could not reach the authentication service at {url}: {error}",
+        "Color": "default",
+        "Trigger": "non-2xx or connection failure from effortless-auth",
+        "Stream": "stderr",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 13. Exit -1; no token is written."
       }
     ]
   },
@@ -11331,12 +11415,12 @@
         "Title": "login command is an explicit future-auth stub",
         "Given": "authentication endpoint is not enabled",
         "When": "effortless login",
-        "Then": "rebuild exits nonzero with a clear unavailable message, makes no bridge request, and writes no token; legacy remains characterized separately",
+        "Then": "rebuild: login prompts \"Email: \", POSTs /login on the mock auth tool, stores the token, prints the preview line, exit 0 (legacy: the bridge-mode flow)",
         "Priority": "P0",
         "Interactive": true,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "Owner decision D3: retain the command surface without implementing live authentication yet."
+        "Description": "Owner decision D3: retain the command surface without implementing live authentication yet. Step 13: keep-modified, stub expectations replaced by the effortless-auth round trip."
       },
       {
         "TestCaseId": "auth-login-already",
@@ -11345,12 +11429,12 @@
         "Title": "login stub preserves existing local token",
         "Given": "valid token",
         "When": "effortless login",
-        "Then": "rebuild reports authentication unavailable without prompting and leaves the token unchanged; legacy re-authentication cancellation remains characterized",
+        "Then": "rebuild: \"You are already authenticated as x@y.z.\" + \"Do you want to re-authenticate? (y/N): \" + \"Authentication cancelled.\"; token untouched; no request",
         "Priority": "P1",
         "Interactive": true,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "The stub never impersonates a successful session mutation."
+        "Description": "The stub never impersonates a successful session mutation. Step 13: keep-modified, stub expectations replaced by the effortless-auth round trip."
       },
       {
         "TestCaseId": "auth-project-login",
@@ -11359,12 +11443,12 @@
         "Title": "projectLogin is an explicit future-auth stub",
         "Given": "project and authentication endpoint is not enabled",
         "When": "effortless projectlogin",
-        "Then": "rebuild exits nonzero with a clear unavailable message, makes no bridge request, and does not write EFFORTLESS_JWT",
+        "Then": "rebuild: POST /project-login; effortless.env keeps EXISTING_KEY and gains EFFORTLESS_JWT; exit 0",
         "Priority": "P0",
         "Interactive": true,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "Owner decision D3: reserve project-scoped login without modifying project data."
+        "Description": "Owner decision D3: reserve project-scoped login without modifying project data. Step 13: keep-modified, stub expectations replaced by the effortless-auth round trip."
       },
       {
         "TestCaseId": "auth-logout",
@@ -11387,12 +11471,12 @@
         "Title": "subscription command is stubbed without login",
         "Given": "no token",
         "When": "effortless plan ; -subscription",
-        "Then": "rebuild exits nonzero and reports account authentication unavailable; legacy login requirement remains characterized",
+        "Then": "rebuild: exit 0; \"Plan: preview (not enforced yet\" and \"Not signed in; the service does not require it yet.\"",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "Plan lookup remains reserved until authentication is enabled."
+        "Description": "Plan lookup remains reserved until authentication is enabled. Step 13: keep-modified, stub expectations replaced by the effortless-auth round trip."
       },
       {
         "TestCaseId": "auth-subscription",
@@ -11401,12 +11485,12 @@
         "Title": "subscription command does not use a stored token while stubbed",
         "Given": "stored token and authentication endpoint is not enabled",
         "When": "effortless plan",
-        "Then": "rebuild exits nonzero with a clear unavailable message and makes no bridge request; legacy short-circuit remains characterized",
+        "Then": "rebuild: exit 0; \"Plan: preview\" and \"Signed in as x@y.z.\"; the mock saw Authorization: Bearer <token>",
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "Owner decision D3: no plan lookup until service-side authentication is enabled."
+        "Description": "Owner decision D3: no plan lookup until service-side authentication is enabled. Step 13: keep-modified, stub expectations replaced by the effortless-auth round trip."
       },
       {
         "TestCaseId": "auth-set-api-key",
@@ -12751,6 +12835,118 @@
         "Slow": false,
         "Status": "rebuild-green",
         "Description": "Step 11 modifier."
+      },
+      {
+        "TestCaseId": "auth-login-calls-tool-and-stores-token",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "login",
+        "Title": "login POSTs /login on the catalog-resolved auth tool and stores the token",
+        "Given": "catalog with effortless/effortless/effortless-auth head -> mock auth tool; no token",
+        "When": "effortless login (stdin: email)",
+        "Then": "mock receives POST /login {email}; ~/.effortless/effortlessapi_token.txt holds the returned token; token_info has the email; stdout \"Signed in (preview: ...)\"; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 13."
+      },
+      {
+        "TestCaseId": "auth-project-login-writes-env",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "projectLogin",
+        "Title": "projectLogin POSTs /project-login and writes EFFORTLESS_JWT",
+        "Given": "same catalog; project with effortless.env EXISTING_KEY=keep",
+        "When": "effortless projectLogin",
+        "Then": "mock receives POST /project-login with the project id; effortless.env keeps EXISTING_KEY and gains EFFORTLESS_JWT=<token>; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 13."
+      },
+      {
+        "TestCaseId": "auth-plan-prints-preview",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "plan",
+        "Title": "plan GETs /plan and prints the preview plan with and without a token",
+        "Given": "same catalog",
+        "When": "effortless plan ; then with a stored token",
+        "Then": "\"Plan: preview (not enforced yet ...)\"; without token \"Not signed in; the service does not require it yet.\"; with token \"Signed in as x@y.z.\" and Authorization: Bearer sent; exit 0 both",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 13 / D18."
+      },
+      {
+        "TestCaseId": "auth-logout-clears-then-calls",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "logout",
+        "Title": "logout clears local tokens then tells the service best-effort",
+        "Given": "same catalog; stored token",
+        "When": "effortless logout (stdin y) ; and again with the auth tool unreachable",
+        "Then": "tokens deleted; mock receives POST /logout; exit 0; with an unreachable tool the command still exits 0 and prints no error",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 13."
+      },
+      {
+        "TestCaseId": "auth-tool-missing-from-catalog-is-clear-error",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "login",
+        "Title": "a catalog without effortless-auth gives a clear error and writes nothing",
+        "Given": "fresh catalog lacking the tool; no override",
+        "When": "effortless login (stdin email) ; effortless plan",
+        "Then": "stderr has \"The authentication tool 'effortless/effortless/effortless-auth' is not in the remote tools catalog\"; exit -1; no token files; no request to the mock",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 13."
+      },
+      {
+        "TestCaseId": "auth-tool-5xx-is-clear-error",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "login",
+        "Title": "a 5xx from the auth tool is a clear error and no token is written",
+        "Given": "mock auth tool configured to answer 503",
+        "When": "effortless login (stdin email)",
+        "Then": "stderr has \"The authentication service returned 503\"; exit -1; no token files",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 13."
+      },
+      {
+        "TestCaseId": "tools-still-run-without-login",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "build",
+        "Title": "tool execution never calls the auth tool",
+        "Given": "catalog with the auth tool and to-uppercase; no token; project step to-uppercase",
+        "When": "effortless build",
+        "Then": "exit 0; the tool ran; the mock auth tool received zero requests",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 13 / D3: tools and buildOnTrigger stay unauthenticated."
+      },
+      {
+        "TestCaseId": "auth-local-override-used-for-dev",
+        "Suite": "e2e-auth",
+        "PrimaryOption": "login",
+        "Title": "a tool_urls.json override for effortless-auth wins over the catalog",
+        "Given": "catalog without the tool; tool_urls.json effortless-auth -> mock",
+        "When": "effortless login (stdin email)",
+        "Then": "mock receives POST /login; exit 0",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Local dev loop from the step-13 doc."
       }
     ]
   },
@@ -13003,7 +13199,7 @@
         "InstructionsPath": "docs/refactor-plan/step-13-auth-workload.md",
         "DoneCriteria": "effortless-auth published via publish-tool.sh and resolvable as [latest]; CPLN min instances 0 with 300s scale-to-zero; login/projectLogin/plan/logout round-trip against it and the E2E mock; tools and buildOnTrigger remain unauthenticated; no usage tracking; tests green.",
         "Owner": "opus",
-        "Status": "ready",
+        "Status": "done",
         "Description": "Owner D18 (2026-09-04). Cross-repo: tools/effortless/effortless-auth in Versioned-Stable-SSoTme-Tools. Never invent a publish procedure; use publish-tool.sh."
       },
       {

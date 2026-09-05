@@ -110,10 +110,16 @@ refresh failure is a hard failure.
 
 ## Authentication status
 
-`login`, `projectLogin`, and `plan` are intentionally non-networking stubs until
-the server-side magic-link endpoint is enabled. They must fail clearly and must
-not write tokens or call the bridge. `logout` still clears local tokens. Normal
-tool execution and `buildOnTrigger` do not require authentication.
+`login`, `projectLogin`, `plan`, and `logout` call the published
+`effortless/effortless/effortless-auth` tool, resolved through the normal catalog
+(a `tool_urls.json` override for `effortless-auth` wins, which is the local dev
+loop: run the tool's `start.sh` on port 30080 and `-setToolUrl effortless-auth=...`).
+The service is a preview that always succeeds and enforces nothing; every
+command's output says so. A missing catalog entry or a non-2xx is a clear error
+and writes no token. `logout` clears local tokens first and calls the service
+best-effort without ever triggering a catalog refresh. Normal tool execution and
+`buildOnTrigger` never call the auth tool. The tool's source lives in
+`api.effortlessapi.com/Versioned-Stable-SSoTme-Tools/tools/effortless/effortless-auth/`.
 
 ## Project save and upgrade invariants
 

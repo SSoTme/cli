@@ -54,7 +54,9 @@ public sealed class CommandDispatcher
         _toolUrlCommands = new ToolUrlCommands();
         _versionCommands = new VersionCommands(_remoteTools);
         _authCommands = new AuthCommands(
-            new MagicLinkAuth());
+            new MagicLinkAuth(
+                () => ResolveAuthToolUrl(offline: false),
+                () => ResolveAuthToolUrl(offline: true)));
         _infoCommand = new InfoCommand(_remoteTools);
         _upgradeCliCommand = new UpgradeCliCommand();
         _executeCommand = new ExecuteCommand();
@@ -444,6 +446,43 @@ public sealed class CommandDispatcher
         return true;
     }
 
+    /// <summary>
+    /// Step 13: the auth tool is an ordinary catalog tool. A tool_urls.json
+    /// override wins (local dev), otherwise R0 freshness applies and the head
+    /// version is used. Null means "not in the catalog".
+    /// </summary>
+    private string ResolveAuthToolUrl(bool offline)
+    {
+        // A tool_urls.json override (local dev: -setToolUrl effortless-auth=...)
+        // wins by either name, exactly as it would for a build step.
+        var overrideUrl = _remoteTools.TryGetToolUrl(MagicLinkAuth.AuthToolShortName)
+            ?? _remoteTools.TryGetToolUrl(MagicLinkAuth.AuthToolName);
+        if (!string.IsNullOrWhiteSpace(overrideUrl))
+        {
+            return overrideUrl;
+        }
+
+        if (offline)
+        {
+            return _remoteTools.Resolve(MagicLinkAuth.AuthToolName)?.Url;
+        }
+
+        var probe = new CliInvocation
+        {
+            Options = new CliOptions(),
+            RawTranspilerArg = MagicLinkAuth.AuthToolName,
+            CurrentDirectory = Environment.CurrentDirectory,
+        };
+        _toolResolver.Resolve(probe);
+        if (probe.CatalogRefreshFailed)
+        {
+            throw new NoStackException(
+                $"ERROR: Remote tools index refresh failed: {_remoteTools.LastRefreshError}");
+        }
+
+        return probe.TargetUrl;
+    }
+
     private bool EnsureCatalogFresh()
     {
         if (_remoteTools.EnsureFresh())
@@ -526,7 +565,7 @@ public sealed class CommandDispatcher
 
         if (options.projectLogin)
         {
-            return _authCommands.ProjectLogin();
+            return _authCommands.ProjectLogin(invocation);
         }
 
         if (options.plan)

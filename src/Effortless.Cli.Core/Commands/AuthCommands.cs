@@ -23,9 +23,19 @@ public sealed class AuthCommands
         return _auth.Login();
     }
 
-    public int ProjectLogin()
+    public int ProjectLogin(CliInvocation invocation)
     {
-        return _auth.ProjectLogin();
+        var project = invocation?.Project;
+        if (project is null
+            && !string.IsNullOrWhiteSpace(invocation?.CurrentDirectory)
+            && Directory.Exists(invocation.CurrentDirectory))
+        {
+            project = Project.ProjectLocator.TryToLoad(
+                new DirectoryInfo(invocation.CurrentDirectory),
+                updateCurrent: false);
+        }
+
+        return _auth.ProjectLogin(project);
     }
 
     public int Plan(string jwt)
@@ -47,8 +57,11 @@ public sealed class AuthCommands
         var response = Console.ReadLine()?.Trim().ToLowerInvariant();
         if (response is "y" or "yes")
         {
+            var jwt = _jwtStore.GetStoredJWTToken();
             _jwtStore.ClearAuthToken();
             Console.WriteLine("Logged out successfully.");
+            // Local tokens are gone regardless; tell the service best-effort.
+            _auth.LogoutBestEffort(jwt);
         }
         else
         {
