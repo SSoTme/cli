@@ -76,10 +76,10 @@ public class CliOptions
     [CommandLineOption(Description = "Don't clean the output before cooking", MinOccurs = 0, Aliases = "sc")]
     public bool skipClean { get; set; }
 
-    [CommandLineOption(Description = "Lists public Effortless seed repositories", MinOccurs = 0, Aliases = "lsd")]
+    [CommandLineOption(Description = "Lists public Effortless seed repositories across the seed sources", MinOccurs = 0, Aliases = "lsd")]
     public bool listSeeds { get; set; }
 
-    [CommandLineOption(Description = "Clones a public Effortless seed repository", MinOccurs = 0, Aliases = "cs,clone")]
+    [CommandLineOption(Description = "Clones a public Effortless seed repository (account/repo, repo, or clone URL)", MinOccurs = 0, Aliases = "cs,clone")]
     public bool cloneSeed { get; set; }
 
     [CommandLineOption(Description = "The account which the transpiler belongs to", MinOccurs = 0, Aliases = "a")]
@@ -216,4 +216,19 @@ public class CliOptions
 
     [CommandLineOption(Description = "Emit the filtered tool list as JSON instead of a table", MinOccurs = 0, Aliases = "")]
     public bool json { get; set; }
+
+    [CommandLineOption(Description = "Hosts this project's local tools (effortless-tools/) over HTTP", MinOccurs = 0, Aliases = "")]
+    public bool serve { get; set; }
+
+    [CommandLineOption(Description = "Port for the local transpiler host (default: an ephemeral port)", MinOccurs = 0, Aliases = "")]
+    public int port { get; set; }
+
+    [CommandLineOption(Description = "Lists the GitHub accounts searched for Effortless seeds", MinOccurs = 0, Aliases = "lss")]
+    public bool listSeedSources { get; set; }
+
+    [CommandLineOption(Description = "Adds a GitHub account to the seed sources", MinOccurs = 0, Aliases = "ass")]
+    public string addSeedSource { get; set; }
+
+    [CommandLineOption(Description = "Removes a GitHub account from the seed sources", MinOccurs = 0, Aliases = "rss")]
+    public string removeSeedSource { get; set; }
 }

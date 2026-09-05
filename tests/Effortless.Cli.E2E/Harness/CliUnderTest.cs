@@ -59,7 +59,8 @@ internal sealed class CliUnderTest
         string cwd,
         Sandbox sandbox,
         string? stdin = null,
-        int timeoutMs = 120_000)
+        int timeoutMs = 120_000,
+        IReadOnlyDictionary<string, string>? environment = null)
     {
         var startInfo = new ProcessStartInfo("dotnet")
         {
@@ -76,6 +77,10 @@ internal sealed class CliUnderTest
             startInfo.ArgumentList.Add(arg);
         }
         ApplySandboxEnvironment(startInfo, sandbox);
+        foreach (var (key, value) in environment ?? new Dictionary<string, string>())
+        {
+            startInfo.Environment[key] = value;
+        }
 
         using var process = new Process { StartInfo = startInfo };
         var stopwatch = Stopwatch.StartNew();

@@ -1,6 +1,7 @@
 using Effortless.Cli.Auth;
 using Effortless.Cli.Config;
 using Effortless.Cli.FileSets;
+using Effortless.Cli.LocalTools;
 using Effortless.Cli.Options;
 using Effortless.Cli.Project;
 
@@ -20,6 +21,7 @@ public sealed class CommandDispatcher
     private readonly UpgradeCliCommand _upgradeCliCommand;
     private readonly ExecuteCommand _executeCommand;
     private readonly SeedCommands _seedCommands;
+    private readonly LocalToolResolver _localTools;
     private readonly ProjectToolFreshness _projectToolFreshness;
     private readonly TimeProvider _timeProvider;
     private bool _projectCatalogChecked;
@@ -46,7 +48,8 @@ public sealed class CommandDispatcher
                 new CloudBridgeClient(RunBridgeCommandLine)
                     .Refresh(request),
             timeProvider: timeProvider);
-        _toolResolver = new ToolResolver(_remoteTools);
+        _localTools = new LocalToolResolver();
+        _toolResolver = new ToolResolver(_remoteTools, _localTools);
         _projectToolFreshness =
             new ProjectToolFreshness(_remoteTools);
         _credentialResolver = new CredentialResolver();
@@ -66,9 +69,18 @@ public sealed class CommandDispatcher
     public int Run(string[] args)
     {
         _projectCatalogChecked = false;
-        return RunInvocation(
-            _parser.Parse(args),
-            activeStep: null);
+        try
+        {
+            return RunInvocation(
+                _parser.Parse(args),
+                activeStep: null);
+        }
+        finally
+        {
+            // S14b: an ephemeral local tool host lives exactly as long as the
+            // CLI invocation that needed it.
+            _localTools.Dispose();
+        }
     }
 
     public int RunCommandLine(
@@ -628,6 +640,21 @@ public sealed class CommandDispatcher
             return _seedCommands.Clone(invocation);
         }
 
+        if (options.listSeedSources)
+        {
+            return _seedCommands.ListSources();
+        }
+
+        if (!string.IsNullOrEmpty(options.addSeedSource))
+        {
+            return _seedCommands.AddSource(options.addSeedSource);
+        }
+
+        if (!string.IsNullOrEmpty(options.removeSeedSource))
+        {
+            return _seedCommands.RemoveSource(options.removeSeedSource);
+        }
+
         if (!string.IsNullOrEmpty(options.viewToolUrl))
         {
             return _toolUrlCommands.View(options.viewToolUrl);
@@ -726,6 +753,11 @@ public sealed class CommandDispatcher
         if (!string.IsNullOrEmpty(options.execute))
         {
             return _executeCommand.Run(invocation);
+        }
+
+        if (options.serve)
+        {
+            return new ServeCommand().Run(invocation);
         }
 
         if (options.build || options.buildLocal)
@@ -1013,6 +1045,9 @@ public sealed class CommandDispatcher
         && !options.upgradeCli
         && !options.listSeeds
         && !options.cloneSeed
+        && !options.listSeedSources
+        && string.IsNullOrEmpty(options.addSeedSource)
+        && string.IsNullOrEmpty(options.removeSeedSource)
         && string.IsNullOrEmpty(options.viewToolUrl)
         && string.IsNullOrEmpty(options.setToolUrl)
         && !options.listToolUrls
@@ -1053,7 +1088,8 @@ public sealed class CommandDispatcher
             return false;
         }
 
-        return true;
+        // R12: a project-local tool never needs the catalog.
+        return _localTools.Find(invocation, rawName) is null;
     }
 
     private static bool RequiresProjectCatalogGate(
@@ -1109,6 +1145,10 @@ public sealed class CommandDispatcher
         || options.describeWithSubprojects
         || options.listSeeds
         || options.cloneSeed
+        || options.listSeedSources
+        || !string.IsNullOrEmpty(options.addSeedSource)
+        || !string.IsNullOrEmpty(options.removeSeedSource)
+        || options.serve
         || options.listSettings
         || options.addSetting.Any()
         || options.removeSetting.Any()
@@ -1152,6 +1192,10 @@ public sealed class CommandDispatcher
         || options.upgradeCli
         || options.listSeeds
         || options.cloneSeed
+        || options.listSeedSources
+        || !string.IsNullOrEmpty(options.addSeedSource)
+        || !string.IsNullOrEmpty(options.removeSeedSource)
+        || options.serve
         || !string.IsNullOrEmpty(options.viewToolUrl)
         || !string.IsNullOrEmpty(options.setToolUrl)
         || options.listToolUrls

@@ -11,6 +11,7 @@
   },
   "files": [
     "cli.js",
+    "lib/",
     "Directory.Build.props",
     "src/",
     "!src/**/bin/**",

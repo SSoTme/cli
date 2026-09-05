@@ -270,9 +270,9 @@
       },
       {
         "OptionCategoryId": "seeds",
-        "Label": "Seeds (legacy scaffolding)",
+        "Label": "Seeds (start a project from a public repository)",
         "SortOrder": 10,
-        "Description": "GitHub-hosted Effortless seed repositories (root or child projects with a full Effortless stack and effortless.json at the root). Kept per owner decision D1; see the effortless-skills seed skill (step 14).",
+        "Description": "An Effortless seed is a public GitHub repository with effortless.json at its root. listSeeds finds them across an ordered list of GitHub accounts (the seed sources: ssotme and effortlessapi by default, managed with listSeedSources/addSeedSource/removeSeedSource); cloneSeed clones one, keeps its .git history, and never executes downloaded code.",
         "ParentCategory": "tools",
         "Tier": null
       },
@@ -331,6 +331,14 @@
         "Description": "Login, project login, logout, plan lookup, and stored account API keys.",
         "ParentCategory": null,
         "Tier": "secondary"
+      },
+      {
+        "OptionCategoryId": "local-tools",
+        "Label": "Local tools (effortless-tools/, serve)",
+        "SortOrder": 11,
+        "Description": "Tools that live inside the project at effortless-tools/<name>/ and are hosted by the CLI itself over the same REST contract published tools speak. A build that names a local tool starts an ephemeral host for the duration of the build; serve keeps one running so repeated builds reuse it.",
+        "ParentCategory": "tools",
+        "Tier": null
       }
     ]
   },
@@ -1000,20 +1008,20 @@
         "Aliases": "lsd",
         "BarewordForms": "listseeds",
         "ValueType": "bool",
-        "HelpText": "Lists public Effortless seed repositories",
+        "HelpText": "Lists public Effortless seed repositories across the seed sources",
         "Category": "seeds",
         "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
-        "HandlerNotes": "SeedCatalogClient lists public repositories under the requested/default GitHub account and retains only repositories with effortless.json at the root.",
+        "HandlerNotes": "SeedCommands.List: with no argument lists every seed source in order, grouped by account with descriptions; with an account argument lists that account only. A seed is a public repository with effortless.json at its root (SeedCatalogClient checks the raw default-branch file). GitHub API failures are fatal.",
         "DispositionReason": "Owner decision D1: root and child Effortless repositories remain first-class seeds.",
-        "Description": "List public Effortless seed repositories.",
+        "Description": "List public Effortless seed repositories across the configured seed sources.",
         "Tier": "secondary",
         "Rationale": "D25: seed discovery is real but occasional \u2014 used when scaffolding a new project from an existing public Effortless repository, not on every-day builds.",
-        "HelpSummary": "List public Effortless seed repositories",
-        "HelpDetail": "Lists public repositories under the requested (or default) GitHub account that have effortless.json at the repository root, making them discoverable as seeds.",
-        "Example": "effortless -listSeeds effortlessapi"
+        "HelpSummary": "List seeds across every seed source",
+        "HelpDetail": "Lists every public repository with effortless.json at its root under each configured seed source (see listSeedSources), grouped by account with the repository description. Pass an account name to list only that account.",
+        "Example": "effortless listSeeds"
       },
       {
         "CliOptionId": "cloneSeed",
@@ -1021,20 +1029,20 @@
         "Aliases": "cs,clone",
         "BarewordForms": "cloneseed,clone",
         "ValueType": "bool",
-        "HelpText": "Clones a public Effortless seed repository",
+        "HelpText": "Clones a public Effortless seed repository (account/repo, repo, or clone URL)",
         "Category": "seeds",
         "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
-        "HandlerNotes": "SeedRepositoryManager runs argument-safe git clone, preserves repository history, verifies effortless.json at the root, and prints the explicit build command without executing cloned code automatically.",
+        "HandlerNotes": "SeedCommands.Clone: <account>/<repo> clones that repository; a bare <repo> searches the seed sources in order and clones the single match, printing the account it came from; the same name matching in more than one source (or matching both a full and short name in one) is an ambiguity error listing every candidate; an http(s) URL is cloned directly. Argument-safe git clone preserving .git; verifies effortless.json at the root; never runs cloned code; prints the explicit build command. Optional second argument is the destination directory.",
         "DispositionReason": "Owner decision D1. Modernized to preserve .git and avoid executing downloaded code without a separate user action.",
         "Description": "Clone a public Effortless seed repository.",
         "Tier": "secondary",
         "Rationale": "D25: the other half of seed discovery \u2014 turning a listed seed into a local starting project.",
         "HelpSummary": "Clone a public Effortless seed repository",
-        "HelpDetail": "Runs an argument-safe git clone of the named seed repository, preserving its .git history, and verifies effortless.json exists at the root. Does not execute any cloned code automatically; prints the explicit build command to run next.",
-        "Example": "effortless -cloneSeed effortlessapi/some-seed"
+        "HelpDetail": "Clones the seed and verifies effortless.json at its root. Accepts account/repo, a bare repository name (searched across the seed sources in order; an ambiguous name lists the candidates), or an HTTP(S) clone URL; an optional second argument names the destination directory. Preserves .git and never executes cloned code; prints the build command to run next.",
+        "Example": "effortless cloneSeed effortlessapi/my-seed"
       },
       {
         "CliOptionId": "account",
@@ -2191,6 +2199,126 @@
         "HelpSummary": "Emit listTools/searchTools output as JSON",
         "HelpDetail": "Writes the filtered, sorted catalog entries as a JSON array (canonicalName, shortName, account, category, headVersion, headCreatedAt, versionCount, requiresApiKey, monthlyRequestCount, description, tags) for scripts and skills. Descriptions are not truncated. Modifier for listTools and searchTools.",
         "Example": "effortless searchTools postgres -json"
+      },
+      {
+        "CliOptionId": "serve",
+        "Flag": "-serve",
+        "Aliases": "",
+        "BarewordForms": "serve",
+        "ValueType": "bool",
+        "HelpText": "Hosts this project's local tools (effortless-tools/) over HTTP",
+        "Category": "local-tools",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": false,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "ServeCommand: discovers <root>/effortless-tools/*, starts LocalToolHost (HttpListener, in-process; no Kestrel so the CLI keeps its two-dependency footprint) on -port or an ephemeral port, writes <root>/.effortless/serve.json {port,pid}, prints one URL per tool, watches effortless-tools/ and reloads discovery on change, and stays up until Ctrl+C (serve.json removed on exit). GET / lists tools as JSON; POST /<name> runs the tool with the cloud wire contract.",
+        "DispositionReason": "Step 12 / D30: replaces the per-project ssotme-proxy scaffolding (a Python server that recovered the CLI's cwd via lsof and returned an empty fileset) with CLI infrastructure that uses the real fileset contract.",
+        "Description": "Run the local transpiler host resident so builds reuse one long-lived process.",
+        "Tier": "primary",
+        "ParentOption": null,
+        "VerbFamily": "serve",
+        "Scope": "local",
+        "Rationale": "D30: local tools should behave exactly like published tools (ledger, clean, -debug) without every project rebuilding an HTTP proxy. Resident mode keeps dotnet/node tool processes warm across builds; ephemeral mode makes a plain build work with no extra terminal.",
+        "HelpSummary": "Host this project's local tools over HTTP",
+        "HelpDetail": "Discovers every tool under effortless-tools/<name>/ (tool.json, or a *.csproj => dotnet, package.json => node, transpiler.* => script), starts the local transpiler host, prints one URL per tool, and keeps running. Records the port and pid in .effortless/serve.json so builds in this project reuse the running host instead of starting an ephemeral one. Reloads when effortless-tools/ changes. GET / lists the tools.",
+        "Example": "effortless serve -port 4242"
+      },
+      {
+        "CliOptionId": "port",
+        "Flag": "-port",
+        "Aliases": "",
+        "BarewordForms": "",
+        "ValueType": "int",
+        "HelpText": "Port for the local transpiler host (default: an ephemeral port)",
+        "Category": "local-tools",
+        "Disposition": "keep-modified",
+        "IsCommand": false,
+        "ConsumesNextArgAsTool": false,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "Modifier of serve only. 0 (the default) binds an ephemeral loopback port. Ignored by every other command.",
+        "DispositionReason": "Step 12: a fixed port is what a developer wants when they -setToolUrl a local tool for debugging or share the URL with another tool.",
+        "Description": "Fixed port for serve.",
+        "Tier": "modifier",
+        "ParentOption": "serve",
+        "VerbFamily": null,
+        "Scope": null,
+        "Rationale": "Without it the resident host's port changes every start; with it the URL is stable enough to paste into tool_urls.json.",
+        "HelpSummary": "Port for serve (default: ephemeral)",
+        "HelpDetail": "Binds the resident local transpiler host to a fixed loopback port instead of an ephemeral one. Only meaningful with serve.",
+        "Example": "effortless serve -port 4242"
+      },
+      {
+        "CliOptionId": "listSeedSources",
+        "Flag": "-listSeedSources",
+        "Aliases": "lss",
+        "BarewordForms": "listseedsources",
+        "ValueType": "bool",
+        "HelpText": "Lists the GitHub accounts searched for Effortless seeds",
+        "Category": "seeds",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": false,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "SeedSources.Load(): file absent => defaults [ssotme, effortlessapi]; env prepend marked \"(env)\"; defaults marked \"(default)\" when the file is absent.",
+        "DispositionReason": "Step 14 (D1/D25): seed discovery spans a configurable, ordered list of GitHub accounts; ssotme and effortlessapi are the two defaults.",
+        "Description": "Lists the GitHub accounts searched for Effortless seeds.",
+        "Tier": "secondary",
+        "ParentOption": null,
+        "VerbFamily": "seeds",
+        "Scope": null,
+        "Rationale": "Makes the search list visible so a missing seed is explainable.",
+        "HelpSummary": "List the GitHub accounts searched for seeds",
+        "HelpDetail": "Prints the ordered list of GitHub accounts that listSeeds and cloneSeed search: ~/.effortless/seed_sources.json when present, otherwise the defaults ssotme and effortlessapi. EFFORTLESS_SEED_GITHUB_ACCOUNT, when set, is shown first as the per-invocation prepend.",
+        "Example": "effortless listSeedSources"
+      },
+      {
+        "CliOptionId": "addSeedSource",
+        "Flag": "-addSeedSource",
+        "Aliases": "ass",
+        "BarewordForms": "addseedsource",
+        "ValueType": "string",
+        "HelpText": "Adds a GitHub account to the seed sources",
+        "Category": "seeds",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "SeedSources.Add(account): validates [A-Za-z0-9-]{1,39}; writes the full explicit list; idempotent.",
+        "DispositionReason": "Step 14 (D1/D25): seed discovery spans a configurable, ordered list of GitHub accounts; ssotme and effortlessapi are the two defaults.",
+        "Description": "Adds a GitHub account to the seed sources.",
+        "Tier": "secondary",
+        "ParentOption": null,
+        "VerbFamily": "seeds",
+        "Scope": null,
+        "Rationale": "Teams keep their seeds under their own GitHub organization.",
+        "HelpSummary": "Add a GitHub account to the seed sources",
+        "HelpDetail": "Appends the account to ~/.effortless/seed_sources.json (creating the file from the defaults first) and prints the resulting list. Adding an account that is already listed is a no-op. Accounts are GitHub user or organization names.",
+        "Example": "effortless addSeedSource my-org"
+      },
+      {
+        "CliOptionId": "removeSeedSource",
+        "Flag": "-removeSeedSource",
+        "Aliases": "rss",
+        "BarewordForms": "removeseedsource",
+        "ValueType": "string",
+        "HelpText": "Removes a GitHub account from the seed sources",
+        "Category": "seeds",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "SeedSources.Remove(account): the file always holds the complete list after a write, so a removed default stays removed.",
+        "DispositionReason": "Step 14 (D1/D25): seed discovery spans a configurable, ordered list of GitHub accounts; ssotme and effortlessapi are the two defaults.",
+        "Description": "Removes a GitHub account from the seed sources.",
+        "Tier": "secondary",
+        "ParentOption": null,
+        "VerbFamily": "seeds",
+        "Scope": null,
+        "Rationale": "Owner: ssotme and effortlessapi are just two default endpoints, not privileged ones.",
+        "HelpSummary": "Remove a GitHub account from the seed sources",
+        "HelpDetail": "Removes the account from the seed source list and prints the result. Removing a default (ssotme, effortlessapi) is allowed; the file then records the remaining list explicitly. Removing an account that is not listed is an error.",
+        "Example": "effortless removeSeedSource ssotme"
       }
     ]
   },
@@ -2845,6 +2973,16 @@
         "NewHome": "Commands/TranspileCommand.cs",
         "Disposition": "keep",
         "Description": ""
+      },
+      {
+        "LifecycleStateId": "S14b-local-host",
+        "Phase": "transpile-dispatch",
+        "SortOrder": 14.5,
+        "Entry": "When the resolved tool is a local tool (R12): if <root>/.effortless/serve.json names a live host use its port; else start LocalToolHost in-process on an ephemeral port (once per CLI invocation, shared by every step of a build) and rewrite TargetUrl to it. The ephemeral host, and every dotnet/node tool process it started, is stopped when the CLI invocation ends.",
+        "ImplementedIn": "(new)",
+        "NewHome": "Commands/CommandDispatcher.cs + LocalTools/LocalToolHost.cs",
+        "Disposition": "keep-modified",
+        "Description": "Step 12. Output is identical whether the host is resident or ephemeral."
       }
     ]
   },
@@ -4290,6 +4428,16 @@
         "VersionLabel": "",
         "Disposition": "keep-modified",
         "Description": "Step 11 / D29. Owner: a workload that cannot be reached after the connection retries is offline; check the latest build numbers and try the build again at least once. Implemented by TranspileClientResult.ConnectionFailure, CliInvocation.IsCatalogResolved, ToolResolver.ReResolveFromCatalog and CommandDispatcher.TryRecoverFromCompleteTimeout."
+      },
+      {
+        "ToolResolutionRuleId": "R12-local-tool",
+        "Precedence": 12,
+        "Source": "<root>/effortless-tools/<name>/",
+        "Condition": "the raw tool name (or its bare part after an account/ prefix) matches a local tool discovered in the current project's effortless-tools/ directory, and neither an explicit URL (R1/R2) nor a tool_urls.json mapping for that name (R4) applies.",
+        "Result": "Resolve to http://127.0.0.1:<port>/<name> where <port> is the running host recorded in <root>/.effortless/serve.json when it is alive, else an ephemeral in-process host started for the duration of this CLI invocation. IsCatalogResolved=false; no catalog refresh is required or performed for the name; no pin, no [latest]; version label \"<name> [local]\"; the ledger key is local-<name> (stable across ports). Local tools are not inherited by nested projects (each project has its own effortless-tools/).",
+        "VersionLabel": "{name} [local]",
+        "Disposition": "keep-modified",
+        "Description": "Step 12 / D30. A -setToolUrl mapping still wins so a local tool can be pointed elsewhere for debugging. Evaluated before the catalog (R3) so an unknown local name never triggers a bridge call. Implemented by LocalToolCatalog + ToolResolver + CommandDispatcher (ephemeral host lifecycle) + CleanRunner (ledger key)."
       }
     ]
   },
@@ -5613,11 +5761,11 @@
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
-        "Description": "Retained seed cache used by cloneSeed; independent of Airtable metadata guessing."
+        "Description": "Legacy cloneSeed moved the files under this directory into the fresh clone and unzipped *.zip files. v2 does NOT apply it (step 04 restored discovery, cloning and $key$ replacement only); the directory is still migrated by step 10. Open item recorded in step 14; implement or drop with an owner decision."
       },
       {
         "ConfigFileId": "seed-json",
-        "Path": "<root>/effortless-seed.json (legacy ssotme-seed.json also accepted; + seed-config-values.json, seed-secrets-values.json)",
+        "Path": "<root>/effortless-seed.json (legacy ssotme-seed.json also accepted; + seed-config-values.json, seed-secret-values.json)",
         "Scope": "project-root",
         "Format": "json",
         "Purpose": "Seed replacement tokens ($key$) and interactive answers.",
@@ -5626,7 +5774,7 @@
         "IsSecret": true,
         "UnixMode": "",
         "Disposition": "keep-modified",
-        "Description": "Retained explicit $key$ replacement contract. Missing required values fail clearly; Airtable schema guessing is removed."
+        "Description": "Retained explicit $key$ replacement contract: effortless-seed.json lists { key, description, default?, secret? } replacements; answers live in seed-config-values.json (and seed-secret-values.json for secret ones; the legacy misspelling seed-secrets-values.json is also read); a parent directory's seed-config-values.json is consulted; missing values without a default prompt on stdin. Airtable schema guessing is removed."
       },
       {
         "ConfigFileId": "auth0-key",
@@ -5705,6 +5853,45 @@
         "UnixMode": "",
         "Disposition": "keep-modified",
         "Description": "Step 10 (D28 option A): renamed to <root>/.effortless when .effortless is absent. It is gitignored build state so a rename is safe. init writes both ignore lines so old clones stay clean."
+      },
+      {
+        "ConfigFileId": "local-tool-manifest",
+        "Path": "<root>/effortless-tools/<name>/tool.json",
+        "Scope": "project-root",
+        "Format": "json",
+        "Purpose": "Declares one local tool: { name, runtime: dotnet|node|script, entry, description, tags }. Optional: when absent a *.csproj means dotnet, package.json means node, and a single transpiler.* file means script.",
+        "ReadBy": "LocalToolCatalog.Discover (serve, resolution, clean, purge)",
+        "WrittenBy": "the tool author",
+        "IsSecret": false,
+        "UnixMode": "",
+        "Disposition": "keep-modified",
+        "Description": "Step 12. The folder name is the tool name and must be a catalog-style lower-hyphen name ([a-z0-9][a-z0-9-]*); a name in tool.json that disagrees with the folder is an error. Runtime contract: dotnet/node tools are started as child processes with PORT (and EFFORTLESS_TOOL_PORT) set and proxied at http://127.0.0.1:<PORT>/ exactly like a cloud workload; script tools get the EFFORTLESS_* directory contract."
+      },
+      {
+        "ConfigFileId": "project-serve-state",
+        "Path": "<root>/.effortless/serve.json",
+        "Scope": "project-hidden",
+        "Format": "json",
+        "Purpose": "{ port, pid, startedAt } of the resident local transpiler host started by effortless serve.",
+        "ReadBy": "CommandDispatcher before starting an ephemeral host: reused only when the pid is alive and GET http://127.0.0.1:<port>/ answers",
+        "WrittenBy": "ServeCommand on start; deleted on exit",
+        "IsSecret": false,
+        "UnixMode": "",
+        "Disposition": "keep-modified",
+        "Description": "Step 12. A stale file (dead pid or nothing listening) is ignored and overwritten by the next serve; an ephemeral host never writes it."
+      },
+      {
+        "ConfigFileId": "seed-sources",
+        "Path": "~/.effortless/seed_sources.json",
+        "Scope": "user-home",
+        "Format": "json",
+        "Purpose": "{ \"sources\": [\"ssotme\", \"effortlessapi\", ...] }: the ordered GitHub accounts searched by listSeeds and cloneSeed.",
+        "ReadBy": "SeedSources.Load (listSeeds, cloneSeed, listSeedSources)",
+        "WrittenBy": "addSeedSource / removeSeedSource (always the complete list)",
+        "IsSecret": false,
+        "UnixMode": "",
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Absent file = the defaults [ssotme, effortlessapi]. EFFORTLESS_SEED_GITHUB_ACCOUNT is prepended for one invocation without being written."
       }
     ]
   },
@@ -7068,6 +7255,166 @@
         "IsGoldenForTests": true,
         "Disposition": "keep-modified",
         "Description": "Step 13. Exit -1; no token is written."
+      },
+      {
+        "UserMessageId": "local-host-started",
+        "Template": "[cli] Local tool host listening on http://127.0.0.1:{port}/ ({count} tool(s))",
+        "Color": "default",
+        "Trigger": "serve start (resident) or -debug (ephemeral)",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 12. Followed by one \"  {name}  http://127.0.0.1:{port}/{name}  ({runtime})\" line per tool. serve also prints \"Press Ctrl+C to stop.\""
+      },
+      {
+        "UserMessageId": "local-host-stopped",
+        "Template": "[cli] Local tool host stopped.",
+        "Color": "default",
+        "Trigger": "serve exit",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 12. serve.json removed first."
+      },
+      {
+        "UserMessageId": "local-host-reloaded",
+        "Template": "[cli] effortless-tools/ changed; {count} tool(s) now served.",
+        "Color": "default",
+        "Trigger": "serve file watcher",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 12. Debounced; dotnet/node processes for changed tools are restarted lazily on next request."
+      },
+      {
+        "UserMessageId": "local-tool-runtime-missing",
+        "Template": "ERROR: Local tool '{name}' needs the '{runtime}' runtime ('{executable}') which was not found on PATH.",
+        "Color": "red",
+        "Trigger": "host cannot start the tool's interpreter/runtime",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 12. Returned to the CLI as the tool's Exception; the step fails."
+      },
+      {
+        "UserMessageId": "local-tool-failed",
+        "Template": "Local tool '{name}' exited with code {code}.",
+        "Color": "red",
+        "Trigger": "script exit != 0, or a proxied tool process died before answering",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 12. The script's stdout lines precede it as message-level log lines and its stderr lines as error-level (warning-level when the exit code was 0). Reaches the CLI as the response Exception, so the normal TRANSPILER ERROR block prints it and the step exits -1."
+      },
+      {
+        "UserMessageId": "local-tool-invalid",
+        "Template": "ERROR: '{folder}' under effortless-tools/ is not a valid local tool: {reason}",
+        "Color": "red",
+        "Trigger": "discovery finds a folder with an invalid name, a tool.json name that disagrees with the folder, an unknown runtime, or no recognizable entry",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 12. Discovery reports and skips the folder; serve and builds continue with the valid tools."
+      },
+      {
+        "UserMessageId": "local-tool-no-tools",
+        "Template": "No local tools found under {path}.",
+        "Color": "yellow",
+        "Trigger": "serve in a project without effortless-tools/ or with no valid tools",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 12. serve exits 0 after printing where it looked."
+      },
+      {
+        "UserMessageId": "seed-sources-list",
+        "Template": "Seed sources (searched in order):\\n  {account} (env)\\n  {account} (default)\\n  {account}",
+        "Color": "default",
+        "Trigger": "listSeedSources; also after addSeedSource/removeSeedSource",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. \"(env)\" marks the EFFORTLESS_SEED_GITHUB_ACCOUNT prepend; \"(default)\" marks entries that come from the built-in defaults because seed_sources.json is absent."
+      },
+      {
+        "UserMessageId": "seed-source-added",
+        "Template": "Added seed source '{account}'. | Seed source '{account}' is already listed.",
+        "Color": "default",
+        "Trigger": "addSeedSource",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Followed by the list."
+      },
+      {
+        "UserMessageId": "seed-source-removed",
+        "Template": "Removed seed source '{account}'.",
+        "Color": "default",
+        "Trigger": "removeSeedSource",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Followed by the list."
+      },
+      {
+        "UserMessageId": "seed-source-not-listed",
+        "Template": "ERROR: Seed source '{account}' is not listed. Current sources: {list}",
+        "Color": "red",
+        "Trigger": "removeSeedSource of an unknown account",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Exit -1; file unchanged."
+      },
+      {
+        "UserMessageId": "seed-source-invalid",
+        "Template": "ERROR: '{account}' is not a valid GitHub account name.",
+        "Color": "red",
+        "Trigger": "addSeedSource/removeSeedSource with a name outside [A-Za-z0-9-]{1,39}",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Exit -1."
+      },
+      {
+        "UserMessageId": "seed-list-header",
+        "Template": "Effortless seeds from GitHub account '{account}' ({count}):",
+        "Color": "default",
+        "Trigger": "listSeeds, once per source",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Followed by \"  {repo}  {description}\" lines; \"  (none)\" when the account has no seeds."
+      },
+      {
+        "UserMessageId": "seed-cloned",
+        "Template": "Cloned Effortless seed {account}/{repo} to {path}\\nRun `cd \"{path}\" && effortless build` when you are ready to execute its pipeline.",
+        "Color": "default",
+        "Trigger": "cloneSeed success",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. A bare name additionally prints \"Found '{repo}' in seed source '{account}'.\" before cloning. Nothing in the clone is executed."
+      },
+      {
+        "UserMessageId": "seed-not-found",
+        "Template": "Seed '{name}' was not found in any seed source ({list}).",
+        "Color": "red",
+        "Trigger": "cloneSeed with a bare name that no source has",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Exit -1."
+      },
+      {
+        "UserMessageId": "seed-ambiguous",
+        "Template": "Seed '{name}' is ambiguous: {account}/{repo}, {account}/{repo}. Use account/repo.",
+        "Color": "red",
+        "Trigger": "cloneSeed with a bare name matching in more than one source, or both a full and a short name in one",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Exit -1."
       }
     ]
   },
@@ -7250,9 +7597,9 @@
       {
         "EnvVariableId": "EFFORTLESS_SEED_GITHUB_ACCOUNT",
         "Source": "process-env",
-        "Purpose": "Default GitHub account used by listSeeds and cloneSeed when the invocation does not provide an account.",
+        "Purpose": "Extra GitHub account searched first by listSeeds and cloneSeed for this invocation only; prepended to the seed sources without being written to seed_sources.json.",
         "Disposition": "keep-modified",
-        "Description": "Defaults to ssotme when unset."
+        "Description": "Step 14: no longer the single default (the defaults are ssotme and effortlessapi from seed_sources.json); still honored as a per-invocation prepend."
       },
       {
         "EnvVariableId": "DEBUG (compile define)",
@@ -7260,6 +7607,69 @@
         "Purpose": "Switches AICaptureHost to https://localhost:7033 for the dead auth0 flow.",
         "Disposition": "drop-dead",
         "Description": "Only used by unreachable auth0 code."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_INPUT_DIR",
+        "Source": "child-env (set by LocalToolHost for script tools)",
+        "Purpose": "Directory where the host unzipped the request's input fileset (files at their RelativePath) before invoking a script tool.",
+        "Disposition": "keep-modified",
+        "Description": "Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_OUTPUT_DIR",
+        "Source": "child-env (set by LocalToolHost for script tools)",
+        "Purpose": "Empty directory the script tool writes its outputs into; after exit every file under it (relative path, AlwaysOverwrite=true) becomes the output fileset.",
+        "Disposition": "keep-modified",
+        "Description": "Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_OUTPUT_NAME",
+        "Source": "child-env (set by LocalToolHost for script tools)",
+        "Purpose": "The -output value (cliOutput) verbatim; the tool decides whether it names a file or a directory (D21). Empty when -output was not given.",
+        "Disposition": "keep-modified",
+        "Description": "Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_PARAMS",
+        "Source": "child-env (set by LocalToolHost for script tools)",
+        "Purpose": "JSON array of the cliParams strings exactly as sent (e.g. [\"schema=public\",\"param1=x\"]).",
+        "Disposition": "keep-modified",
+        "Description": "Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_TOOL_NAME",
+        "Source": "child-env (set by LocalToolHost for script tools)",
+        "Purpose": "The local tool's name.",
+        "Disposition": "keep-modified",
+        "Description": "Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout."
+      },
+      {
+        "EnvVariableId": "PORT / EFFORTLESS_TOOL_PORT",
+        "Source": "child-env (set by LocalToolHost for dotnet and node tools)",
+        "Purpose": "Loopback port the dotnet/node tool process must listen on; the host proxies POST / to it. PORT is what CLIClassLibrary.StartToolListener already reads, so a local dotnet tool folder is literally a cloud workload run locally.",
+        "Disposition": "keep-modified",
+        "Description": "Step 12 proxied-runtime contract. Node tools also receive EFFORTLESS_FILESET_HANDLER: the absolute path of the fileset handler module (lib/fileset-handler.mjs, embedded in the CLI and extracted to <root>/.effortless/local-tools/) so the tool can import it without an npm install."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_SEED_GITHUB_API / EFFORTLESS_SEED_GITHUB_RAW",
+        "Source": "process-env (test seam)",
+        "Purpose": "Base URLs replacing https://api.github.com and https://raw.githubusercontent.com in SeedCatalogClient so the E2E suite can run a mock GitHub.",
+        "Disposition": "keep-modified",
+        "Description": "Step 14. Unset in normal use."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_SERVE_EXIT_AFTER_MS",
+        "Source": "process-env (test seam)",
+        "Purpose": "Makes effortless serve exit on its own after this many milliseconds instead of waiting for Ctrl+C.",
+        "Disposition": "keep-modified",
+        "Description": "Step 12. Unset in normal use; the exit path is the same one SIGINT/SIGTERM take (serve.json removed, host disposed)."
+      },
+      {
+        "EnvVariableId": "EFFORTLESS_CLI_TEST_UTC_NOW",
+        "Source": "process-env (test seam)",
+        "Purpose": "Fixed UTC \"now\" for catalog-age and freshness decisions so the E2E suite is deterministic.",
+        "Disposition": "keep-modified",
+        "Description": "Steps 03A/11. Unset in normal use."
       }
     ]
   },
@@ -8196,6 +8606,116 @@
         "NewPath": "src/Effortless.Cli.Core/Config/UserConfigMigration.cs",
         "Notes": "The ONLY module allowed to know the legacy ~/.ssotme names. Copy-only, staged into ~/.effortless.migrating-<guid> then renamed; writes ~/.ssotme/MIGRATED-TO-EFFORTLESS; failure is fatal. Called from Program.Main and lazily from UserConfigDir.EffortlessDir.",
         "Description": "Step 10 in-field migration of the user state directory."
+      },
+      {
+        "SourceModuleId": "local-tool",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 60,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/LocalTool.cs",
+        "Notes": "LocalTool record (name, runtime, directory, entry, description, tags), LocalToolRuntime, LocalToolProblem.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "local-tool-catalog",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 330,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/LocalToolCatalog.cs",
+        "Notes": "Discovery of <root>/effortless-tools/*: tool.json or csproj/package.json/transpiler.* inference, name validation, entry resolution, ledger key local-<name>.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "local-tool-host",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 330,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/LocalToolHost.cs",
+        "Notes": "HttpListener host: GET / lists tools, GET /<name> health, POST /<name> runs a script tool or proxies a dotnet/node tool; shapes the wire response.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "local-tool-resolver",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 130,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/LocalToolResolver.cs",
+        "Notes": "R12 seam used by ToolResolver and CommandDispatcher: finds the local tool for an invocation, returns the resident host URL from serve.json or starts one ephemeral host per project for the CLI invocation.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "local-tool-script-runner",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 210,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/ScriptToolRunner.cs",
+        "Notes": "Script runtime: interpreter map, EFFORTLESS_* env contract, stdout/stderr -> logs, exit code -> failure, cliWaitTimeout bound.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "local-tool-proxied-process",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 260,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/ProxiedToolProcess.cs",
+        "Notes": "dotnet (dotnet run --project) and node child processes on PORT; TCP readiness wait; verbatim HTTP forwarding including /task/<id> polls.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "local-fileset-io",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 150,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/LocalFileSets.cs",
+        "Notes": "Input FileSet XML -> directory; output directory -> FileSet XML (FileContents for XML-safe text, ZippedBinaryFileContents otherwise; AlwaysOverwrite).",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "serve-state",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 120,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/ServeState.cs",
+        "Notes": "<root>/.effortless/serve.json read/write and liveness check (pid alive + port accepting).",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "fileset-handler-asset",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 35,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/LocalTools/FileSetHandlerAsset.cs",
+        "Notes": "Extracts the embedded lib/fileset-handler.mjs into <root>/.effortless/local-tools/.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "fileset-handler-mjs",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 240,
+        "Disposition": "keep-modified",
+        "NewPath": "lib/fileset-handler.mjs",
+        "Notes": "Zero-dependency node module: parse/build FileSet XML, decode TranspilePayload, build the response, createRequestListener (mountable in express), serveTool. Shipped in the npm package and embedded in the CLI.",
+        "Description": "Step 12 local transpiler host."
+      },
+      {
+        "SourceModuleId": "serve-command",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 180,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/Commands/ServeCommand.cs",
+        "Notes": "effortless serve [-port N]: resident host, serve.json, tool listing, effortless-tools/ watcher with debounced reload, SIGINT/SIGTERM cleanup; EFFORTLESS_SERVE_EXIT_AFTER_MS test seam.",
+        "Description": "Step 12 local transpiler host."
       }
     ]
   },
@@ -8798,6 +9318,22 @@
         "RunsInCi": true,
         "NeedsNetwork": false,
         "Description": "Step 10: ~/.ssotme -> ~/.effortless migration, project ledger dir rename, child env var."
+      },
+      {
+        "TestSuiteId": "e2e-local-tools",
+        "Harness": "tests/Effortless.Cli.E2E",
+        "Kind": "black-box",
+        "RunsInCi": true,
+        "NeedsNetwork": false,
+        "Description": "Step 12: effortless-tools/ discovery, R12 resolution, the three runtimes (script/node/dotnet), ephemeral and resident hosts, ledger/clean, -setToolUrl override."
+      },
+      {
+        "TestSuiteId": "e2e-seeds",
+        "Harness": "tests/Effortless.Cli.E2E",
+        "Kind": "black-box",
+        "RunsInCi": true,
+        "NeedsNetwork": false,
+        "Description": "Step 14: seed sources file and verbs, listSeeds across sources, cloneSeed qualified/bare/ambiguous against a mock GitHub (API + raw + dumb-HTTP git), $key$ replacement on first load."
       }
     ]
   },
@@ -12947,6 +13483,384 @@
         "Slow": false,
         "Status": "rebuild-green",
         "Description": "Local dev loop from the step-13 doc."
+      },
+      {
+        "TestCaseId": "local-tool-resolves-before-catalog",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "a local tool name resolves without any catalog or bridge call",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server; empty catalog cache",
+        "When": "effortless echo-params -input README.md",
+        "Then": "exit 0; label \"echo-params [local]\"; no bridge request; output written",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-build-writes-output",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "build",
+        "Title": "a build step naming a local tool writes its output through the normal SaveFileSet path",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server with effortless.json step \"echo-params -input README.md -output echo.txt\"",
+        "When": "effortless build",
+        "Then": "echo.txt written with the script's output; .effortless/local-echo-params.zfs exists",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-ledger-and-clean",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "clean",
+        "Title": "clean removes exactly what the local tool wrote, keyed local-<name>",
+        "Given": "after local-tool-build-writes-output",
+        "When": "effortless clean",
+        "Then": "echo.txt removed; ledger key was local-echo-params regardless of the host port",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-ephemeral-host-lifecycle",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "build",
+        "Title": "a build with no serve.json starts an in-process host and leaves nothing behind",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server; no .effortless/serve.json",
+        "When": "effortless build",
+        "Then": "build succeeds; no serve.json written; no listener remains on the port after exit",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-resident-serve-reuse",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "a running serve is reused by builds via serve.json",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server",
+        "When": "effortless serve (background) then effortless build",
+        "Then": "serve.json has the pid/port; the build's request arrives at the resident host (its stdout shows the request); build output identical to ephemeral",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": true,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-params-passthrough",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "cliParams and -output reach a script tool via the env contract",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server",
+        "When": "effortless echo-params -input README.md -output out/echo.txt -p schema=public extra",
+        "Then": "the script sees EFFORTLESS_PARAMS [\"schema=public\",\"param1=extra\",...], EFFORTLESS_OUTPUT_NAME=out/echo.txt, EFFORTLESS_TOOL_NAME=echo-params, the input file list, and writes them into out/echo.txt",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-nonzero-exit-fails-step",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "build",
+        "Title": "a script that exits non-zero fails the step with its log",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server plus effortless-tools/fail-tool/transpiler.sh exiting 3 after echoing to stderr",
+        "When": "effortless fail-tool -input README.md",
+        "Then": "exit -1; stderr contains \"Local tool 'fail-tool' exited with code 3.\" and the script's stderr line; nothing written",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-missing-runtime",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "a tool.json naming an unknown runtime is a clear error",
+        "Given": "effortless-tools/bogus/tool.json with runtime \"cobol\"",
+        "When": "effortless serve",
+        "Then": "serve prints the local-tool-invalid message naming bogus and runtime 'cobol' and serves the remaining 4 tools; a direct \"effortless bogus\" falls through to the catalog and gets the tool-not-found message",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-node-handler-roundtrip",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "a node tool built on lib/fileset-handler.mjs round-trips input to output",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server",
+        "When": "effortless to-upper-node -input README.md",
+        "Then": "Output.txt contains the upper-cased README; the tool imported the handler from EFFORTLESS_FILESET_HANDLER; the child was started with PORT",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": true,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-dotnet-same-shape-as-cloud",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "a dotnet tool reading PORT and answering POST / works unchanged as a local tool",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server",
+        "When": "effortless to-upper-dotnet -input README.md",
+        "Then": "Output.txt upper-cased; the tool never saw anything but the standard TranspilePayload JSON",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": true,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-seturl-override-wins",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "setToolUrl",
+        "Title": "a tool_urls.json mapping beats a same-named local tool",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server and a mock tool server",
+        "When": "effortless -setToolUrl echo-params=<mock url> ; effortless echo-params -input README.md",
+        "Then": "the request hits the mock server; label \"echo-params [user-set]\"; no local host started",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "serve-lists-tools",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "serve prints one URL per tool and GET / lists them",
+        "Given": "project-local-tools fixture (effortless-tools/echo-params/transpiler.sh, to-upper-node/{package.json,index.mjs}, to-upper-dotnet/{csproj,Program.cs}); no bridge server",
+        "When": "effortless serve -port <free>",
+        "Then": "stdout has \"Local tool host listening on http://127.0.0.1:<port>/ (3 tool(s))\" and one line per tool with its runtime; GET / returns JSON with the three names; Ctrl+C/kill removes serve.json",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "local-tool-not-inherited-by-child-project",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "build",
+        "Title": "a nested project does not see its parent's effortless-tools/",
+        "Given": "parent with effortless-tools/echo-params; child project (own effortless.json) under it with a step naming echo-params and an empty catalog",
+        "When": "effortless build in the child",
+        "Then": "the child fails at the project catalog gate with \"Project tool 'echo-params' is missing from the current remote tools index\"; no [local] label; nothing written",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "unit-local-tool-discovery",
+        "Suite": "unit-core",
+        "PrimaryOption": "serve",
+        "Title": "discovery maps folders to runtimes and validates names",
+        "Given": "temp dir with a/tool.json(runtime script), b/x.csproj, c/package.json, d/transpiler.py, Bad_Name/, e/(empty), f/tool.json(name mismatch)",
+        "When": "LocalToolCatalog.Discover",
+        "Then": "a=script, b=dotnet, c=node, d=script(entry transpiler.py); Bad_Name, e and f reported invalid with reasons; LedgerKey(\"a\") == \"local-a\"",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12 unit half."
+      },
+      {
+        "TestCaseId": "serve-no-tools",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "serve without effortless-tools/ says where it looked",
+        "Given": "project-basic fixture (no effortless-tools/)",
+        "When": "effortless serve",
+        "Then": "exit 0; stdout \"No local tools found under <root>/effortless-tools.\"; no host started, no serve.json",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12."
+      },
+      {
+        "TestCaseId": "unit-local-tool-discovery-no-folder",
+        "Suite": "unit-core",
+        "PrimaryOption": "serve",
+        "Title": "a project without effortless-tools/ has an empty catalog",
+        "Given": "temp project dir with no effortless-tools/",
+        "When": "LocalToolCatalog.Discover / DiscoverFrom",
+        "Then": "IsEmpty, no problems, TryGet null; DiscoverFrom(dir without effortless.json) is null",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12 unit half."
+      },
+      {
+        "TestCaseId": "serve-port-fixed",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "port",
+        "Title": "serve -port binds the given loopback port",
+        "Given": "project-local-tools fixture and a free port N",
+        "When": "effortless serve -port N",
+        "Then": "the listening line and every tool URL use port N; GET http://127.0.0.1:N/ answers; serve.json records N",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": true,
+        "Status": "rebuild-green",
+        "Description": "Step 12. Covered inside serve-lists-tools, which passes -port explicitly."
+      },
+      {
+        "TestCaseId": "seed-sources-default-list",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "listSeedSources",
+        "Title": "no seed_sources.json means the two defaults",
+        "Given": "sandbox home without seed_sources.json",
+        "When": "effortless listSeedSources ; EFFORTLESS_SEED_GITHUB_ACCOUNT=extra effortless listSeedSources",
+        "Then": "first lists ssotme (default), effortlessapi (default); second lists extra (env) first; no file is written",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "seed-source-add",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "addSeedSource",
+        "Title": "addSeedSource creates the file from the defaults and appends",
+        "Given": "sandbox home without seed_sources.json",
+        "When": "effortless addSeedSource acme ; effortless addSeedSource acme",
+        "Then": "seed_sources.json = {sources:[ssotme,effortlessapi,acme]}; second run prints already listed and leaves the file unchanged; an invalid name (bad/name) fails with the invalid message",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "seed-source-remove-default",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "removeSeedSource",
+        "Title": "a default can be removed and stays removed",
+        "Given": "sandbox home without seed_sources.json",
+        "When": "effortless removeSeedSource ssotme ; effortless listSeedSources ; effortless removeSeedSource nope",
+        "Then": "file = {sources:[effortlessapi]}; list shows only effortlessapi with no (default) marker; nope fails with the not-listed message and the file is unchanged",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "list-seeds-across-sources",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "listSeeds",
+        "Title": "listSeeds walks every source in order and groups by account",
+        "Given": "mock GitHub with accounts acme (seeds: acme-orders, shared-seed; non-seed: plain-repo) and beta (seeds: beta-crm, shared-seed), served as API + raw + dumb-HTTP git; sandbox home; seed_sources.json = [acme, beta]",
+        "When": "effortless listSeeds ; effortless listSeeds beta",
+        "Then": "first prints both headers in order with acme-orders, shared-seed under acme (with descriptions) and beta-crm, shared-seed under beta, never plain-repo; second prints only the beta group",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "clone-seed-qualified",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "cloneSeed",
+        "Title": "cloneSeed account/repo clones exactly that repository",
+        "Given": "mock GitHub with accounts acme (seeds: acme-orders, shared-seed; non-seed: plain-repo) and beta (seeds: beta-crm, shared-seed), served as API + raw + dumb-HTTP git; sandbox home",
+        "When": "effortless cloneSeed acme/acme-orders",
+        "Then": "acme-orders/ exists with .git and effortless.json; stdout has the cloned message and the build hint; the API was queried for acme only",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "clone-seed-bare-first-match",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "cloneSeed",
+        "Title": "a bare name found in one source clones it and says which",
+        "Given": "mock GitHub with accounts acme (seeds: acme-orders, shared-seed; non-seed: plain-repo) and beta (seeds: beta-crm, shared-seed), served as API + raw + dumb-HTTP git; sandbox home; sources [acme, beta]",
+        "When": "effortless cloneSeed beta-crm",
+        "Then": "stdout \"Found 'beta-crm' in seed source 'beta'.\" then the cloned message; beta-crm/.git exists",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "clone-seed-bare-ambiguous",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "cloneSeed",
+        "Title": "a bare name present in two sources is an error listing both",
+        "Given": "mock GitHub with accounts acme (seeds: acme-orders, shared-seed; non-seed: plain-repo) and beta (seeds: beta-crm, shared-seed), served as API + raw + dumb-HTTP git; sandbox home; sources [acme, beta]",
+        "When": "effortless cloneSeed shared-seed ; effortless cloneSeed nothing-here",
+        "Then": "first fails with the ambiguous message naming acme/shared-seed and beta/shared-seed and nothing is cloned; second fails with the not-found message listing acme, beta",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "clone-seed-preserves-git-and-runs-nothing",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "cloneSeed",
+        "Title": "cloning keeps history and executes nothing",
+        "Given": "mock GitHub with accounts acme (seeds: acme-orders, shared-seed; non-seed: plain-repo) and beta (seeds: beta-crm, shared-seed), served as API + raw + dumb-HTTP git; sandbox home; acme-orders has a build step and an effortless-seed.json",
+        "When": "effortless cloneSeed acme/acme-orders here",
+        "Then": "here/.git has the seed's commit; no .effortless/ ledger, no generated output, no replacement applied yet; stdout tells the user to run effortless build",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "seed-replacements-effortless-seed-json",
+        "Suite": "e2e-seeds",
+        "PrimaryOption": "cloneSeed",
+        "Title": "$key$ replacement runs on first project load using defaults",
+        "Given": "a clone of acme-orders whose effortless-seed.json declares project-name with default orders and whose tree has $project-name$.md containing $PROJECT-NAME$",
+        "When": "effortless describe in the clone",
+        "Then": "the file is renamed orders.md with content \"# orders\"; no seed-config-values.json is written (defaults are applied silently; only prompted answers are recorded); effortless-seed.json itself is untouched; exit 0",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14."
+      },
+      {
+        "TestCaseId": "unit-seed-sources",
+        "Suite": "unit-core",
+        "PrimaryOption": "listSeedSources",
+        "Title": "SeedSources round-trips the file, prepends the env account, and validates names",
+        "Given": "temp home",
+        "When": "Load/Add/Remove",
+        "Then": "absent file => [ssotme, effortlessapi] with IsDefault; Add writes the full list; Remove of a default persists; env prepend not written; duplicate Add is a no-op; invalid names throw",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 14 unit half."
       }
     ]
   },
@@ -13187,8 +14101,8 @@
         "InstructionsPath": "docs/refactor-plan/step-12-local-transpiler-host.md",
         "DoneCriteria": "effortless serve hosts ./effortless-tools/* over the exact TranspilePayload/FileSet contract cloud tools use; a bare <tool-name> resolves to the local host via a new ToolResolutionRule ahead of the catalog; effortless build auto-starts an ephemeral host when needed; .zfs ledgers and clean behave identically to remote tools; e2e fixture tool green; the legacy-runner ssotme-proxy pattern (lsof cwd sniffing) is documented as superseded.",
         "Owner": "opus",
-        "Status": "ready",
-        "Description": "Owner decided D30: native .NET host in the CLI; dotnet tools are the same shape as published cloud tools; a node/express fileset handler ships in the npm package; script tools get the env-dir contract. Supersedes the legacy-runner ssotme-proxy."
+        "Status": "done",
+        "Description": "Owner decided D30: native .NET host in the CLI; dotnet tools are the same shape as published cloud tools; a node fileset handler ships in the npm package (zero-dependency, mountable in express); script tools get the env-dir contract. Supersedes the legacy-runner ssotme-proxy. Implemented 2026-09-05 on HttpListener (no ASP.NET shared-framework requirement); ledger key local-<name>; script outputs are AlwaysOverwrite (per-file overwrite modes need the node/dotnet shape)."
       },
       {
         "RefactorStepId": "step-13",
@@ -13211,7 +14125,7 @@
         "InstructionsPath": "docs/refactor-plan/step-14-seeds-v2-and-skill.md",
         "DoneCriteria": "Source verbs work; listSeeds spans sources; cloneSeed accepts account/repo and bare repo (first match, ambiguity is an error); clone preserves .git and runs nothing; effortless-seeds SKILL.md exists in ../effortless-skills, that repo is pushed and install.sh run; tests green.",
         "Owner": "opus",
-        "Status": "ready",
+        "Status": "done",
         "Description": "Owner D1/D25. The skills-repo push is the only push permitted before step-16, and it is to a different repo."
       },
       {
@@ -13235,7 +14149,7 @@
         "InstructionsPath": "docs/refactor-plan/step-16-v2-cut-and-cutover.md",
         "DoneCriteria": "parity-check.sh clean on macOS + Windows; the v2 clean-cut checklist is fully ticked (rulebook archive split, no legacy appendix, no rabbit compat test, text sweep passes); single squash commit on main; CI green on that push; installers built from it; release published; all four aliases print the new stamp.",
         "Owner": "opus",
-        "Status": "blocked",
+        "Status": "ready",
         "Description": "Was step-08, then step-13. Last so steps 09-15 ship inside the same single commit and single push. Text sweep encodes D31 (ssotme only as protocol, alias, migration constants, seed source, formerly line). Step-15 may be deferred to v2.x without blocking this."
       }
     ]

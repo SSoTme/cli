@@ -6,6 +6,7 @@ namespace Effortless.Cli.Project;
 public class CleanRunner
 {
     private readonly EffortlessProject _project;
+    private LocalTools.LocalToolCatalog _localTools;
     private List<string> _projectFiles = new List<string>();
 
     public CleanRunner(EffortlessProject project)
@@ -192,9 +193,10 @@ public class CleanRunner
         var zfsDirectory =
             _project.GetZFSDI(projectTranspiler.RelativePath);
 
-        string transpilerName = null;
+        string transpilerName = LocalLedgerKey(projectTranspiler);
 
-        if (!String.IsNullOrEmpty(projectTranspiler.LastUrl))
+        if (String.IsNullOrEmpty(transpilerName)
+            && !String.IsNullOrEmpty(projectTranspiler.LastUrl))
         {
             transpilerName =
                 projectTranspiler.LastUrl
@@ -338,9 +340,16 @@ public class CleanRunner
                      _project.ProjectTranspilers)
             {
                 string transpilerName =
-                    NameHelpers.LowerHyphenName(
+                    LocalLedgerKey(projectTranspiler)
+                    ?? NameHelpers.LowerHyphenName(
                         projectTranspiler.Name);
-                if (IsRemoteUrlCommandLine(
+                if (transpilerName.StartsWith(
+                        LocalTools.LocalToolCatalog.LedgerKeyPrefix,
+                        StringComparison.Ordinal))
+                {
+                    // R12: local tools are keyed local-<name>, never by URL.
+                }
+                else if (IsRemoteUrlCommandLine(
                         projectTranspiler.CommandLine))
                 {
                     var trimmedCommandLine =
@@ -550,6 +559,25 @@ public class CleanRunner
         {
             new DirectoryInfo(projectDirectory).InvokeEffortlessClean();
         }
+    }
+
+    /// <summary>
+    /// R12: a step whose tool is a project-local tool keeps its ledger under
+    /// local-&lt;name&gt; regardless of the host port it ran against.
+    /// </summary>
+    private string LocalLedgerKey(ProjectTranspiler projectTranspiler)
+    {
+        var toolName = EffortlessProject.GetToolName(
+            projectTranspiler.CommandLine);
+        if (string.IsNullOrWhiteSpace(toolName)
+            || string.IsNullOrWhiteSpace(_project.RootPath))
+        {
+            return null;
+        }
+
+        _localTools ??= LocalTools.LocalToolCatalog.Discover(
+            _project.RootPath);
+        return _localTools.Match(toolName)?.LedgerKey;
     }
 
     private static bool IsRemoteUrlCommandLine(

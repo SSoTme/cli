@@ -23,11 +23,24 @@ public sealed record SeedRepository(
 public sealed class SeedCatalogClient
 {
     public const string DefaultAccount = "ssotme";
+    public const string ApiBaseEnvironmentVariable = "EFFORTLESS_SEED_GITHUB_API";
+    public const string RawBaseEnvironmentVariable = "EFFORTLESS_SEED_GITHUB_RAW";
 
     private readonly HttpClient _httpClient;
+    private readonly string _apiBase;
+    private readonly string _rawBase;
 
-    public SeedCatalogClient(HttpClient httpClient = null)
+    public SeedCatalogClient(
+        HttpClient httpClient = null,
+        string apiBase = null,
+        string rawBase = null)
     {
+        _apiBase = (apiBase
+                    ?? Environment.GetEnvironmentVariable(ApiBaseEnvironmentVariable)
+                    ?? "https://api.github.com").TrimEnd('/');
+        _rawBase = (rawBase
+                    ?? Environment.GetEnvironmentVariable(RawBaseEnvironmentVariable)
+                    ?? "https://raw.githubusercontent.com").TrimEnd('/');
         _httpClient = httpClient ?? new HttpClient();
         if (!_httpClient.DefaultRequestHeaders.UserAgent.Any())
         {
@@ -47,7 +60,7 @@ public sealed class SeedCatalogClient
         for (var page = 1; ; page++)
         {
             using var response = await _httpClient.GetAsync(
-                $"https://api.github.com/users/{Uri.EscapeDataString(account)}/repos?per_page=100&page={page}",
+                $"{_apiBase}/users/{Uri.EscapeDataString(account)}/repos?per_page=100&page={page}",
                 cancellationToken);
             response.EnsureSuccessStatusCode();
             var root = JArray.Parse(
@@ -104,7 +117,7 @@ public sealed class SeedCatalogClient
     {
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            $"https://raw.githubusercontent.com/{Uri.EscapeDataString(account)}/{Uri.EscapeDataString(repository)}/{Uri.EscapeDataString(defaultBranch)}/effortless.json");
+            $"{_rawBase}/{Uri.EscapeDataString(account)}/{Uri.EscapeDataString(repository)}/{Uri.EscapeDataString(defaultBranch)}/effortless.json");
         using var response = await _httpClient.SendAsync(
             request,
             HttpCompletionOption.ResponseHeadersRead,

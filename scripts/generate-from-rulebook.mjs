@@ -313,12 +313,15 @@ function generateBarewordVerbs(options) {
   const stringSetters = [];
   // Bareword forms of these consume the tool position as their value, rather
   // than the tool position being a tool name. D16 renamed the *Url ids to
-  // *ToolUrl; D17 added pin, whose bareword takes "<tool> <version|url>".
+  // *ToolUrl; D17 added pin, whose bareword takes "<tool> <version|url>";
+  // step 14 added the seed-source verbs, whose bareword takes "<account>".
   const consumedStringOptions = new Set([
     "viewToolUrl",
     "setToolUrl",
     "removeToolUrl",
     "searchTools",
+    "addSeedSource",
+    "removeSeedSource",
   ]);
 
   // Options whose bareword form is normalized by CliArgumentParser's

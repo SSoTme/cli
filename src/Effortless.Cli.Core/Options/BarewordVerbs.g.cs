@@ -71,6 +71,10 @@ public static class BarewordVerbs
                 ["describewithsubprojects"] = options => options.describeWithSubprojects = true,
                 ["disable"] = options => options.disable = true,
                 ["enable"] = options => options.enable = true,
+                ["serve"] = options => options.serve = true,
+                ["listseedsources"] = options => options.listSeedSources = true,
+                ["addseedsource"] = _ => { },
+                ["removeseedsource"] = _ => { },
             });
 
     private static IReadOnlyDictionary<string, Action<CliOptions, string>> StringOptionSetters { get; } =
@@ -91,6 +95,8 @@ public static class BarewordVerbs
                 ["rt"] = (options, value) => options.removeToolUrl = value,
                 ["searchtools"] = (options, value) => options.searchTools = value,
                 ["search"] = (options, value) => options.searchTools = value,
+                ["addseedsource"] = (options, value) => options.addSeedSource = value,
+                ["removeseedsource"] = (options, value) => options.removeSeedSource = value,
             });
 
     public static bool TryApply(

@@ -286,5 +286,29 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "unit-local-tool-discovery",
+    "suite": "unit-core",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "unit-local-tool-discovery-no-folder",
+    "suite": "unit-core",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "unit-seed-sources",
+    "suite": "unit-core",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]

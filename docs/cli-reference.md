@@ -547,25 +547,69 @@ Magic-link login, project login, subscription, API keys.
 - Help text: Show the EffortlessAPI plan for this account (preview plan until subscriptions exist)
 - Description: Show the account plan.
 
-## Seeds (legacy scaffolding)
+## Seeds (start a project from a public repository)
 
-GitHub-hosted Effortless seed repositories (root or child projects with a full Effortless stack and effortless.json at the root). Kept per owner decision D1; see the effortless-skills seed skill (step 14).
+An Effortless seed is a public GitHub repository with effortless.json at its root. listSeeds finds them across an ordered list of GitHub accounts (the seed sources: ssotme and effortlessapi by default, managed with listSeedSources/addSeedSource/removeSeedSource); cloneSeed clones one, keeps its .git history, and never executes downloaded code.
 
 ### `-listSeeds`
 
 - Aliases: `lsd`
 - Bareword forms: `listseeds`
 - Value type: `bool`
-- Help text: Lists public Effortless seed repositories
-- Description: List public Effortless seed repositories.
+- Help text: Lists public Effortless seed repositories across the seed sources
+- Description: List public Effortless seed repositories across the configured seed sources.
 
 ### `-cloneSeed`
 
 - Aliases: `cs`, `clone`
 - Bareword forms: `cloneseed`, `clone`
 - Value type: `bool`
-- Help text: Clones a public Effortless seed repository
+- Help text: Clones a public Effortless seed repository (account/repo, repo, or clone URL)
 - Description: Clone a public Effortless seed repository.
+
+### `-listSeedSources`
+
+- Aliases: `lss`
+- Bareword forms: `listseedsources`
+- Value type: `bool`
+- Help text: Lists the GitHub accounts searched for Effortless seeds
+- Description: Lists the GitHub accounts searched for Effortless seeds.
+
+### `-addSeedSource`
+
+- Aliases: `ass`
+- Bareword forms: `addseedsource`
+- Value type: `string`
+- Help text: Adds a GitHub account to the seed sources
+- Description: Adds a GitHub account to the seed sources.
+
+### `-removeSeedSource`
+
+- Aliases: `rss`
+- Bareword forms: `removeseedsource`
+- Value type: `string`
+- Help text: Removes a GitHub account from the seed sources
+- Description: Removes a GitHub account from the seed sources.
+
+## Local tools (effortless-tools/, serve)
+
+Tools that live inside the project at effortless-tools/<name>/ and are hosted by the CLI itself over the same REST contract published tools speak. A build that names a local tool starts an ephemeral host for the duration of the build; serve keeps one running so repeated builds reuse it.
+
+### `-serve`
+
+- Aliases: None
+- Bareword forms: `serve`
+- Value type: `bool`
+- Help text: Hosts this project's local tools (effortless-tools/) over HTTP
+- Description: Run the local transpiler host resident so builds reuse one long-lived process.
+
+### `-port`
+
+- Aliases: None
+- Bareword forms: None
+- Value type: `int`
+- Help text: Port for the local transpiler host (default: an ephemeral port)
+- Description: Fixed port for serve.
 
 ## Exit codes
 
@@ -596,11 +640,14 @@ GitHub-hosted Effortless seed repositories (root or child projects with a full E
 - `~/.effortless/github_version_check.json` — { lastCheck, latestVersion } 24h cache of the GitHub latest release tag. Only reachable through the disabled CheckForUpdateNotice; kept because -upgradeCli shares the parsing.
 - `~/.effortless/effortlessapi_token.txt` — Global JWT.
 - `~/.effortless/effortlessapi_token_info.json` — { Token, Email, CreatedAt, ExpiresAt(+24h) }.
-- `~/.effortless/seed_cache/<seed>/cache/**` — Files copied into a cloned seed. Retained seed cache used by cloneSeed; independent of Airtable metadata guessing.
-- `<root>/effortless-seed.json (legacy ssotme-seed.json also accepted; + seed-config-values.json, seed-secrets-values.json)` — Seed replacement tokens ($key$) and interactive answers. Retained explicit $key$ replacement contract. Missing required values fail clearly; Airtable schema guessing is removed.
+- `~/.effortless/seed_cache/<seed>/cache/**` — Files copied into a cloned seed. Legacy cloneSeed moved the files under this directory into the fresh clone and unzipped *.zip files. v2 does NOT apply it (step 04 restored discovery, cloning and $key$ replacement only); the directory is still migrated by step 10. Open item recorded in step 14; implement or drop with an owner decision.
+- `<root>/effortless-seed.json (legacy ssotme-seed.json also accepted; + seed-config-values.json, seed-secret-values.json)` — Seed replacement tokens ($key$) and interactive answers. Retained explicit $key$ replacement contract: effortless-seed.json lists { key, description, default?, secret? } replacements; answers live in seed-config-values.json (and seed-secret-values.json for secret ones; the legacy misspelling seed-secrets-values.json is also read); a parent directory's seed-config-values.json is consulted; missing values without a default prompt on stdin. Airtable schema guessing is removed.
 - `~/.ssotme/` — Legacy user state directory (v1). Step 10: copied (never moved) to ~/.effortless with renames: ssotme.key -> effortless.key, ssotme.<runAs>.key -> effortless.<runAs>.key, remote_tools/ssotme-tools.json -> remote_tools/effortless-tools.json, remote_tools/ssotme.json dropped, everything else same relative path. If both directories exist, ~/.effortless wins and ~/.ssotme is never read again (no merging). Migration failure is fatal.
 - `~/.ssotme/MIGRATED-TO-EFFORTLESS` — Records that the legacy directory was copied to ~/.effortless. One line: target path, UTC timestamp, CLI version. The rest of ~/.ssotme is left untouched so a legacy ssotme binary keeps working.
 - `<root>/.ssotme/` — Legacy per-project ledger directory. Step 10 (D28 option A): renamed to <root>/.effortless when .effortless is absent. It is gitignored build state so a rename is safe. init writes both ignore lines so old clones stay clean.
+- `<root>/effortless-tools/<name>/tool.json` — Declares one local tool: { name, runtime: dotnet|node|script, entry, description, tags }. Optional: when absent a *.csproj means dotnet, package.json means node, and a single transpiler.* file means script. Step 12. The folder name is the tool name and must be a catalog-style lower-hyphen name ([a-z0-9][a-z0-9-]*); a name in tool.json that disagrees with the folder is an error. Runtime contract: dotnet/node tools are started as child processes with PORT (and EFFORTLESS_TOOL_PORT) set and proxied at http://127.0.0.1:<PORT>/ exactly like a cloud workload; script tools get the EFFORTLESS_* directory contract.
+- `<root>/.effortless/serve.json` — { port, pid, startedAt } of the resident local transpiler host started by effortless serve. Step 12. A stale file (dead pid or nothing listening) is ignored and overwritten by the next serve; an ephemeral host never writes it.
+- `~/.effortless/seed_sources.json` — { "sources": ["ssotme", "effortlessapi", ...] }: the ordered GitHub accounts searched by listSeeds and cloneSeed. Step 14. Absent file = the defaults [ssotme, effortlessapi]. EFFORTLESS_SEED_GITHUB_ACCOUNT is prepended for one invocation without being written.
 
 ## Environment variables and keys
 
@@ -610,7 +657,16 @@ GitHub-hosted Effortless seed repositories (root or child projects with a full E
 - `EFFORTLESS_JWT` (effortless.env) — Project-scoped JWT written by "effortless projectLogin"; takes precedence over the global token and is sent as cliJwt. Read via SsotmeEnvFile.TryLoadFromNearestProject; quotes stripped; comments (#) ignored.
 - `{ACCOUNT}_PAT | _API_KEY | _APIKEY | _KEY` (effortless.env) — With -account X, the first matching X_{suffix} value is injected as apiKey=... (case-insensitive key lookup). Precedence: effortless.env beats ~/.effortless/effortless.key APIKeys[X]; both beat a same-named ProjectSetting.
 - `{ACCOUNT}_BASEID | _BASE_ID` (effortless.env) — With -account X, injected as baseId=... Same rules as the apiKey mapping.
-- `EFFORTLESS_SEED_GITHUB_ACCOUNT` (process-env) — Default GitHub account used by listSeeds and cloneSeed when the invocation does not provide an account. Defaults to ssotme when unset.
+- `EFFORTLESS_SEED_GITHUB_ACCOUNT` (process-env) — Extra GitHub account searched first by listSeeds and cloneSeed for this invocation only; prepended to the seed sources without being written to seed_sources.json. Step 14: no longer the single default (the defaults are ssotme and effortlessapi from seed_sources.json); still honored as a per-invocation prepend.
+- `EFFORTLESS_INPUT_DIR` (child-env (set by LocalToolHost for script tools)) — Directory where the host unzipped the request's input fileset (files at their RelativePath) before invoking a script tool. Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout.
+- `EFFORTLESS_OUTPUT_DIR` (child-env (set by LocalToolHost for script tools)) — Empty directory the script tool writes its outputs into; after exit every file under it (relative path, AlwaysOverwrite=true) becomes the output fileset. Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout.
+- `EFFORTLESS_OUTPUT_NAME` (child-env (set by LocalToolHost for script tools)) — The -output value (cliOutput) verbatim; the tool decides whether it names a file or a directory (D21). Empty when -output was not given. Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout.
+- `EFFORTLESS_PARAMS` (child-env (set by LocalToolHost for script tools)) — JSON array of the cliParams strings exactly as sent (e.g. ["schema=public","param1=x"]). Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout.
+- `EFFORTLESS_TOOL_NAME` (child-env (set by LocalToolHost for script tools)) — The local tool's name. Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout.
+- `PORT / EFFORTLESS_TOOL_PORT` (child-env (set by LocalToolHost for dotnet and node tools)) — Loopback port the dotnet/node tool process must listen on; the host proxies POST / to it. PORT is what CLIClassLibrary.StartToolListener already reads, so a local dotnet tool folder is literally a cloud workload run locally. Step 12 proxied-runtime contract. Node tools also receive EFFORTLESS_FILESET_HANDLER: the absolute path of the fileset handler module (lib/fileset-handler.mjs, embedded in the CLI and extracted to <root>/.effortless/local-tools/) so the tool can import it without an npm install.
+- `EFFORTLESS_SEED_GITHUB_API / EFFORTLESS_SEED_GITHUB_RAW` (process-env (test seam)) — Base URLs replacing https://api.github.com and https://raw.githubusercontent.com in SeedCatalogClient so the E2E suite can run a mock GitHub. Step 14. Unset in normal use.
+- `EFFORTLESS_SERVE_EXIT_AFTER_MS` (process-env (test seam)) — Makes effortless serve exit on its own after this many milliseconds instead of waiting for Ctrl+C. Step 12. Unset in normal use; the exit path is the same one SIGINT/SIGTERM take (serve.json removed, host disposed).
+- `EFFORTLESS_CLI_TEST_UTC_NOW` (process-env (test seam)) — Fixed UTC "now" for catalog-age and freshness decisions so the E2E suite is deterministic. Steps 03A/11. Unset in normal use.
 
 ## Removed in the rebuild
 

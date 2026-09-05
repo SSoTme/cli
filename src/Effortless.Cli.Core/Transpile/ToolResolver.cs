@@ -1,3 +1,4 @@
+using Effortless.Cli.LocalTools;
 using Effortless.Cli.Options;
 using Effortless.Cli.Project;
 using Effortless.Cli.Text;
@@ -11,11 +12,15 @@ namespace Effortless.Cli;
 public sealed class ToolResolver
 {
     private readonly RemoteToolsIndex _remoteTools;
+    private readonly LocalToolResolver _localTools;
 
-    public ToolResolver(RemoteToolsIndex remoteTools)
+    public ToolResolver(
+        RemoteToolsIndex remoteTools,
+        LocalToolResolver localTools = null)
     {
         _remoteTools = remoteTools
             ?? throw new ArgumentNullException(nameof(remoteTools));
+        _localTools = localTools;
     }
 
     /// <summary>
@@ -71,6 +76,17 @@ public sealed class ToolResolver
         }
 
         var localOverride = _remoteTools.TryGetToolUrl(rawName);
+
+        // R12: a project-local tool resolves before the catalog is consulted.
+        // A tool_urls.json mapping (R4) still wins so it can be redirected.
+        if (string.IsNullOrWhiteSpace(localOverride)
+            && !invocation.SkipRemoteToolsLookup
+            && _localTools?.Find(invocation, rawName) is { } localTool)
+        {
+            ApplyLocalTool(invocation, localTool);
+            return;
+        }
+
         RemoteToolResolution remote = null;
         if (!invocation.SkipRemoteToolsLookup)
         {
@@ -191,6 +207,24 @@ public sealed class ToolResolver
         invocation.ResolvedVersionLabel = null;
         invocation.ResolvedToolName = null;
         invocation.HasExplicitVersionError = false;
+    }
+
+    private void ApplyLocalTool(
+        CliInvocation invocation,
+        LocalTool localTool)
+    {
+        invocation.LocalTool = localTool;
+        invocation.LedgerKey = localTool.LedgerKey;
+        invocation.Transpiler = localTool.Name;
+        invocation.TargetUrl = _localTools.UrlFor(
+            localTool,
+            invocation.Options.debug);
+        invocation.ResolvedVersionKey = null;
+        invocation.ResolvedVersionUrl = null;
+        invocation.ResolvedVersionLabel = $"{localTool.Name} [local]";
+        invocation.ResolvedToolName = null;
+        invocation.HasExplicitVersionError = false;
+        invocation.IsCatalogResolved = false;
     }
 
     private static void ApplyRemoteMetadata(
@@ -410,6 +444,10 @@ public sealed class ToolResolver
             || options.upgradeAll
             || options.listSeeds
             || options.cloneSeed
+            || options.listSeedSources
+            || !string.IsNullOrWhiteSpace(options.addSeedSource)
+            || !string.IsNullOrWhiteSpace(options.removeSeedSource)
+            || options.serve
             || !string.IsNullOrWhiteSpace(options.viewToolUrl)
             || !string.IsNullOrWhiteSpace(options.setToolUrl)
             || !string.IsNullOrWhiteSpace(options.removeToolUrl)

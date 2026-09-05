@@ -53,6 +53,19 @@ public sealed class SeedReplacements : ISeedReplacements
             Path.Combine(
                 rootDirectory.FullName,
                 "seed-secret-values.json"));
+        // The legacy CLI wrote "seed-secrets-values.json" but read the
+        // singular name; accept the plural on read so old seeds still work.
+        if (!secretFile.Exists)
+        {
+            var legacySecretFile = new FileInfo(
+                Path.Combine(
+                    rootDirectory.FullName,
+                    "seed-secrets-values.json"));
+            if (legacySecretFile.Exists)
+            {
+                secretFile = legacySecretFile;
+            }
+        }
         var parentConfigFile = rootDirectory.Parent is null
             ? null
             : new FileInfo(

@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Step 12: the node fileset handler ships inside the CLI and is extracted for node local tools. -->
+    <EmbeddedResource Include="../../lib/fileset-handler.mjs" LogicalName="Effortless.Cli.Core.lib.fileset-handler.mjs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Effortless.Cli.Tests" />
     <InternalsVisibleTo Include="Effortless.Cli.E2E" />
   </ItemGroup>

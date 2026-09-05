@@ -25,11 +25,20 @@ public sealed class ProjectToolFreshness
         ArgumentNullException.ThrowIfNull(project);
 
         var entries = new List<ProjectToolUpgradeEntry>();
+        var localTools = string.IsNullOrWhiteSpace(project.RootPath)
+            ? null
+            : LocalTools.LocalToolCatalog.Discover(project.RootPath);
         foreach (var step in project.ProjectTranspilers
                      ?? Enumerable.Empty<ProjectTranspiler>())
         {
             var tool = EffortlessProject.GetToolName(step.CommandLine);
             if (IsExcluded(tool))
+            {
+                continue;
+            }
+
+            // R12: a project-local tool is not catalog-versioned.
+            if (localTools?.Match(tool) is not null)
             {
                 continue;
             }

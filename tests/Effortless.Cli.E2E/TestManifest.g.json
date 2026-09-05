@@ -1942,5 +1942,197 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "local-tool-resolves-before-catalog",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-build-writes-output",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-ledger-and-clean",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-ephemeral-host-lifecycle",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-resident-serve-reuse",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-params-passthrough",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-nonzero-exit-fails-step",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-missing-runtime",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-node-handler-roundtrip",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-dotnet-same-shape-as-cloud",
+    "suite": "e2e-local-tools",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-seturl-override-wins",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "serve-lists-tools",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "local-tool-not-inherited-by-child-project",
+    "suite": "e2e-local-tools",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "serve-no-tools",
+    "suite": "e2e-local-tools",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "serve-port-fixed",
+    "suite": "e2e-local-tools",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "seed-sources-default-list",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "seed-source-add",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "seed-source-remove-default",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "list-seeds-across-sources",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clone-seed-qualified",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clone-seed-bare-first-match",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clone-seed-bare-ambiguous",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clone-seed-preserves-git-and-runs-nothing",
+    "suite": "e2e-seeds",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "seed-replacements-effortless-seed-json",
+    "suite": "e2e-seeds",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]

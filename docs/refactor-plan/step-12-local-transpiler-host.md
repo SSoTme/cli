@@ -94,3 +94,36 @@ Unit: discovery, name validation, runtime mapping.
 The fixture tools build, clean, and re-build byte-identically to an equivalent remote tool; `serve` runs
 resident and ephemeral; the legacy-runner README points here as the successor to `ssotme-proxy`; tests
 green; `RefactorSteps.step-12.Status` → `done`.
+
+## As built (2026-09-05)
+
+Everything above shipped with these concrete decisions, each recorded in the rulebook:
+
+- **Host runtime.** `System.Net.HttpListener`, not Kestrel. Kestrel would add the ASP.NET Core shared
+  framework to the CLI's install requirements and break the two-dependency cut; HttpListener is in the
+  base framework and is the same server the E2E mock tool already uses. D30's "native .NET host in the
+  CLI" holds.
+- **Ledger key** is `local-<name>` (the step-15 form, not `local/<name>`): a slash would nest a
+  directory under the ledger, and the key must not contain the host port, which changes per run.
+  `TranspileClient`, `CleanRunner` (clean and purge) and `Uninstall` all derive it from the discovered
+  catalog through `CliInvocation.LedgerKey`. Local runs never write `LastUrl`/`LastVersionUsed`.
+- **Precedence.** `tool_urls.json` (R4) beats R12, so `-setToolUrl <name>=…` redirects a local tool.
+  R12 beats the catalog (R3), and a local name never triggers a catalog refresh
+  (`RequiresFreshCatalogBeforeResolution`) nor the project currentness gate (`ProjectToolFreshness`).
+- **Proxied shapes (dotnet/node)** get `PORT` (what `CLIClassLibrary.StartToolListener` reads) plus
+  `EFFORTLESS_TOOL_PORT` and `EFFORTLESS_TOOL_NAME`; the host waits for the port to accept connections
+  (3 min budget, `dotnet run` builds first) and forwards `POST /` and `GET /task/<id>` verbatim.
+- **Node handler** is `lib/fileset-handler.mjs`: zero dependencies (node:http + node:zlib), embedded in
+  the Core assembly and extracted to `<root>/.effortless/local-tools/`, handed to the tool as
+  `EFFORTLESS_FILESET_HANDLER`. It exposes `createRequestListener` (a plain `(req, res)` handler, so it
+  mounts in express) and `serveTool`. No `npm install` in the tool folder is required.
+- **Script outputs** are `AlwaysOverwrite`; text that XML can carry verbatim goes as `FileContents`,
+  anything else as `ZippedBinaryFileContents`. Per-file `Never` overwrite modes need the node/dotnet
+  shape (open question for a follow-up: a sidecar convention for scripts).
+- **Ephemeral host** lives in `LocalToolResolver` on the dispatcher, one per project root per CLI
+  invocation, disposed in `CommandDispatcher.Run`'s `finally`. It never writes `serve.json`.
+- **Resident host** (`serve`) reloads discovery on `effortless-tools/` changes (500 ms debounce),
+  handles SIGINT/SIGTERM, and removes `serve.json` on exit. `EFFORTLESS_SERVE_EXIT_AFTER_MS` is the
+  test seam. Stale `serve.json` (dead pid or closed port) is ignored.
+- **Fixture** `tests/fixtures/projects/project-local-tools/` has all three shapes plus `fail-tool`;
+  the dotnet fixture is dependency-free (HttpListener) so it restores offline.

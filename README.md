@@ -117,26 +117,86 @@ The command summary below is generated from
 - `-cleanAll` — Clean the whole project from its root
 - `-cleanLocal` — Clean only steps registered exactly here
 
+### Local tools (effortless-tools/, serve)
+
+- `-serve` — Host this project's local tools over HTTP
+
 Run `effortless -help <category|option>` for one topic, or
 `effortless -help all` for every option.
 <!-- cli-commands:end -->
 
+## Local tools
+
+A project can carry its own transpilers next to the rulebook and reference
+them in `effortless.json` exactly like catalog tools. The CLI hosts them over
+the same REST contract published tools speak, so the ledger, `clean`, `-debug`,
+and `-continueOnError` behave identically.
+
+```
+effortless-tools/
+  echo-params/transpiler.sh        # script: any executable or interpreted file
+  to-upper-node/package.json       # node:   a small HTTP tool on the shipped fileset handler
+  to-upper-dotnet/ToUpper.csproj   # dotnet: the same shape as a published cloud tool
+```
+
+The folder name is the tool name (lower-hyphen). An optional `tool.json`
+(`{ "name", "runtime": "dotnet" | "node" | "script", "entry", "description", "tags" }`)
+overrides the inference above.
+
+- **script** tools get directories, not HTTP: `EFFORTLESS_INPUT_DIR` holds the
+  input fileset, everything written under `EFFORTLESS_OUTPUT_DIR` becomes the
+  output fileset, and `EFFORTLESS_OUTPUT_NAME`, `EFFORTLESS_PARAMS` (JSON array
+  of the `name=value` params) and `EFFORTLESS_TOOL_NAME` carry the rest. A
+  non-zero exit fails the step with the script's output as the tool log.
+- **node** tools are started with `PORT` set and answer `POST /`. The CLI passes
+  the path of its zero-dependency handler in `EFFORTLESS_FILESET_HANDLER`:
+  `const { serveTool } = await import(process.env.EFFORTLESS_FILESET_HANDLER);`
+  then `serveTool({ transpile: ({ inputFiles, outputName }) => [{ relativePath, contents, alwaysOverwrite: true }] })`.
+  The handler is also `lib/fileset-handler.mjs` in the npm package and exposes a
+  plain `(req, res)` listener for express.
+- **dotnet** tools are started with `dotnet run --project` and `PORT` set, which
+  is exactly what `CLIClassLibrary.StartToolListener` reads, so a local tool
+  folder can later be published unchanged.
+
+```bash
+effortless echo-params -input README.md -output echo.txt   # ephemeral host, started and stopped for this run
+effortless build                                           # same: one ephemeral host for the whole build
+effortless serve -port 4242                                # resident host; builds reuse it via .effortless/serve.json
+```
+
+A `-setToolUrl` mapping still wins over a same-named local tool, so a local
+tool can be pointed elsewhere for debugging. Local tools are not
+catalog-versioned (no pin, no `[latest]`; the label is `<name> [local]`) and a
+nested project does not inherit its parent's `effortless-tools/`.
+
 ## Seeds
 
 An Effortless seed is a public GitHub repository with `effortless.json` at its
-root. List seeds from an account and clone one without automatically executing
-downloaded code:
+root: a whole starter project, root or child, that you clone and build. Seeds
+are discovered across an ordered list of GitHub accounts, the **seed sources**.
+The defaults are `ssotme` and `effortlessapi`; the list lives in
+`~/.effortless/seed_sources.json` once you change it.
 
 ```bash
-effortless listSeeds ssotme
-effortless cloneSeed seed-name my-project
-cd my-project
-effortless build
+effortless listSeedSources                 # ssotme (default), effortlessapi (default)
+effortless addSeedSource my-org            # search my-org too (appended, persisted)
+effortless removeSeedSource ssotme         # defaults can be removed
+
+effortless listSeeds                       # every seed, grouped by account, with descriptions
+effortless listSeeds my-org                # one account only
+effortless cloneSeed my-org/my-seed        # exactly that repository
+effortless cloneSeed my-seed [dir]         # searched across the sources; must match in exactly one
+cd my-seed
+effortless build                           # nothing runs until you do this
 ```
 
-Set `EFFORTLESS_SEED_GITHUB_ACCOUNT` to change the default account. Projects
-containing `effortless-seed.json` (or the legacy `ssotme-seed.json`) retain the
-`$key$` content and filename replacement contract when loaded.
+`EFFORTLESS_SEED_GITHUB_ACCOUNT` adds one more account, searched first, for a
+single invocation. Cloning preserves `.git` and never executes downloaded
+code. A seed that ships `effortless-seed.json` (the legacy `ssotme-seed.json`
+is also read) declares `$key$` replacements; on the first project load each
+key is filled from `seed-config-values.json`, `seed-secret-values.json`, a
+parent folder's `seed-config-values.json`, the key's `default`, or a prompt,
+and the tokens are replaced in file contents and file names.
 
 ## Build on a cloud trigger
 

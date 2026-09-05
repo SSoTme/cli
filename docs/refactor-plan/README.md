@@ -57,11 +57,11 @@ jq '.SourceModules.data[] | select(.Disposition=="keep-modified") | {LegacyPath,
 | 09 | Option taxonomy, verb families, and the v2 option decisions (D12–D27) | opus | **done** | [step-09-option-taxonomy.md](step-09-option-taxonomy.md) |
 | 10 | `.ssotme` → `.effortless` with in-field migration (option A); rebrand installers | opus | **done** | [step-10-effortless-home-migration.md](step-10-effortless-home-migration.md) |
 | 11 | Catalog freshness v2 (refresh on timeout) + searchable catalog | opus | **done** | [step-11-catalog-freshness-and-search.md](step-11-catalog-freshness-and-search.md) |
-| 12 | Local transpiler host: native .NET + node/express fileset handler | opus | ready (after 11) | [step-12-local-transpiler-host.md](step-12-local-transpiler-host.md) |
+| 12 | Local transpiler host: native .NET + node fileset handler | opus | **done** | [step-12-local-transpiler-host.md](step-12-local-transpiler-host.md) |
 | 13 | Effortless authentication workload (api.effortlessapi.com) + wire auth commands | opus | **done** (live-CI verification of step 06 still waits for the first push) | [step-13-auth-workload.md](step-13-auth-workload.md) |
-| 14 | Seeds v2: seed sources, verbs, `effortless-seeds` skill | opus | ready (after 10; cross-repo) | [step-14-seeds-v2-and-skill.md](step-14-seeds-v2-and-skill.md) |
+| 14 | Seeds v2: seed sources, verbs, `effortless-seeds` skill | opus | **done** (skills repo edited + installed; owner commits/pushes it) | [step-14-seeds-v2-and-skill.md](step-14-seeds-v2-and-skill.md) |
 | 15 | Ledger v2: hash manifests replace `.zfs`, readable keys | opus | proposed, non-blocking (may defer to v2.x) | [step-15-ledger-v2.md](step-15-ledger-v2.md) |
-| 16 | Parity check, **v2 clean cut**, single-commit cutover (was 08) | opus | blocked (after 14) | [step-16-v2-cut-and-cutover.md](step-16-v2-cut-and-cutover.md) |
+| 16 | Parity check, **v2 clean cut**, single-commit cutover (was 08) | opus | ready (12 and 14 done) | [step-16-v2-cut-and-cutover.md](step-16-v2-cut-and-cutover.md) |
 
 ## The v2 operating model (decided 2026-09-04)
 

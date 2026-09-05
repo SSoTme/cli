@@ -385,7 +385,10 @@ public class EffortlessProject
         {
             var transpiler = transpilersToRemove[0];
             var zfsDirectory = GetZFSDI(transpiler.RelativePath);
-            var zfsName = NameHelpers.LowerHyphenName(transpiler.Name);
+            // R12: a local tool's ledger is keyed local-<name>.
+            var zfsName = LocalTools.LocalToolCatalog.Discover(RootPath)
+                    .Match(GetToolName(transpiler.CommandLine))?.LedgerKey
+                ?? NameHelpers.LowerHyphenName(transpiler.Name);
             var zfsFile = new FileInfo(
                 Path.Combine(zfsDirectory.FullName, zfsName + ".zfs"));
 

@@ -159,6 +159,12 @@ internal sealed class ShimUnderTest
                 Path.Combine(CliUnderTest.Root, "src"),
                 Path.Combine(root, "src"),
                 excludeBuildArtifacts: true);
+            // The npm package ships lib/ next to src/; Core embeds
+            // lib/fileset-handler.mjs, so a source tree without it does not build.
+            CopyDirectory(
+                Path.Combine(CliUnderTest.Root, "lib"),
+                Path.Combine(root, "lib"),
+                excludeBuildArtifacts: true);
             CopyDirectory(
                 Path.Combine(CliUnderTest.Root, "tests"),
                 Path.Combine(root, "tests"),

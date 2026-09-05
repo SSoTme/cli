@@ -171,7 +171,8 @@ public sealed class TranspileClient : IDisposable
 
         var options = invocation.Options;
         var inputFileSetXml = invocation.InputFileSetXml;
-        var transpilerKey = invocation.TargetUrl.SanitizeUrlForFilename();
+        var transpilerKey = invocation.LedgerKey
+            ?? invocation.TargetUrl.SanitizeUrlForFilename();
 
         return new TranspilePayload
         {
@@ -725,7 +726,8 @@ public sealed class TranspileClient : IDisposable
         }
 
         payload.Transpiler.LowerHyphenName =
-            targetUrl.ToString().SanitizeUrlForFilename();
+            invocation.LedgerKey
+            ?? targetUrl.ToString().SanitizeUrlForFilename();
         if (invocation.Options.debug)
         {
             Console.WriteLine(
@@ -810,6 +812,7 @@ public sealed class TranspileClient : IDisposable
             payload,
             disposition,
             payload.Transpiler?.LowerHyphenName
+                ?? invocation.LedgerKey
                 ?? invocation.TargetUrl.SanitizeUrlForFilename(),
             invocation.CurrentDirectory,
             invocation.InputFileSetXml,

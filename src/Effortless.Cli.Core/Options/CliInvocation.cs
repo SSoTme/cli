@@ -69,6 +69,18 @@ public class CliInvocation
     /// </summary>
     public bool IsCatalogResolved { get; set; }
 
+    /// <summary>
+    /// R12: the project-local tool this invocation resolved to, if any. Local
+    /// tools never consult the catalog and never pin.
+    /// </summary>
+    public LocalTools.LocalTool? LocalTool { get; set; }
+
+    /// <summary>
+    /// Overrides the ledger (.zfs) key derived from <see cref="TargetUrl"/>.
+    /// Set for local tools, whose host port changes between runs.
+    /// </summary>
+    public string? LedgerKey { get; set; }
+
     public bool SuppressTranspilerErrorOutput { get; set; }
 
     public string? CurrentDirectory { get; set; }
