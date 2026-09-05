@@ -19,6 +19,21 @@ public enum TranspileOutputDisposition
     Save,
 }
 
+/// <summary>
+/// R11: how a POST failed at the connection level, when it never produced a
+/// response. A tool that answered (even 4xx/5xx) is <see cref="None"/>; those
+/// failures belong to the <see cref="RetryPolicy"/> matrix, not to a catalog
+/// refresh.
+/// </summary>
+public enum TranspileConnectionFailure
+{
+    None,
+    HostNotFound,
+    ConnectionRefused,
+    TlsHandshake,
+    NoResponseWithinTimeout,
+}
+
 public sealed class TranspileClientResult
 {
     internal TranspileClientResult(
@@ -28,7 +43,8 @@ public sealed class TranspileClientResult
         string currentDirectory,
         string inputFileSetXml,
         bool skipClean,
-        bool debug)
+        bool debug,
+        TranspileConnectionFailure connectionFailure = TranspileConnectionFailure.None)
     {
         Payload = payload;
         OutputDisposition = outputDisposition;
@@ -37,9 +53,24 @@ public sealed class TranspileClientResult
         InputFileSetXml = inputFileSetXml;
         SkipClean = skipClean;
         Debug = debug;
+        ConnectionFailure = connectionFailure;
     }
 
     public TranspilePayload Payload { get; }
+
+    /// <summary>
+    /// Non-<see cref="TranspileConnectionFailure.None"/> when the tool was
+    /// completely unreachable (D29): DNS failure, connection refused, TLS
+    /// failure, or no response bytes within waitTimeout.
+    /// </summary>
+    public TranspileConnectionFailure ConnectionFailure { get; }
+
+    /// <summary>
+    /// True when the workload never answered, so a forced catalog refresh and
+    /// one retry against a moved head URL may help (R11).
+    /// </summary>
+    public bool IsCompleteTimeout =>
+        ConnectionFailure != TranspileConnectionFailure.None;
 
     public TranspileOutputDisposition OutputDisposition { get; }
 
@@ -72,6 +103,7 @@ public sealed class TranspileClient : IDisposable
     private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
     private readonly TimeProvider _timeProvider;
     private readonly RetryPolicy _retryPolicy;
+    private TranspileConnectionFailure _lastConnectionFailure;
     private readonly Func<Guid> _entityIdFactory;
     private bool _disposed;
 
@@ -187,6 +219,7 @@ public sealed class TranspileClient : IDisposable
         var payload = BuildPayload(invocation);
         var startedAt = _timeProvider.GetTimestamp();
         var spinner = new BootSpinner(invocation.Transpiler);
+        _lastConnectionFailure = TranspileConnectionFailure.None;
 
         if (invocation.Options.debug)
         {
@@ -252,6 +285,7 @@ public sealed class TranspileClient : IDisposable
     {
         var retryCount = 0;
         var connectionRefusedCount = 0;
+        var serverAnswered = false;
         var toolLabel = FirstNonEmpty(
             invocation.RawTranspilerArg,
             invocation.Transpiler,
@@ -274,6 +308,13 @@ public sealed class TranspileClient : IDisposable
             catch (OperationCanceledException)
                 when (!cancellationToken.IsCancellationRequested)
             {
+                if (!serverAnswered
+                    && _lastConnectionFailure == TranspileConnectionFailure.None)
+                {
+                    _lastConnectionFailure =
+                        TranspileConnectionFailure.NoResponseWithinTimeout;
+                }
+
                 return null;
             }
             catch (HttpRequestException exception)
@@ -295,6 +336,11 @@ public sealed class TranspileClient : IDisposable
                 if (decision.Kind == TranspileRetryKind.None)
                 {
                     return FailurePayload(exception);
+                }
+
+                if (!serverAnswered)
+                {
+                    _lastConnectionFailure = ToConnectionFailure(decision.Kind);
                 }
 
                 retryCount++;
@@ -328,6 +374,10 @@ public sealed class TranspileClient : IDisposable
 
             using (response)
             {
+                // Any HTTP response, even a gateway status, means the workload
+                // is reachable: this is never a complete timeout (D29).
+                serverAnswered = true;
+                _lastConnectionFailure = TranspileConnectionFailure.None;
                 var responseContent = await response.Content.ReadAsStringAsync(
                     cancellationToken);
                 var decision = _retryPolicy.Classify(
@@ -724,7 +774,22 @@ public sealed class TranspileClient : IDisposable
         }
     }
 
-    private static TranspileClientResult CreateResult(
+    private static TranspileConnectionFailure ToConnectionFailure(
+        TranspileRetryKind kind) =>
+        kind switch
+        {
+            TranspileRetryKind.HostNotFound =>
+                TranspileConnectionFailure.HostNotFound,
+            TranspileRetryKind.ConnectionRefused =>
+                TranspileConnectionFailure.ConnectionRefused,
+            TranspileRetryKind.ConnectionResetOrUnreachable =>
+                TranspileConnectionFailure.ConnectionRefused,
+            TranspileRetryKind.SslException =>
+                TranspileConnectionFailure.TlsHandshake,
+            _ => TranspileConnectionFailure.None,
+        };
+
+    private TranspileClientResult CreateResult(
         CliInvocation invocation,
         TranspilePayload payload)
     {
@@ -749,7 +814,10 @@ public sealed class TranspileClient : IDisposable
             invocation.CurrentDirectory,
             invocation.InputFileSetXml,
             invocation.Options.skipClean,
-            invocation.Options.debug);
+            invocation.Options.debug,
+            payload.Exception is null
+                ? TranspileConnectionFailure.None
+                : _lastConnectionFailure);
     }
 
     private static void ValidateOutputForDebug(

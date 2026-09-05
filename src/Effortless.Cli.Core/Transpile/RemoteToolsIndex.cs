@@ -178,6 +178,52 @@ public sealed class RemoteToolsIndex
     public string LastRefreshError { get; private set; }
 
     /// <summary>
+    /// When the cached catalog was last validated (the CLI-stamped fetchedAt),
+    /// or null when there is no valid cache.
+    /// </summary>
+    public DateTimeOffset? FetchedAt
+    {
+        get
+        {
+            Load();
+            return CatalogFreshnessPolicy.TryGetFetchedAt(_rawRoot);
+        }
+    }
+
+    /// <summary>
+    /// Time since the tool list was last refreshed ("catalog age", D23).
+    /// </summary>
+    public TimeSpan? CatalogAge =>
+        FetchedAt is { } fetchedAt
+            ? _freshnessPolicy.UtcNow - fetchedAt
+            : null;
+
+    /// <summary>
+    /// When the next automatic (R0) refresh is due.
+    /// </summary>
+    public DateTimeOffset? NextRefreshDueAt =>
+        FetchedAt is { } fetchedAt
+            ? fetchedAt + CatalogFreshnessPolicy.MaximumAge
+            : null;
+
+    /// <summary>
+    /// One line describing the catalog age for diagnostics, e.g.
+    /// "catalog age 3h 12m (fetched 2026-09-05T10:00:00Z)".
+    /// </summary>
+    public string DescribeCatalogAge()
+    {
+        var fetchedAt = FetchedAt;
+        if (fetchedAt is null)
+        {
+            return "catalog age unknown (no validated catalog cached)";
+        }
+
+        var age = CatalogFreshnessPolicy.FormatAge(
+            _freshnessPolicy.UtcNow - fetchedAt.Value);
+        return $"catalog age {age} (fetched {fetchedAt.Value.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ})";
+    }
+
+    /// <summary>
     /// Proves that the local catalog was validated within the preceding 24 hours.
     /// A failed refresh is fatal; stale bytes are never used as a fallback.
     /// </summary>
@@ -272,43 +318,151 @@ public sealed class RemoteToolsIndex
             latest: true);
     }
 
-    public IReadOnlyList<RemoteCatalogTool> ListTools(string search = null)
+    public IReadOnlyList<RemoteCatalogTool> ListTools(string search = null) =>
+        ListTools(new CatalogQuery(search));
+
+    /// <summary>
+    /// Projects the cached catalog to one row per canonical tool and applies the
+    /// step-11 search filters. Always answered from the local cache; the caller
+    /// establishes R0 freshness. Every catalog field beyond names, URLs and
+    /// isHeadVersion is optional.
+    /// </summary>
+    public IReadOnlyList<RemoteCatalogTool> ListTools(CatalogQuery query)
     {
+        query ??= new CatalogQuery();
         var tools = Load();
         if (tools == null)
         {
             return Array.Empty<RemoteCatalogTool>();
         }
 
-        return tools.Properties()
-            .Select(property =>
-            {
-                var versions = property.Value as JObject;
-                var head = versions?.Properties()
-                    .FirstOrDefault(version =>
-                        version.Value["metaData"]?["isHeadVersion"]
-                            ?.Value<bool>() == true);
-                return new RemoteCatalogTool(
-                    property.Name,
-                    property.Name.Split('/').Last(),
-                    head?.Name);
-            })
-            .Where(tool =>
-                string.IsNullOrEmpty(search)
-                || tool.CanonicalName.Contains(
-                    search,
-                    StringComparison.OrdinalIgnoreCase)
-                || tool.ShortName.Contains(
-                    search,
-                    StringComparison.OrdinalIgnoreCase))
-            .OrderBy(
-                tool => tool.CanonicalName,
-                StringComparer.OrdinalIgnoreCase)
-            .ThenBy(
-                tool => tool.CanonicalName,
-                StringComparer.Ordinal)
-            .ToArray();
+        var terms = (query.Text ?? string.Empty)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        IEnumerable<RemoteCatalogTool> rows = tools.Properties()
+            .Select(property => ProjectTool(property.Name, property.Value as JObject))
+            .Where(tool => terms.All(term => tool.Matches(term)));
+
+        if (!string.IsNullOrWhiteSpace(query.Category))
+        {
+            rows = rows.Where(tool =>
+                string.Equals(tool.Category, query.Category, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Account))
+        {
+            rows = rows.Where(tool =>
+                string.Equals(tool.Account, query.Account, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.UpdatedSince is { } since)
+        {
+            rows = rows.Where(tool => tool.HeadCreatedAt is { } created && created >= since);
+        }
+
+        if (query.HeadOnly)
+        {
+            rows = rows.Where(tool => tool.HeadVersion != null);
+        }
+
+        if (query.RequiresKey is { } requiresKey)
+        {
+            rows = rows.Where(tool => tool.RequiresApiKey == requiresKey);
+        }
+
+        var byName = rows
+            .OrderBy(tool => tool.CanonicalName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(tool => tool.CanonicalName, StringComparer.Ordinal);
+        return (query.Sort ?? CatalogQuery.SortByName) switch
+        {
+            CatalogQuery.SortByUpdated => byName
+                .OrderByDescending(tool => tool.HeadCreatedAt ?? DateTimeOffset.MinValue)
+                .ThenBy(tool => tool.CanonicalName, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
+            CatalogQuery.SortByPopular => byName
+                .OrderByDescending(tool => tool.MonthlyRequestCount)
+                .ThenBy(tool => tool.CanonicalName, StringComparer.OrdinalIgnoreCase)
+                .ToArray(),
+            _ => byName.ToArray(),
+        };
     }
+
+    private static RemoteCatalogTool ProjectTool(string canonicalName, JObject versions)
+    {
+        var versionList = versions?.Properties().ToList() ?? new List<JProperty>();
+        var head = versionList.FirstOrDefault(version =>
+            version.Value["metaData"]?["isHeadVersion"]?.Value<bool>() == true);
+        var newest = versionList
+            .OrderByDescending(version => VersionKey.ParseVersionKey(version.Name))
+            .FirstOrDefault();
+        var representative = (head ?? newest)?.Value as JObject;
+        var segments = canonicalName.Split('/');
+        var shortName = segments.Last();
+        var account = segments.Length >= 2 ? segments[0] : null;
+        var category = FirstNonEmpty(
+            representative?["category"]?.Value<string>(),
+            segments.Length >= 3 ? segments[1] : null);
+        var description = FirstNonEmpty(
+            versionList.Select(version => version.Value["description"]?.Value<string>())
+                .Prepend(representative?["description"]?.Value<string>())
+                .ToArray());
+        var tags = versionList
+            .Select(version => version.Value["tags"] as JArray)
+            .Prepend(representative?["tags"] as JArray)
+            .FirstOrDefault(array => array != null && array.Count > 0)
+            ?.Select(tag => tag?.Value<string>())
+            .Where(tag => !string.IsNullOrWhiteSpace(tag))
+            .ToArray()
+            ?? Array.Empty<string>();
+        var headMeta = head?.Value["metaData"] as JObject;
+        var monthly = versionList
+            .Select(version => version.Value["metaData"]?["monthlyRequestCount"]?.Value<long?>() ?? 0)
+            .DefaultIfEmpty(0)
+            .Max();
+
+        return new RemoteCatalogTool(canonicalName, shortName, head?.Name)
+        {
+            Account = account,
+            Category = category,
+            DisplayName = FirstNonEmpty(representative?["displayName"]?.Value<string>()),
+            Description = description,
+            Tags = tags,
+            HeadCreatedAt = ParseDate(headMeta?["createdAt"]),
+            VersionCount = headMeta?["versionCount"]?.Value<int?>() ?? versionList.Count,
+            RequiresApiKey = headMeta?["requiresAPIKey"]?.Value<bool?>()
+                ?? (representative?["metaData"]?["requiresAPIKey"]?.Value<bool?>()),
+            MonthlyRequestCount = monthly,
+        };
+    }
+
+    private static DateTimeOffset? ParseDate(JToken token)
+    {
+        if (token == null || token.Type == JTokenType.Null)
+        {
+            return null;
+        }
+
+        if (token.Type == JTokenType.Date)
+        {
+            return (token as JValue)?.Value switch
+            {
+                DateTimeOffset offset => offset,
+                DateTime dateTime => new DateTimeOffset(DateTime.SpecifyKind(dateTime, DateTimeKind.Utc)),
+                _ => null,
+            };
+        }
+
+        return DateTimeOffset.TryParse(
+            token.Value<string>(),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static string FirstNonEmpty(params string[] values) =>
+        values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 
     /// <summary>
     /// Returns all versions for a tool in descending version order.
@@ -1190,7 +1344,71 @@ public sealed class RemoteToolVersion
     public bool IsHead { get; }
 }
 
+/// <summary>
+/// One catalog tool collapsed across its versions. Everything beyond the three
+/// positional members is optional in the bridge payload (step 11).
+/// </summary>
 public sealed record RemoteCatalogTool(
     string CanonicalName,
     string ShortName,
-    string HeadVersion);
+    string HeadVersion)
+{
+    public string Account { get; init; }
+
+    public string Category { get; init; }
+
+    public string DisplayName { get; init; }
+
+    public string Description { get; init; }
+
+    public IReadOnlyList<string> Tags { get; init; } = Array.Empty<string>();
+
+    public DateTimeOffset? HeadCreatedAt { get; init; }
+
+    public int VersionCount { get; init; }
+
+    public bool? RequiresApiKey { get; init; }
+
+    public long MonthlyRequestCount { get; init; }
+
+    /// <summary>
+    /// True when <paramref name="term"/> occurs (ordinal, case-insensitive) in
+    /// the canonical name, short name, display name, description, or a tag.
+    /// </summary>
+    public bool Matches(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            return true;
+        }
+
+        return Contains(CanonicalName, term)
+            || Contains(ShortName, term)
+            || Contains(DisplayName, term)
+            || Contains(Description, term)
+            || Tags.Any(tag => Contains(tag, term));
+    }
+
+    private static bool Contains(string haystack, string needle) =>
+        !string.IsNullOrEmpty(haystack)
+        && haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
+}
+
+/// <summary>
+/// Filters and ordering for <see cref="RemoteToolsIndex.ListTools(CatalogQuery)"/>.
+/// </summary>
+public sealed record CatalogQuery(
+    string Text = null,
+    string Category = null,
+    string Account = null,
+    DateTimeOffset? UpdatedSince = null,
+    bool HeadOnly = false,
+    bool? RequiresKey = null,
+    string Sort = null)
+{
+    public const string SortByName = "name";
+    public const string SortByUpdated = "updated";
+    public const string SortByPopular = "popular";
+
+    public static readonly string[] SortValues = { SortByName, SortByUpdated, SortByPopular };
+}

@@ -278,5 +278,13 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "unit-r11-classification",
+    "suite": "unit-core",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]

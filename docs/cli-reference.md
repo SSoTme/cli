@@ -384,7 +384,7 @@ How a tool name becomes a URL: remote index, versions, pins, upgrades.
 - Aliases: `search`, `st`
 - Bareword forms: `searchtools`, `search`
 - Value type: `string`
-- Help text: Search the current remote tools catalog by tool name
+- Help text: Search the current remote tools catalog by name, description, or tags
 - Description: Find tools by canonical or short name without guessing an exact tool name.
 
 ### `-upgrade`
@@ -410,6 +410,54 @@ How a tool name becomes a URL: remote index, versions, pins, upgrades.
 - Value type: `string`
 - Help text: Pin this project's step to a specific catalog version or URL
 - Description: Pin an installed step to a version or URL for this project.
+
+### `-category`
+
+- Aliases: `cat`
+- Bareword forms: None
+- Value type: `string`
+- Help text: Filter the tool catalog by category (the middle segment of account/category/tool)
+- Description: Filter listTools/searchTools by category
+
+### `-updatedSince`
+
+- Aliases: `since`
+- Bareword forms: None
+- Value type: `string`
+- Help text: Only tools whose head version was created on or after yyyy-mm-dd
+- Description: Only tools with a head newer than a date
+
+### `-headOnly`
+
+- Aliases: `head`
+- Bareword forms: None
+- Value type: `bool`
+- Help text: Only tools that currently have a head version
+- Description: Hide tools with NO HEAD
+
+### `-requiresKey`
+
+- Aliases: `rk`
+- Bareword forms: None
+- Value type: `string`
+- Help text: Filter by whether the tool requires an account API key: true or false
+- Description: Filter by API-key requirement (true|false)
+
+### `-sort`
+
+- Aliases: None
+- Bareword forms: None
+- Value type: `string`
+- Help text: Sort the tool list: name (default), updated, or popular
+- Description: Sort by name, updated, or popular
+
+### `-json`
+
+- Aliases: None
+- Bareword forms: None
+- Value type: `bool`
+- Help text: Emit the filtered tool list as JSON instead of a table
+- Description: Emit listTools/searchTools output as JSON
 
 ## Tool URL overrides
 

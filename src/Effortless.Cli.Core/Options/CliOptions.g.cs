@@ -163,7 +163,7 @@ public class CliOptions
     [CommandLineOption(Description = "List all available tools in the current remote tools catalog", MinOccurs = 0, Aliases = "tools,lt")]
     public bool listTools { get; set; }
 
-    [CommandLineOption(Description = "Search the current remote tools catalog by tool name", MinOccurs = 0, Aliases = "search,st")]
+    [CommandLineOption(Description = "Search the current remote tools catalog by name, description, or tags", MinOccurs = 0, Aliases = "search,st")]
     public string searchTools { get; set; }
 
     [CommandLineOption(Description = "Update the pinned version of this tool to the current head version (does not run the tool)", MinOccurs = 0, Aliases = "up")]
@@ -198,4 +198,22 @@ public class CliOptions
 
     [CommandLineOption(Description = "Marks the current command's step as enabled in the effortless.json Project file", MinOccurs = 0, Aliases = "")]
     public bool enable { get; set; }
+
+    [CommandLineOption(Description = "Filter the tool catalog by category (the middle segment of account/category/tool)", MinOccurs = 0, Aliases = "cat")]
+    public string category { get; set; }
+
+    [CommandLineOption(Description = "Only tools whose head version was created on or after yyyy-mm-dd", MinOccurs = 0, Aliases = "since")]
+    public string updatedSince { get; set; }
+
+    [CommandLineOption(Description = "Only tools that currently have a head version", MinOccurs = 0, Aliases = "head")]
+    public bool headOnly { get; set; }
+
+    [CommandLineOption(Description = "Filter by whether the tool requires an account API key: true or false", MinOccurs = 0, Aliases = "rk")]
+    public string requiresKey { get; set; }
+
+    [CommandLineOption(Description = "Sort the tool list: name (default), updated, or popular", MinOccurs = 0, Aliases = "")]
+    public string sort { get; set; }
+
+    [CommandLineOption(Description = "Emit the filtered tool list as JSON instead of a table", MinOccurs = 0, Aliases = "")]
+    public bool json { get; set; }
 }

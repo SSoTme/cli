@@ -188,9 +188,43 @@ public sealed class VersionCommands
         return 0;
     }
 
-    public int ListTools(string search = null)
+    public int ListTools(string search = null) =>
+        ListTools(new CatalogQuery(search), json: false);
+
+    /// <summary>
+    /// listTools / searchTools (step 11): filters the cached catalog and prints an
+    /// aligned table, or the entries as JSON with -json.
+    /// </summary>
+    public int ListTools(CatalogQuery query, bool json)
     {
-        var tools = _index.ListTools(search);
+        query ??= new CatalogQuery();
+        var search = query.Text;
+        var tools = _index.ListTools(query);
+
+        if (json)
+        {
+            Console.WriteLine(
+                Newtonsoft.Json.JsonConvert.SerializeObject(
+                    tools.Select(tool => new
+                    {
+                        canonicalName = tool.CanonicalName,
+                        shortName = tool.ShortName,
+                        account = tool.Account,
+                        category = tool.Category,
+                        headVersion = tool.HeadVersion,
+                        headCreatedAt = tool.HeadCreatedAt?.UtcDateTime.ToString(
+                            "yyyy-MM-ddTHH:mm:ssZ",
+                            System.Globalization.CultureInfo.InvariantCulture),
+                        versionCount = tool.VersionCount,
+                        requiresApiKey = tool.RequiresApiKey,
+                        monthlyRequestCount = tool.MonthlyRequestCount,
+                        description = tool.Description,
+                        tags = tool.Tags,
+                    }),
+                    Newtonsoft.Json.Formatting.Indented));
+            return 0;
+        }
+
         if (!string.IsNullOrEmpty(search) && tools.Count == 0)
         {
             Console.WriteLine($"No tools matched '{search}'.");
@@ -202,13 +236,49 @@ public sealed class VersionCommands
                 ? $"Available tools ({tools.Count}):"
                 : $"Tools matching '{search}' ({tools.Count}):");
         Console.WriteLine();
+        if (tools.Count == 0)
+        {
+            return 0;
+        }
+
+        var nameWidth = Math.Max("NAME".Length, tools.Max(tool => tool.CanonicalName.Length));
+        var headWidth = Math.Max("HEAD".Length, tools.Max(tool => (tool.HeadVersion ?? "NO HEAD").Length));
+        Console.WriteLine(
+            $"  {"NAME".PadRight(nameWidth)}  {"HEAD".PadRight(headWidth)}  UPDATED     VERSIONS  KEY  DESCRIPTION");
         foreach (var tool in tools)
         {
+            var updated = tool.HeadCreatedAt?.UtcDateTime.ToString(
+                "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture) ?? "-";
+            var versions = tool.VersionCount > 0
+                ? tool.VersionCount.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : "-";
+            var key = tool.RequiresApiKey switch
+            {
+                true => "yes",
+                false => "no",
+                _ => "-",
+            };
             Console.WriteLine(
-                $"  {tool.CanonicalName}  {tool.HeadVersion ?? "NO HEAD"}");
+                $"  {tool.CanonicalName.PadRight(nameWidth)}  {(tool.HeadVersion ?? "NO HEAD").PadRight(headWidth)}  {updated,-10}  {versions,8}  {key,-3}  {Truncate(tool.Description, 60)}");
         }
 
         return 0;
+    }
+
+    private static string Truncate(string value, int max)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var single = string.Join(
+            " ",
+            value.Split(
+                new[] { '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        return single.Length <= max ? single : single[..(max - 1)].TrimEnd() + "\u2026";
     }
 
     private int UpgradeAll(EffortlessProject project)

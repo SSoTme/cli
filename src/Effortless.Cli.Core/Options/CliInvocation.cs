@@ -62,6 +62,13 @@ public class CliInvocation
 
     public bool SkipRemoteToolsLookup { get; set; }
 
+    /// <summary>
+    /// True when <see cref="TargetUrl"/> came from the remote catalog (not from
+    /// -targetUrl, a bare URL, or a tool_urls.json override). Only such tools
+    /// qualify for the R11 refresh-on-timeout retry.
+    /// </summary>
+    public bool IsCatalogResolved { get; set; }
+
     public bool SuppressTranspilerErrorOutput { get; set; }
 
     public string? CurrentDirectory { get; set; }

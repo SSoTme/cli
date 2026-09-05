@@ -74,3 +74,27 @@ Mock bridge fixture with descriptions/tags on some tools and none on others. E2E
 R11 implemented and bounded; search filters and `-json` work against the cache; `info` shows catalog age;
 bridge fields consumed when present; the bridge-side ticket exists; tests green;
 `RefactorSteps.step-11.Status` → `done`.
+
+## Done 2026-09-05
+
+- **R11** lives in `TranspileClientResult.ConnectionFailure` (set only when the workload never produced an
+  HTTP response: host not found, connection refused/reset, TLS failure, or no bytes within `waitTimeout`),
+  `CliInvocation.IsCatalogResolved` (set by `ToolResolver` only on a catalog hit; `-targetUrl`, bare URLs and
+  `tool_urls.json` overrides leave it false), `ToolResolver.ReResolveFromCatalog`, and
+  `CommandDispatcher.TryRecoverFromCompleteTimeout`. One forced refresh per process; when `buildOnTrigger`
+  is active the budget renews every 10 minutes (`ForcedRefreshInterval`). A refresh failure prints the
+  existing fatal message and the step fails with the original error.
+- **Legacy wait-for-cook is untouched.** After a connection-refused abort the client still waits out the
+  step's own `waitTimeout` (the characterized v1 behavior), so R11 kicks in after that wait. Note that
+  `build -waitTimeout N` is not inherited by steps; the timeout in a step's `CommandLine` governs.
+- **The catalog already carries `description`** (189/200 live entries) plus `metaData.createdAt`,
+  `versionCount`, `requiresAPIKey`, `monthlyRequestCount`; the plan's "no description" assumption was
+  stale. `category` is empty on every entry, so the canonical-name segment is the effective category.
+  `tags[]`, `inputKinds[]`, `outputKinds[]` are consumed when present and were filed as
+  <https://github.com/EffortlessAPI/api.effortlessapi.com/issues/63>.
+- **Output.** `listTools`/`searchTools` print an aligned table (NAME, HEAD, UPDATED, VERSIONS, KEY,
+  DESCRIPTION truncated to 60) or `-json`. New modifiers `-category`, `-updatedSince`, `-headOnly`,
+  `-requiresKey`, `-sort`, `-json` (all `ParentOption: listTools`; `-account` is reused). Bad values are
+  explicit errors. `info` prints `Catalog: fetched <utc>, age <h m>, next automatic refresh <utc>`.
+- Tests: `tests/fixtures/index/catalog-search.json`, `CatalogSearchTests` (13 cases incl. the four
+  `timeout-*` cases against a reserved closed port), `unit-r11-classification`.

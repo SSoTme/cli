@@ -1,0 +1,57 @@
+{
+  "transpilerVersions": {
+    "effortless/common/echo": {
+      "v2026.01.01.0001": {
+        "description": "Repeats its input verbatim so the wire contract can be inspected.",
+        "tags": ["debug", "sample"],
+        "metaData": {
+          "isHeadVersion": true,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "versionCount": 2,
+          "requiresAPIKey": true,
+          "monthlyRequestCount": 40
+        },
+        "urls": { "post": "http://127.0.0.1:{port}/tools/echo/v2026.01.01.0001/" }
+      },
+      "v2025.12.31.2359": {
+        "description": "Repeats its input verbatim so the wire contract can be inspected.",
+        "metaData": {
+          "isHeadVersion": false,
+          "createdAt": "2025-12-31T23:59:00Z",
+          "versionCount": 2,
+          "requiresAPIKey": true,
+          "monthlyRequestCount": 3
+        },
+        "urls": { "post": "http://127.0.0.1:{port}/tools/echo/v2025.12.31.2359/" }
+      }
+    },
+    "effortless/common/to-uppercase": {
+      "v2026.01.01.0001": {
+        "metaData": {
+          "isHeadVersion": true,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "versionCount": 1,
+          "requiresAPIKey": false,
+          "monthlyRequestCount": 0
+        },
+        "urls": { "post": "http://127.0.0.1:{port}/tools/to-uppercase/v2026.01.01.0001/" }
+      }
+    },
+    "acme/sql/pg-tool": {
+      "v2026.08.15.0900": {
+        "description": "Generates Postgres DDL from a rulebook.",
+        "metaData": {
+          "isHeadVersion": true,
+          "createdAt": "2026-08-15T09:00:00Z",
+          "versionCount": 1,
+          "requiresAPIKey": false,
+          "monthlyRequestCount": 500
+        },
+        "urls": { "post": "http://127.0.0.1:{port}/tools/pg-tool/v2026.08.15.0900/" }
+      }
+    }
+  },
+  "cliUpdateAvailable": false,
+  "latestBridgeVersion": null,
+  "latestCliVersion": "2026.6.9.613"
+}

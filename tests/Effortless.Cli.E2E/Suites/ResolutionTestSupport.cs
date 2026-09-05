@@ -245,7 +245,7 @@ internal sealed class ResolutionBridgeServer : IAsyncDisposable
             }
 
             var xml = FileSetXml.Build(
-                [FileSetEntry.TextFile("effortless-tools.json", IndexJson, alwaysOverwrite: true)]);
+                [FileSetEntry.TextFile("ssotme-tools.json", IndexJson, alwaysOverwrite: true)]);
             var payload = new
             {
                 TranspileRequest = new

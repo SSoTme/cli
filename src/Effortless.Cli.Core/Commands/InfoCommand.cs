@@ -6,6 +6,13 @@ namespace Effortless.Cli.Commands;
 
 public sealed class InfoCommand
 {
+    private readonly RemoteToolsIndex _index;
+
+    public InfoCommand(RemoteToolsIndex index = null)
+    {
+        _index = index;
+    }
+
     public int Run(CliInvocation invocation)
     {
         try
@@ -51,6 +58,7 @@ public sealed class InfoCommand
             Console.WriteLine(
                 $"Logged in as: {loginLabel ?? "(not logged in)"}");
             Console.WriteLine("Subscription: n/a");
+            Console.WriteLine(DescribeCatalog());
 
             if (key.APIKeys.Count == 0)
             {
@@ -72,5 +80,24 @@ public sealed class InfoCommand
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// D23 / step 11: catalog age line. info stays offline; this reads only the
+    /// cached fetchedAt stamp.
+    /// </summary>
+    private string DescribeCatalog()
+    {
+        var fetchedAt = _index?.FetchedAt;
+        if (fetchedAt is null)
+        {
+            return "Catalog: not fetched yet";
+        }
+
+        var age = CatalogFreshnessPolicy.FormatAge(_index.CatalogAge ?? TimeSpan.Zero);
+        var due = _index.NextRefreshDueAt?.UtcDateTime.ToString(
+            "yyyy-MM-ddTHH:mm:ssZ",
+            System.Globalization.CultureInfo.InvariantCulture);
+        return $"Catalog: fetched {fetchedAt.Value.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}, age {age}, next automatic refresh {due}";
     }
 }

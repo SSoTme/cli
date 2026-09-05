@@ -1135,13 +1135,15 @@ public sealed class ResolutionTests
                 result.Stdout,
                 StringComparison.Ordinal);
             Assert.Contains(
-                "  aaa/example/no-head  NO HEAD",
+                "  NAME",
                 result.Stdout,
                 StringComparison.Ordinal);
-            Assert.Contains(
-                $"  effortless/common/to-uppercase  {ResolutionTestSupport.HeadVersion}",
-                result.Stdout,
-                StringComparison.Ordinal);
+            Assert.Matches(
+                @"  aaa/example/no-head\s+NO HEAD",
+                result.Stdout);
+            Assert.Matches(
+                $@"  effortless/common/to-uppercase\s+{System.Text.RegularExpressions.Regex.Escape(ResolutionTestSupport.HeadVersion)}",
+                result.Stdout);
             Assert.True(
                 result.Stdout.IndexOf(
                     "aaa/example/no-head",

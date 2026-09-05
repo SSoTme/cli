@@ -27,6 +27,7 @@ public sealed class ToolResolver
     {
         ArgumentNullException.ThrowIfNull(invocation);
         invocation.Options ??= new CliOptions();
+        invocation.IsCatalogResolved = false;
 
         if (string.IsNullOrWhiteSpace(invocation.Account))
         {
@@ -122,6 +123,7 @@ public sealed class ToolResolver
                     invocation.TargetUrl = bareRemote.Url;
                     invocation.Transpiler =
                         NameHelpers.SanitizeUrlForFilename(bareRemote.Url);
+                    invocation.IsCatalogResolved = true;
                     return;
                 }
             }
@@ -139,6 +141,7 @@ public sealed class ToolResolver
             invocation.TargetUrl = remote.Url;
             invocation.Transpiler =
                 NameHelpers.SanitizeUrlForFilename(remote.Url);
+            invocation.IsCatalogResolved = true;
             return;
         }
 
@@ -157,6 +160,24 @@ public sealed class ToolResolver
         {
             ApplyAccountPrefix(invocation, rawName);
         }
+    }
+
+    /// <summary>
+    /// R11: re-runs catalog resolution for an invocation whose catalog-resolved
+    /// tool completely timed out, after the caller forced a refresh. Returns the
+    /// new target URL (or null when the tool no longer resolves).
+    /// </summary>
+    public string ReResolveFromCatalog(CliInvocation invocation)
+    {
+        ArgumentNullException.ThrowIfNull(invocation);
+        if (!invocation.IsCatalogResolved)
+        {
+            return invocation.TargetUrl;
+        }
+
+        invocation.TargetUrl = null;
+        Resolve(invocation);
+        return invocation.TargetUrl;
     }
 
     private static void ApplyDirectUrl(

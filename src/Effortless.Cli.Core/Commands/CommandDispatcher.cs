@@ -21,7 +21,16 @@ public sealed class CommandDispatcher
     private readonly ExecuteCommand _executeCommand;
     private readonly SeedCommands _seedCommands;
     private readonly ProjectToolFreshness _projectToolFreshness;
+    private readonly TimeProvider _timeProvider;
     private bool _projectCatalogChecked;
+    private DateTimeOffset? _forcedRefreshAt;
+    private bool _longRunning;
+
+    /// <summary>
+    /// R11 bound for long-running modes (buildOnTrigger, serve): at most one
+    /// forced catalog refresh per this interval. One-shot commands get one.
+    /// </summary>
+    public static readonly TimeSpan ForcedRefreshInterval = TimeSpan.FromMinutes(10);
 
     public CommandDispatcher()
         : this(CreateTimeProvider())
@@ -30,6 +39,7 @@ public sealed class CommandDispatcher
 
     internal CommandDispatcher(TimeProvider timeProvider)
     {
+        _timeProvider = timeProvider ?? TimeProvider.System;
         _parser = new CliArgumentParser();
         _remoteTools = new RemoteToolsIndex(
             refreshRunner: request =>
@@ -45,7 +55,7 @@ public sealed class CommandDispatcher
         _versionCommands = new VersionCommands(_remoteTools);
         _authCommands = new AuthCommands(
             new MagicLinkAuth());
-        _infoCommand = new InfoCommand();
+        _infoCommand = new InfoCommand(_remoteTools);
         _upgradeCliCommand = new UpgradeCliCommand();
         _executeCommand = new ExecuteCommand();
         _seedCommands = new SeedCommands();
@@ -303,6 +313,137 @@ public sealed class CommandDispatcher
         }
     }
 
+    /// <summary>
+    /// R11 (D29): a catalog-resolved tool that never answered gets one forced
+    /// catalog refresh; if its head URL moved, the caller retries once against
+    /// the new URL. -targetUrl, bare URLs, and tool_urls.json overrides never
+    /// reach here because they are not catalog-resolved.
+    /// </summary>
+    private bool TryRecoverFromCompleteTimeout(
+        CliInvocation invocation,
+        TranspileClientResult result)
+    {
+        if (!invocation.IsCatalogResolved)
+        {
+            return false;
+        }
+
+        var now = _timeProvider.GetUtcNow();
+        if (_forcedRefreshAt is { } last
+            && (!_longRunning || now - last < ForcedRefreshInterval))
+        {
+            return false;
+        }
+
+        _forcedRefreshAt = now;
+        var name = invocation.RawTranspilerArg ?? invocation.Transpiler;
+        var previousUrl = invocation.TargetUrl;
+        Console.WriteLine(
+            $"[cli] {name} did not respond ({DescribeFailure(result.ConnectionFailure)}); refreshing the catalog to check for a newer build...");
+        if (!_remoteTools.Refresh(
+                "Catalog-resolved tool completely timed out",
+                $"'{name}' at {previousUrl} failed with {DescribeFailure(result.ConnectionFailure)} before producing any response. R11 forces one catalog refresh (ignoring the 24h stamp) to learn whether the tool's head URL moved."))
+        {
+            WriteError(
+                $"ERROR: Remote tools index refresh failed: {_remoteTools.LastRefreshError}");
+            return false;
+        }
+
+        var newUrl = _toolResolver.ReResolveFromCatalog(invocation);
+        if (string.IsNullOrWhiteSpace(newUrl))
+        {
+            invocation.TargetUrl = previousUrl;
+            return false;
+        }
+
+        if (string.Equals(
+                newUrl.TrimEnd('/'),
+                previousUrl?.TrimEnd('/'),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        Console.WriteLine(
+            $"Tool {name} moved; retrying against {newUrl}");
+        return true;
+    }
+
+    private static string DescribeFailure(TranspileConnectionFailure failure) =>
+        failure switch
+        {
+            TranspileConnectionFailure.HostNotFound => "DNS resolution failure",
+            TranspileConnectionFailure.ConnectionRefused => "connection refused",
+            TranspileConnectionFailure.TlsHandshake => "TLS handshake failure",
+            TranspileConnectionFailure.NoResponseWithinTimeout => "no response within waitTimeout",
+            _ => "a connection failure",
+        };
+
+    /// <summary>
+    /// Step 11: validates the listTools/searchTools modifiers. Bad values are
+    /// explicit errors rather than silently ignored filters.
+    /// </summary>
+    internal static bool TryBuildCatalogQuery(
+        CliOptions options,
+        out CatalogQuery query,
+        out string error)
+    {
+        query = null;
+        error = null;
+
+        DateTimeOffset? updatedSince = null;
+        if (!string.IsNullOrWhiteSpace(options.updatedSince))
+        {
+            if (!DateTimeOffset.TryParseExact(
+                    options.updatedSince.Trim(),
+                    new[] { "yyyy-MM-dd", "yyyy-MM-ddTHH:mm:ssZ", "yyyy-MM-ddTHH:mm:ss.fffffffZ", "O" },
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.AssumeUniversal
+                    | System.Globalization.DateTimeStyles.AdjustToUniversal,
+                    out var parsed))
+            {
+                error =
+                    $"Invalid -updatedSince value '{options.updatedSince}'. Use yyyy-mm-dd (UTC).";
+                return false;
+            }
+
+            updatedSince = parsed;
+        }
+
+        bool? requiresKey = null;
+        if (!string.IsNullOrWhiteSpace(options.requiresKey))
+        {
+            if (!bool.TryParse(options.requiresKey.Trim(), out var flag))
+            {
+                error =
+                    $"Invalid -requiresKey value '{options.requiresKey}'. Use true or false.";
+                return false;
+            }
+
+            requiresKey = flag;
+        }
+
+        var sort = string.IsNullOrWhiteSpace(options.sort)
+            ? CatalogQuery.SortByName
+            : options.sort.Trim().ToLowerInvariant();
+        if (!CatalogQuery.SortValues.Contains(sort))
+        {
+            error =
+                $"Invalid -sort value '{options.sort}'. Use {string.Join(", ", CatalogQuery.SortValues)}.";
+            return false;
+        }
+
+        query = new CatalogQuery(
+            Text: options.searchTools,
+            Category: options.category,
+            Account: options.account,
+            UpdatedSince: updatedSince,
+            HeadOnly: options.headOnly,
+            RequiresKey: requiresKey,
+            Sort: sort);
+        return true;
+    }
+
     private bool EnsureCatalogFresh()
     {
         if (_remoteTools.EnsureFresh())
@@ -500,14 +641,16 @@ public sealed class CommandDispatcher
                 ?? invocation.Transpiler);
         }
 
-        if (options.listTools)
+        if (options.listTools
+            || !string.IsNullOrEmpty(options.searchTools))
         {
-            return _versionCommands.ListTools();
-        }
+            if (!TryBuildCatalogQuery(options, out var query, out var queryError))
+            {
+                WriteError(queryError);
+                return -1;
+            }
 
-        if (!string.IsNullOrEmpty(options.searchTools))
-        {
-            return _versionCommands.ListTools(options.searchTools);
+            return _versionCommands.ListTools(query, options.json);
         }
 
         if (options.removeSetting.Any())
@@ -548,6 +691,7 @@ public sealed class CommandDispatcher
 
         if (options.build || options.buildLocal)
         {
+            _longRunning = !string.IsNullOrWhiteSpace(options.buildOnTrigger);
             return new BuildCommand(RunCommandLine)
                 .Run(invocation, all: false);
         }
@@ -633,8 +777,23 @@ public sealed class CommandDispatcher
         var result = client.ExecuteAsync(invocation)
             .GetAwaiter()
             .GetResult();
+        if (!result.Succeeded
+            && result.IsCompleteTimeout
+            && TryRecoverFromCompleteTimeout(invocation, result))
+        {
+            result = client.ExecuteAsync(invocation)
+                .GetAwaiter()
+                .GetResult();
+        }
+
         if (!result.Succeeded)
         {
+            if (result.IsCompleteTimeout)
+            {
+                Console.WriteLine(
+                    $"[cli] {invocation.RawTranspilerArg ?? invocation.Transpiler} is offline at {invocation.TargetUrl}; {_remoteTools.DescribeCatalogAge()}.");
+            }
+
             var exception = result.Payload.Exception;
             var isNotFound = exception.Message.Contains(
                 "transpiler status message",

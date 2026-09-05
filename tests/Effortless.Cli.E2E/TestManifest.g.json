@@ -1774,5 +1774,109 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "catalog-search-text",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-search-multi-term",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-filter-category",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-filter-updated-since",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-sort-popular",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-json",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-info-shows-age",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "timeout-forces-one-refresh",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "timeout-retries-once-on-moved-url",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "timeout-does-not-refresh-for-target-url",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "timeout-second-step-does-not-refresh-again",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-filter-head-only",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "catalog-filter-requires-key",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]
