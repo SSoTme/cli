@@ -79,7 +79,7 @@ internal sealed class Sandbox : IDisposable
 
     public void SeedEmptyHome()
     {
-        var configPath = Path.Combine(HomePath, ".ssotme");
+        var configPath = Path.Combine(HomePath, ".effortless");
         if (!Directory.Exists(configPath))
         {
             Directory.CreateDirectory(configPath);
@@ -94,7 +94,7 @@ internal sealed class Sandbox : IDisposable
         if (withToolUrls)
         {
             WriteHomeFile(
-                ".ssotme/tool_urls.json",
+                ".effortless/tool_urls.json",
                 JsonSerializer.Serialize(
                     index.ToolUrls,
                     new JsonSerializerOptions { WriteIndented = true }));
@@ -106,17 +106,17 @@ internal sealed class Sandbox : IDisposable
         catalog["fetchedAt"] =
             CliUnderTest.TestUtcNow.ToString("O");
         WriteHomeFile(
-            ".ssotme/remote_tools/ssotme-tools.json",
+            ".effortless/remote_tools/effortless-tools.json",
             catalog.ToJsonString(
                 new JsonSerializerOptions
                 {
                     WriteIndented = true,
                 }));
         WriteHomeFile(
-            ".ssotme/remote_tools/cli_version",
+            ".effortless/remote_tools/cli_version",
             CliUnderTest.PackageVersion);
         WriteHomeFile(
-            ".ssotme/remote_tools/effortless.json",
+            ".effortless/remote_tools/effortless.json",
             """
             {
               "Name": "remote_tools",
@@ -136,7 +136,7 @@ internal sealed class Sandbox : IDisposable
         ArgumentNullException.ThrowIfNull(index);
         SeedHome(index);
         WriteHomeFile(
-            ".ssotme/remote_tools/ssotme-tools.json",
+            ".effortless/remote_tools/effortless-tools.json",
             """{"transpilerVersions":{}}""");
     }
 

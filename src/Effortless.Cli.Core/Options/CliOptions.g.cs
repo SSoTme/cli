@@ -4,9 +4,9 @@ using Plossum.CommandLine;
 namespace Effortless.Cli.Options;
 
 [CommandLineManager(
-    ApplicationName = "SSoTme CLI",
+    ApplicationName = "Effortless CLI",
     Copyright = "Copyright 2026, EffortlessAPI.com",
-    Description = @"-p description=\n\nSYNTAX: ssotme {command} [...{additional_args}] [options]\nOptions",
+    Description = @"-p description=\n\nSYNTAX: effortless {command} [...{additional_args}] [options]\nOptions",
     EnabledOptionStyles =
         OptionStyles.Windows |
         OptionStyles.Unix |

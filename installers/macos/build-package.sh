@@ -11,7 +11,7 @@ ARCHITECTURE=$(uname -m)  # detect if arm or intel processor (we need separate i
 
 INSTALLERDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-INSTALLERNAME="SSoTme-Installer-$ARCHITECTURE.pkg"
+INSTALLERNAME="Effortless-Installer-$ARCHITECTURE.pkg"
 
 DEV_INS_KEYCHAIN_ID=""
 DEV_APP_KEYCHAIN_ID=""

@@ -10,23 +10,23 @@ public class KeyFile
 
     public static KeyFile CurrentKey
     {
-        get { return GetSSoTmeKey(); }
-        set { SetSSoTmeKey(value); }
+        get { return GetKey(); }
+        set { SetKey(value); }
     }
 
-    public static void SetSSoTmeKey(KeyFile value, string account = "")
+    public static void SetKey(KeyFile value, string account = "")
     {
-        FileInfo ssotmeKeyFile = GetKeyForAccount(account);
-        string ssotmeJson = JsonConvert.SerializeObject(value, Formatting.Indented);
+        FileInfo keyFile = GetKeyForAccount(account);
+        string keyJson = JsonConvert.SerializeObject(value, Formatting.Indented);
 
         try
         {
-            if (!ssotmeKeyFile.Directory.Exists)
+            if (!keyFile.Directory.Exists)
             {
-                ssotmeKeyFile.Directory.Create();
+                keyFile.Directory.Create();
             }
 
-            File.WriteAllText(ssotmeKeyFile.FullName, ssotmeJson);
+            File.WriteAllText(keyFile.FullName, keyJson);
 
             if (Environment.OSVersion.Platform == PlatformID.Unix ||
                 Environment.OSVersion.Platform == PlatformID.MacOSX)
@@ -36,7 +36,7 @@ public class KeyFile
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = "chmod",
-                        Arguments = $"600 \"{ssotmeKeyFile.FullName}\"",
+                        Arguments = $"600 \"{keyFile.FullName}\"",
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         UseShellExecute = false,
@@ -52,29 +52,29 @@ public class KeyFile
         catch (UnauthorizedAccessException ex)
         {
             throw new UnauthorizedAccessException(
-                $"Cannot write to '{ssotmeKeyFile.FullName}'. " +
-                $"Please ensure the directory '{ssotmeKeyFile.Directory.FullName}' exists and you have write permissions. " +
-                $"You may need to run: chmod 700 \"{ssotmeKeyFile.Directory.FullName}\"",
+                $"Cannot write to '{keyFile.FullName}'. " +
+                $"Please ensure the directory '{keyFile.Directory.FullName}' exists and you have write permissions. " +
+                $"You may need to run: chmod 700 \"{keyFile.Directory.FullName}\"",
                 ex);
         }
         catch (IOException ex)
         {
             throw new IOException(
-                $"Cannot write to '{ssotmeKeyFile.FullName}'. " +
+                $"Cannot write to '{keyFile.FullName}'. " +
                 "Please ensure you have write permissions to this location. " +
-                $"You may need to run: chmod 700 \"{ssotmeKeyFile.Directory.FullName}\" && chmod 600 \"{ssotmeKeyFile.FullName}\"",
+                $"You may need to run: chmod 700 \"{keyFile.Directory.FullName}\" && chmod 600 \"{keyFile.FullName}\"",
                 ex);
         }
     }
 
-    public static KeyFile GetSSoTmeKey(string runAs = "")
+    public static KeyFile GetKey(string runAs = "")
     {
-        FileInfo ssotmeKeyFile = GetKeyForAccount(runAs);
+        FileInfo keyFile = GetKeyForAccount(runAs);
 
-        if (ssotmeKeyFile.Exists)
+        if (keyFile.Exists)
         {
             return JsonConvert.DeserializeObject<KeyFile>(
-                File.ReadAllText(ssotmeKeyFile.FullName));
+                File.ReadAllText(keyFile.FullName));
         }
 
         return new KeyFile
@@ -104,13 +104,13 @@ public class KeyFile
         if (String.IsNullOrEmpty(accountUsername))
         {
             return new FileInfo(Path.Combine(
-                UserConfigDir.SSoTmeDir.FullName,
-                "ssotme.key"));
+                UserConfigDir.EffortlessDir.FullName,
+                "effortless.key"));
         }
 
         return new FileInfo(Path.Combine(
-            UserConfigDir.SSoTmeDir.FullName,
-            String.Format("ssotme.{0}.key", accountUsername)));
+            UserConfigDir.EffortlessDir.FullName,
+            String.Format("effortless.{0}.key", accountUsername)));
     }
 
     public override string ToString()

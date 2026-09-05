@@ -1,45 +1,28 @@
-using System.Diagnostics;
-
 namespace Effortless.Cli.Config;
 
 public static class UserConfigDir
 {
-    public static DirectoryInfo SSoTmeDir
+    /// <summary>
+    /// <c>~/.effortless</c>, created on first access (mode 700 on Unix). A legacy
+    /// <c>~/.ssotme</c> is migrated first by <see cref="UserConfigMigration"/>.
+    /// </summary>
+    public static DirectoryInfo EffortlessDir
     {
         get
         {
-            var ssotmeDir = new DirectoryInfo(
+            UserConfigMigration.EnsureMigrated();
+            var directory = new DirectoryInfo(
                 Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    ".ssotme"));
+                    UserConfigMigration.EffortlessDirName));
 
-            if (!ssotmeDir.Exists)
+            if (!directory.Exists)
             {
-                ssotmeDir.Create();
-
-                if (Environment.OSVersion.Platform == PlatformID.Unix ||
-                    Environment.OSVersion.Platform == PlatformID.MacOSX)
-                {
-                    try
-                    {
-                        Process.Start(new ProcessStartInfo
-                        {
-                            FileName = "chmod",
-                            Arguments = $"700 \"{ssotmeDir.FullName}\"",
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        })?.WaitForExit();
-                    }
-                    catch
-                    {
-                        // Silently ignore chmod failures.
-                    }
-                }
+                directory.Create();
+                UserConfigMigration.SetUnixMode(directory.FullName, "700");
             }
 
-            return ssotmeDir;
+            return directory;
         }
     }
 }

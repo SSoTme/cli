@@ -126,6 +126,7 @@ public static class ProjectLocator
                     JsonConvert.DeserializeObject<EffortlessProject>(
                         projectJson);
                 project.RootPath = projectFile.Directory.FullName;
+                EffortlessProject.MigrateLegacyLedgerDirectory(project.RootPath);
                 if (string.IsNullOrEmpty(project.Name))
                 {
                     project.Name = Path.GetFileName(project.RootPath);

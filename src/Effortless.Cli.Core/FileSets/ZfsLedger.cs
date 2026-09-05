@@ -15,18 +15,11 @@ public static class ZfsLedger
             project,
             transpilerKey,
             cwd);
-        var ssotmeDI = new DirectoryInfo(
-            string.Format("{0}/.ssotme", project.RootPath));
-        if (!ssotmeDI.Exists)
-        {
-            ssotmeDI.Create();
-            ssotmeDI.Attributes =
-                FileAttributes.Directory | FileAttributes.Hidden;
-        }
+        var ledgerDI = project.GetEffortlessDI();
 
         var zfsFileName = string.Format(
             "{0}/{1}/{2}.zfs",
-            ssotmeDI.FullName,
+            ledgerDI.FullName,
             relPath,
             transpilerKey);
         return new FileInfo(zfsFileName);
@@ -202,7 +195,7 @@ public static class ZfsLedger
         }
 
         var fileSetXml = zippedOutputFileSet.UnzipToString();
-        string workingDir = project.GetSSoTmeDI().ToString();
+        string workingDir = project.GetEffortlessDI().ToString();
 
         var tempFI = new FileInfo(
             Path.Combine(

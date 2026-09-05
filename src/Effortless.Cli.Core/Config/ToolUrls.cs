@@ -7,7 +7,7 @@ public static class ToolUrls
     public static FileInfo GetToolUrlsFilePath()
     {
         var toolUrlsPath = Path.Combine(
-            UserConfigDir.SSoTmeDir.FullName,
+            UserConfigDir.EffortlessDir.FullName,
             "tool_urls.json");
 
         return new FileInfo(toolUrlsPath);
@@ -37,7 +37,7 @@ public static class ToolUrls
         catch (Exception ex)
         {
             throw new InvalidDataException(
-                $"Error reading ~/.ssotme/tool_urls.json: {ex.Message}",
+                $"Error reading ~/.effortless/tool_urls.json: {ex.Message}",
                 ex);
         }
 

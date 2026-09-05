@@ -5,7 +5,9 @@ namespace Effortless.Cli.Project;
 
 public static class ChildProcessRunner
 {
-    public static void InvokeSSoTmeBuild(this DirectoryInfo directory)
+    public const string ChildProcessEnvVariable = "EFFORTLESS_CHILD_PROCESS";
+
+    public static void InvokeEffortlessBuild(this DirectoryInfo directory)
     {
         if (!directory.Exists)
         {
@@ -20,7 +22,7 @@ public static class ChildProcessRunner
             "-buildLocal");
     }
 
-    public static void InvokeSSoTmeDescribe(this DirectoryInfo directory)
+    public static void InvokeEffortlessDescribe(this DirectoryInfo directory)
     {
         if (!directory.Exists)
         {
@@ -35,7 +37,7 @@ public static class ChildProcessRunner
             "-describeAll");
     }
 
-    public static void InvokeSSoTmeClean(this DirectoryInfo directory)
+    public static void InvokeEffortlessClean(this DirectoryInfo directory)
     {
         if (!directory.Exists)
         {
@@ -89,7 +91,7 @@ public static class ChildProcessRunner
         }
 
         Environment.SetEnvironmentVariable(
-            "SSOTME_CHILD_PROCESS",
+            ChildProcessEnvVariable,
             "1");
         try
         {
@@ -105,7 +107,7 @@ public static class ChildProcessRunner
         finally
         {
             Environment.SetEnvironmentVariable(
-                "SSOTME_CHILD_PROCESS",
+                ChildProcessEnvVariable,
                 null);
         }
     }
@@ -117,7 +119,8 @@ public static class ChildProcessRunner
             return true;
         }
 
-        if (subDirToCheck.Name == ".ssotme")
+        if (subDirToCheck.Name == EffortlessProject.LedgerDirectoryName
+            || subDirToCheck.Name == EffortlessProject.LegacyLedgerDirectoryName)
         {
             return true;
         }

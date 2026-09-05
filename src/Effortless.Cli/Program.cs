@@ -1,4 +1,5 @@
 using Effortless.Cli.Commands;
+using Effortless.Cli.Config;
 using Effortless.Cli.FileSets;
 using Effortless.Cli.Project;
 
@@ -10,6 +11,7 @@ public static class Program
     {
         try
         {
+            UserConfigMigration.EnsureMigrated();
             return new CommandDispatcher().Run(args);
         }
         catch (NoStackException exception)

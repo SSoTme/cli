@@ -10,7 +10,7 @@ namespace Effortless.Cli;
 
 /// <summary>
 /// Reads and refreshes the versioned tool catalog stored under
-/// <c>~/.ssotme/remote_tools</c>.
+/// <c>~/.effortless/remote_tools</c>.
 /// </summary>
 public sealed class RemoteToolsIndex
 {
@@ -40,7 +40,7 @@ public sealed class RemoteToolsIndex
         Func<string> commandLine = null,
         TimeProvider timeProvider = null)
         : this(
-            UserConfigDir.SSoTmeDir,
+            UserConfigDir.EffortlessDir,
             cliVersion,
             refreshRunner,
             writeLine,
@@ -91,13 +91,11 @@ public sealed class RemoteToolsIndex
         RemoteToolsDirectory = new DirectoryInfo(
             Path.Combine(configRoot.FullName, "remote_tools"));
         IndexFile = new FileInfo(
-            Path.Combine(RemoteToolsDirectory.FullName, "ssotme-tools.json"));
+            Path.Combine(RemoteToolsDirectory.FullName, "effortless-tools.json"));
         CliVersionFile = new FileInfo(
             Path.Combine(RemoteToolsDirectory.FullName, "cli_version"));
         ProjectFile = new FileInfo(
             Path.Combine(RemoteToolsDirectory.FullName, "effortless.json"));
-        LegacyProjectFile = new FileInfo(
-            Path.Combine(RemoteToolsDirectory.FullName, "ssotme.json"));
         ToolUrlsFile = new FileInfo(
             Path.Combine(configRoot.FullName, "tool_urls.json"));
         BridgeVersionIndexFile = new FileInfo(
@@ -137,8 +135,6 @@ public sealed class RemoteToolsIndex
     public FileInfo CliVersionFile { get; }
 
     public FileInfo ProjectFile { get; }
-
-    public FileInfo LegacyProjectFile { get; }
 
     public FileInfo ToolUrlsFile { get; }
 
@@ -553,7 +549,7 @@ public sealed class RemoteToolsIndex
             if (selected == null)
             {
                 _writeLine(
-                    $"Error: this tool has no head versions; please specify a version to run via ssotme {toolPart}/version. use ssotme {toolPart} -list to view all available versions");
+                    $"Error: this tool has no head versions; please specify a version to run via effortless {toolPart}/version. use effortless {toolPart} -list to view all available versions");
                 return RemoteToolResolution.SpecificError(
                     candidate,
                     hasExplicitVersionError: false);
@@ -815,8 +811,7 @@ public sealed class RemoteToolsIndex
     private void EnsureRefreshProject()
     {
         ProjectFile.Refresh();
-        LegacyProjectFile.Refresh();
-        if (ProjectFile.Exists || LegacyProjectFile.Exists)
+        if (ProjectFile.Exists)
         {
             return;
         }
@@ -943,7 +938,7 @@ public sealed class RemoteToolsIndex
         catch (Exception exception)
         {
             throw new InvalidDataException(
-                $"Error reading ~/.ssotme/tool_urls.json: {exception.Message}",
+                $"Error reading ~/.effortless/tool_urls.json: {exception.Message}",
                 exception);
         }
     }

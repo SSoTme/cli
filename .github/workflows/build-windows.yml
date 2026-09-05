@@ -94,8 +94,8 @@ jobs:
       if: steps.early_check.outputs.msi_count < '2'
       uses: actions/upload-artifact@v4
       with:
-        name: SSoTme-Installer-win-x64
-        path: installers/windows/bin/Release/SSoTme-Installer_win-x64.msi
+        name: Effortless-Installer-win-x64
+        path: installers/windows/bin/Release/Effortless-Installer_win-x64.msi
 
     - name: Get release tag from package.json
       id: get_tag
@@ -136,7 +136,7 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag_name }}
-        files: installers/windows/bin/Release/SSoTme-Installer_win-x64.msi
+        files: installers/windows/bin/Release/Effortless-Installer_win-x64.msi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -200,8 +200,8 @@ jobs:
       if: steps.early_check_arm.outputs.msi_count < '2'
       uses: actions/upload-artifact@v4
       with:
-        name: SSoTme-Installer-win-arm64
-        path: installers/windows/bin/Release/SSoTme-Installer_win-arm64.msi
+        name: Effortless-Installer-win-arm64
+        path: installers/windows/bin/Release/Effortless-Installer_win-arm64.msi
 
     - name: Get release tag from package.json
       id: get_tag_arm
@@ -242,6 +242,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
-        files: installers/windows/bin/Release/SSoTme-Installer_win-arm64.msi
+        files: installers/windows/bin/Release/Effortless-Installer_win-arm64.msi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

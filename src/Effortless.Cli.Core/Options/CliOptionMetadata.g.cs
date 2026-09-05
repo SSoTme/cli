@@ -59,7 +59,7 @@ public static class CliOptionMetadata
                 new(
                     "tool-urls",
                     "Tool URL overrides",
-                    "The per-user ~/.ssotme/tool_urls.json override table."),
+                    "The per-user ~/.effortless/tool_urls.json override table."),
                 new(
                     "auth",
                     "Authentication & account",

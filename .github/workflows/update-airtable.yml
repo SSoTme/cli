@@ -1,3 +1,10 @@
+# Records the released CLI version and installer asset URLs in the Airtable
+# CLIVersions table.
+# Required repository secrets:
+#   AIRTABLE_PAT                 - Airtable personal access token
+#   EFFORTLESS_AIRTABLE_BASE_ID  - the Airtable base id (formerly SSOT_BASE_ID; the
+#                                  script still falls back to SSOT_BASE_ID until the
+#                                  secret is renamed in the repository settings)
 name: Update Airtable with Latest Version
 
 on:
@@ -32,6 +39,7 @@ jobs:
         python scripts/ci/add_latest_version_to_airtable_db.py --version "${{ steps.get_version.outputs.version }}"
       env:
         AIRTABLE_PAT: ${{ secrets.AIRTABLE_PAT }}
+        EFFORTLESS_AIRTABLE_BASE_ID: ${{ secrets.EFFORTLESS_AIRTABLE_BASE_ID }}
         SSOT_BASE_ID: ${{ secrets.SSOT_BASE_ID }}
         GITHUB_REPOSITORY: ${{ github.repository }}
     

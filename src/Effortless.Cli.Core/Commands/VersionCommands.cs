@@ -23,7 +23,7 @@ public sealed class VersionCommands
         CliLog.LogLine("Refreshing remote tools index...");
         var succeeded = _index.Refresh(
             "RefreshRemoteTools: explicit -refreshTools invocation",
-            $"User invoked -refreshTools; deleted ssotme-tools.json, cli_version, and bridge_version_index to force a full re-fetch. cached CLI version was '{cachedVersion ?? "(none)"}', current is '{_index.CliVersion}'.");
+            $"User invoked -refreshTools; deleted effortless-tools.json, cli_version, and bridge_version_index to force a full re-fetch. cached CLI version was '{cachedVersion ?? "(none)"}', current is '{_index.CliVersion}'.");
         if (!succeeded)
         {
             WriteError(

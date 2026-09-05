@@ -1,7 +1,7 @@
 # Build script for the Effortless Windows Installer (WiX v6)
 #
 # Generates:
-#           - bin/Release/SSoTme-Installer.msi -> installs just ssotme
+#           - bin/Release/Effortless-Installer_<rid>.msi -> installs the Effortless CLI (effortless, ssotme, aic, aicapture)
 
 param (
     [string]$Configuration = "Release",
@@ -37,8 +37,8 @@ function Update-VersionIfChanged {
     param (
         [string]$FilePath,
         [string]$NewVersion,
-        [string]$Pattern = '<SSoTmeVersion>([^<]*)</SSoTmeVersion>',
-        [string]$Replacement = "<SSoTmeVersion>$NewVersion</SSoTmeVersion>"
+        [string]$Pattern = '<EffortlessVersion>([^<]*)</EffortlessVersion>',
+        [string]$Replacement = "<EffortlessVersion>$NewVersion</EffortlessVersion>"
     )
     $content = Get-Content $FilePath -Raw
     if ($content -match $Pattern) {
@@ -81,7 +81,7 @@ $AssetsDir = Join-Path $InstallerDir "Assets"
 $binFolder = Join-Path $InstallerDir "bin"
 $OutputDir = Join-Path $binFolder "$Configuration"
 
-Write-Host "=== SSoTme WiX v6 Build Script ===" -ForegroundColor Green
+Write-Host "=== Effortless CLI WiX v6 Build Script ===" -ForegroundColor Green
 Write-Host "Configuration: $Configuration" -ForegroundColor Cyan
 Write-Host "Platform: $Platform" -ForegroundColor Cyan
 Write-Host "Script Directory: $ScriptDir" -ForegroundColor Cyan
@@ -110,13 +110,13 @@ foreach ($Dir in $Directories) {
 }
 
 $packageJsonTxt = Get-Content (Join-Path $RootDir "package.json") -Raw | ConvertFrom-Json
-$ssotmeVersionOriginal = $packageJsonTxt.version
+$cliVersionOriginal = $packageJsonTxt.version
 $versionMatch = [regex]::Match(
-    $ssotmeVersionOriginal,
+    $cliVersionOriginal,
     '^(\d{4})\.(\d{3,4})\.(\d{1,4})$'
 )
 if (-not $versionMatch.Success) {
-    Write-Error "package.json version must use npm-safe YYYY.MDD.HHMM format; got '$ssotmeVersionOriginal'"
+    Write-Error "package.json version must use npm-safe YYYY.MDD.HHMM format; got '$cliVersionOriginal'"
     exit 1
 }
 $versionYear = [int]$versionMatch.Groups[1].Value
@@ -131,7 +131,7 @@ if (
     $versionDay -lt 1 -or $versionDay -gt 31 -or
     $versionHour -gt 23 -or $versionMinute -gt 59
 ) {
-    Write-Error "package.json version contains an invalid UTC date/time: '$ssotmeVersionOriginal'"
+    Write-Error "package.json version contains an invalid UTC date/time: '$cliVersionOriginal'"
     exit 1
 }
 
@@ -143,8 +143,8 @@ if (
 $msiMajor = $versionYear % 100
 $msiMinor = $versionMonth
 $msiBuild = $versionDay * 1440 + $versionHour * 60 + $versionMinute
-$ssotmeVersion = "$msiMajor.$msiMinor.$msiBuild"
-Write-Host "Using version: $ssotmeVersion from package.json"
+$cliVersion = "$msiMajor.$msiMinor.$msiBuild"
+Write-Host "Using version: $cliVersion from package.json"
 
 # Convert version to numeric format for .csproj (YYYY.M.D.HHMM)
 # e.g. "2026.404.1917" -> "2026.4.4.1917"
@@ -192,9 +192,9 @@ $rid = switch ($Platform.ToLowerInvariant()) {
 
 # Update the CLI version constant so effortless -version matches package.json.
 $CLIHandlerFile = "$RootDir/src/Effortless.Cli.Core/CliVersion.cs"
-Update-VersionIfChanged -FilePath $CLIHandlerFile -NewVersion $ssotmeVersionOriginal `
+Update-VersionIfChanged -FilePath $CLIHandlerFile -NewVersion $cliVersionOriginal `
     -Pattern 'public const string Value = ".*?";' `
-    -Replacement "public const string Value = `"$ssotmeVersionOriginal`";"
+    -Replacement "public const string Value = `"$cliVersionOriginal`";"
 
 Write-Host "`nBuilding .NET CLI project..." -ForegroundColor Yellow
 
@@ -213,21 +213,21 @@ finally {
 
 try {
     # Verify the generated executable
-    $ssotmeExePath = Join-Path $ResourcesDir "Effortless.Cli.exe"
-    if (-not (Test-Path $ssotmeExePath)) {
+    $cliExePath = Join-Path $ResourcesDir "Effortless.Cli.exe"
+    if (-not (Test-Path $cliExePath)) {
         Write-Error "built exe not found in resources directory: $ResourcesDir"
         Write-Host "Contents of directory:"
         Get-ChildItem $ResourcesDir -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $_" }
         exit 1
     }
 
-    Write-Host "Found ssotme.exe, creating alias executables..."
+    Write-Host "Found Effortless.Cli.exe, creating alias executables..."
     
-    # Copy the ssotme.exe into ssotme, aic, aicapture, effortless (these are the CLI entry points)
-    Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/ssotme.exe" -Force
-    Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/aic.exe" -Force
-    Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/aicapture.exe" -Force
-    Copy-Item -Path $ssotmeExePath -Destination "$ResourcesDir/effortless.exe" -Force
+    # Copy Effortless.Cli.exe into effortless, ssotme, aic, aicapture (these are the CLI entry points)
+    Copy-Item -Path $cliExePath -Destination "$ResourcesDir/ssotme.exe" -Force
+    Copy-Item -Path $cliExePath -Destination "$ResourcesDir/aic.exe" -Force
+    Copy-Item -Path $cliExePath -Destination "$ResourcesDir/aicapture.exe" -Force
+    Copy-Item -Path $cliExePath -Destination "$ResourcesDir/effortless.exe" -Force
 
     Write-Host "Created alias executables in: $ResourcesDir"
 }
@@ -236,22 +236,22 @@ finally {
 }
 
 Set-Location $InstallerDir
-$MsiName = "SSoTme-Installer_$rid"
+$MsiName = "Effortless-Installer_$rid"
 $MsiPath = Join-Path $OutputDir "$MsiName.msi"
 
 # Update versions in all files if needed
-$installerProj = Join-Path $InstallerDir "SSoTmeInstaller.wixproj"
+$installerProj = Join-Path $InstallerDir "EffortlessInstaller.wixproj"
 $productwxs = Join-Path $InstallerDir "Product.wxs"
 
 # Update versions in all files
-Update-VersionIfChanged -FilePath $installerProj -NewVersion $ssotmeVersion
+Update-VersionIfChanged -FilePath $installerProj -NewVersion $cliVersion
 
-Update-VersionIfChanged -FilePath $productwxs -NewVersion $ssotmeVersion `
+Update-VersionIfChanged -FilePath $productwxs -NewVersion $cliVersion `
     -Pattern '<Package([^>]*?)Version="([^"]*)"([^>]*?)>' `
-    -Replacement "<Package`$1Version=`"$ssotmeVersion`"`$3>"
-Update-VersionIfChanged -FilePath $productwxs -NewVersion $ssotmeVersion `
+    -Replacement "<Package`$1Version=`"$cliVersion`"`$3>"
+Update-VersionIfChanged -FilePath $productwxs -NewVersion $cliVersion `
     -Pattern '<RegistryValue([^>]*?)Name="Version" Value="([^"]*)"([^>]*?)>' `
-    -Replacement "<RegistryValue`$1Name=`"Version`" Value=`"$ssotmeVersion`"`$3>"
+    -Replacement "<RegistryValue`$1Name=`"Version`" Value=`"$cliVersion`"`$3>"
 
 # Rename the target file for the installer
 Update-VersionIfChanged -FilePath $installerProj -NewVersion $MsiName `
@@ -275,8 +275,8 @@ try {
     Set-Location $InstallerDir
     
     # Build the MSI project first (this should only compile Product.wxs)
-    Write-Host "Building SSoTmeInstaller.wixproj (MSI)..." -ForegroundColor Cyan
-    & dotnet build SSoTmeInstaller.wixproj --configuration $Configuration --verbosity normal
+    Write-Host "Building EffortlessInstaller.wixproj (MSI)..." -ForegroundColor Cyan
+    & dotnet build EffortlessInstaller.wixproj --configuration $Configuration --verbosity normal
     
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to build MSI project"

@@ -6,15 +6,15 @@ using Newtonsoft.Json.Linq;
 namespace Effortless.Cli.Seeds;
 
 /// <summary>
-/// Applies the legacy $key$ seed contract whenever a project containing
-/// ssotme-seed.json is loaded.
+/// Applies the $key$ seed contract whenever a project containing
+/// effortless-seed.json (or the legacy ssotme-seed.json) is loaded.
 /// </summary>
 public sealed class SeedReplacements : ISeedReplacements
 {
     private static readonly UTF8Encoding StrictUtf8 =
         new(false, true);
     private static readonly string[] IgnoredDirectories =
-        [".git", ".ssotme", "bin", "obj", "node_modules"];
+        [".git", ".effortless", ".ssotme", "bin", "obj", "node_modules"];
 
     public Task ApplyAsync(
         DirectoryInfo rootDirectory,
@@ -24,7 +24,15 @@ public sealed class SeedReplacements : ISeedReplacements
         var template = new FileInfo(
             Path.Combine(
                 rootDirectory.FullName,
-                "ssotme-seed.json"));
+                "effortless-seed.json"));
+        if (!template.Exists)
+        {
+            template = new FileInfo(
+                Path.Combine(
+                    rootDirectory.FullName,
+                    "ssotme-seed.json"));
+        }
+
         if (!template.Exists)
         {
             return Task.CompletedTask;

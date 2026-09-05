@@ -18,7 +18,7 @@ public sealed class ToolUrlCommands
         var url = ToolUrls.TryGetUrlFromFileUrls(toolName);
         Console.WriteLine(
             string.IsNullOrEmpty(url)
-                ? $"Tool '{toolName}' is not configured in ~/.ssotme/tool_urls.json file."
+                ? $"Tool '{toolName}' is not configured in ~/.effortless/tool_urls.json file."
                 : $"Tool '{toolName}' is configured with URL: {url}");
         return 0;
     }
@@ -54,7 +54,7 @@ public sealed class ToolUrlCommands
                 StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine(
-                "Warning: 'cli-cloud-bridge' is an internal ssotme-managed tool. Overriding it may break remote tool resolution.");
+                "Warning: 'cli-cloud-bridge' is an internal Effortless-managed tool. Overriding it may break remote tool resolution.");
             Console.WriteLine(
                 "To restore default functionality, run: effortless -removeUrl cli-cloud-bridge");
         }
@@ -81,7 +81,7 @@ public sealed class ToolUrlCommands
         if (!path.Exists)
         {
             Console.WriteLine(
-                "No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.");
+                "No tool URLs configured. The ~/.effortless/tool_urls.json file does not exist.");
             Console.WriteLine(
                 "Use 'effortless setUrl toolname=url' to configure tool URLs.");
             return 0;
@@ -94,7 +94,7 @@ public sealed class ToolUrlCommands
         if (mappings is null || mappings.Count == 0)
         {
             Console.WriteLine(
-                "No tool URLs configured in ~/.ssotme/tool_urls.json.");
+                "No tool URLs configured in ~/.effortless/tool_urls.json.");
             Console.WriteLine(
                 "Use 'effortless setUrl toolname=url' to configure tool URLs.");
             return 0;

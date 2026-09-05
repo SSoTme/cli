@@ -41,7 +41,7 @@ public sealed class MetaTests
         var result = await cli.Run([argument], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("SSoTme CLI", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Effortless CLI", result.Stdout, StringComparison.Ordinal);
         Assert.Contains(
             "Syntax: effortless [account/]transpiler [Options]",
             result.Stdout,
@@ -260,7 +260,7 @@ public sealed class MetaTests
         var result = await cli.Run([argument], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains($"SSoTme CLI Version {CliUnderTest.PackageVersion}", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains($"Effortless CLI Version {CliUnderTest.PackageVersion}", result.Stdout, StringComparison.Ordinal);
         Assert.Contains("Project: characterization-project", result.Stdout, StringComparison.Ordinal);
         Assert.Contains("Logged in as: (not logged in)", result.Stdout, StringComparison.Ordinal);
         Assert.Contains("Subscription: n/a", result.Stdout, StringComparison.Ordinal);

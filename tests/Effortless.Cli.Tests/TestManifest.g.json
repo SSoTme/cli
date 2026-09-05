@@ -254,5 +254,29 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "unit-home-migration-map",
+    "suite": "unit-core",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "unit-home-migration-copy",
+    "suite": "unit-core",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "unit-home-migration-failure",
+    "suite": "unit-core",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]

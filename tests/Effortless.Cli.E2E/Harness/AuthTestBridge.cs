@@ -40,7 +40,7 @@ internal sealed class AuthTestBridge : IAsyncDisposable
     public void SeedHome(Sandbox sandbox)
     {
         sandbox.WriteHomeFile(
-            ".ssotme/tool_urls.json",
+            ".effortless/tool_urls.json",
             JsonSerializer.Serialize(
                 new Dictionary<string, string>
                 {

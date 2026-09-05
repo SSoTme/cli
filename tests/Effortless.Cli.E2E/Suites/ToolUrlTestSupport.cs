@@ -7,14 +7,14 @@ namespace Effortless.Cli.E2E.Suites;
 internal static class ToolUrlTestSupport
 {
     public static string ToolUrlsPath(Sandbox sandbox) =>
-        Path.Combine(sandbox.HomePath, ".ssotme", "tool_urls.json");
+        Path.Combine(sandbox.HomePath, ".effortless", "tool_urls.json");
 
     public static void WriteToolUrls(
         Sandbox sandbox,
         IReadOnlyDictionary<string, string> urls)
     {
         sandbox.WriteHomeFile(
-            ".ssotme/tool_urls.json",
+            ".effortless/tool_urls.json",
             JsonSerializer.Serialize(urls, new JsonSerializerOptions { WriteIndented = true }));
     }
 

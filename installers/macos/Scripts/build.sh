@@ -1,8 +1,8 @@
 #!/bin/bash
-# Build script for SSoTme macOS Installer
+# Build script for the Effortless CLI macOS Installer
 #
 # Generates:
-#           - installers/macos/bin/SSoTme-Installer.pkg
+#           - installers/macos/bin/Effortless-Installer-<arch>.pkg
 
 
 # Parse command line arguments
@@ -75,8 +75,8 @@ ASSETS_DIR="$INSTALLER_DIR/Assets"
 BUILD_DIR="$INSTALLER_DIR/build"
 DIST_DIR="$ROOT_DIR/dist"
 BIN_DIR="$INSTALLER_DIR/bin"
-SSOTME_VERSION=$(grep -o '"version": "[^"]*"' "$ROOT_DIR/package.json" | cut -d'"' -f4)
-echo "Using version: $SSOTME_VERSION from package.json"
+CLI_VERSION=$(grep -o '"version": "[^"]*"' "$ROOT_DIR/package.json" | cut -d'"' -f4)
+echo "Using version: $CLI_VERSION from package.json"
 
 # Update the version in the .csproj file
 CSPROJ_FILE="$SOURCE_DIR/Effortless.Cli.csproj"
@@ -84,7 +84,7 @@ CLIVERSION_FILE="$ROOT_DIR/src/Effortless.Cli.Core/CliVersion.cs"
 
 # Convert npm-safe YYYY.MDD.HHMM to numeric YYYY.M.D.HHMM for .NET.
 # e.g. "2026.404.1917" -> "2026.4.4.1917"
-if [[ "$SSOTME_VERSION" =~ ^([0-9]{4})\.([0-9]{3,4})\.([0-9]{1,4})$ ]]; then
+if [[ "$CLI_VERSION" =~ ^([0-9]{4})\.([0-9]{3,4})\.([0-9]{1,4})$ ]]; then
     CSPROJ_YEAR="${BASH_REMATCH[1]}"
     MONTH_DAY=$((10#${BASH_REMATCH[2]}))
     CSPROJ_MONTH=$((MONTH_DAY / 100))
@@ -94,15 +94,15 @@ if [[ "$SSOTME_VERSION" =~ ^([0-9]{4})\.([0-9]{3,4})\.([0-9]{1,4})$ ]]; then
     CSPROJ_MINUTE=$((CSPROJ_HHMM % 100))
     if (( CSPROJ_MONTH < 1 || CSPROJ_MONTH > 12 || CSPROJ_DAY < 1 || CSPROJ_DAY > 31 ||
           CSPROJ_HOUR > 23 || CSPROJ_MINUTE > 59 )); then
-        echo "ERROR: package.json version contains an invalid UTC date/time: '$SSOTME_VERSION'"
+        echo "ERROR: package.json version contains an invalid UTC date/time: '$CLI_VERSION'"
         exit 1
     fi
     NEW_CSPROJ_VERSION="${CSPROJ_YEAR}.${CSPROJ_MONTH}.${CSPROJ_DAY}.${CSPROJ_HHMM}"
 else
-    echo "ERROR: package.json version must use npm-safe YYYY.MDD.HHMM format; got '$SSOTME_VERSION'"
+    echo "ERROR: package.json version must use npm-safe YYYY.MDD.HHMM format; got '$CLI_VERSION'"
     exit 1
 fi
-echo "Using csproj version: $NEW_CSPROJ_VERSION (from $SSOTME_VERSION)"
+echo "Using csproj version: $NEW_CSPROJ_VERSION (from $CLI_VERSION)"
 
 if [ ! -f "$CSPROJ_FILE" ]; then
     echo "WARNING: $CSPROJ_FILE not found"
@@ -111,8 +111,8 @@ fi
 echo "Updating version in $CSPROJ_FILE to $NEW_CSPROJ_VERSION"
 sed -i '' "s/<Version>[^<]*<\/Version>/<Version>$NEW_CSPROJ_VERSION<\/Version>/g" "$CSPROJ_FILE"
 
-echo "Updating CLI version in $CLIVERSION_FILE to $SSOTME_VERSION"
-sed -i '' "s/public const string Value = \".*\";/public const string Value = \"$SSOTME_VERSION\";/g" "$CLIVERSION_FILE"
+echo "Updating CLI version in $CLIVERSION_FILE to $CLI_VERSION"
+sed -i '' "s/public const string Value = \".*\";/public const string Value = \"$CLI_VERSION\";/g" "$CLIVERSION_FILE"
 
 # Clean previous builds
 rm -rf "$DIST_DIR"
@@ -175,12 +175,12 @@ fi
 
 dotnet publish "$CSPROJ_FILE" -r "osx-$PUB_ARCH" -c Release /p:PublishSingleFile=true \
   --self-contained true -o "$RESOURCES_DIR"
-mv "$RESOURCES_DIR/Effortless.Cli" "$RESOURCES_DIR/ssotme"
+mv "$RESOURCES_DIR/Effortless.Cli" "$RESOURCES_DIR/effortless"
 
-# copy into aic, aicapture & effortless
-cp "$RESOURCES_DIR/ssotme" "$RESOURCES_DIR/aic"
-cp "$RESOURCES_DIR/ssotme" "$RESOURCES_DIR/aicapture"
-cp "$RESOURCES_DIR/ssotme" "$RESOURCES_DIR/effortless"
+# copy into the ssotme, aic & aicapture aliases
+cp "$RESOURCES_DIR/effortless" "$RESOURCES_DIR/ssotme"
+cp "$RESOURCES_DIR/effortless" "$RESOURCES_DIR/aic"
+cp "$RESOURCES_DIR/effortless" "$RESOURCES_DIR/aicapture"
 
 chmod +x "$RESOURCES_DIR/ssotme"
 chmod +x "$RESOURCES_DIR/aic"
@@ -208,8 +208,8 @@ fi
 
 
 echo "Building package..."
-mkdir -p "$BUILD_DIR/payload/Applications/SSoTme"
-cp -r "$RESOURCES_DIR"/* "$BUILD_DIR/payload/Applications/SSoTme/"
+mkdir -p "$BUILD_DIR/payload/Applications/Effortless"
+cp -r "$RESOURCES_DIR"/* "$BUILD_DIR/payload/Applications/Effortless/"
 
 if [ -n "$DEV_EXECUTABLE_KEYCHAIN_ID" ]; then
   echo "Verifying code signatures on copied binaries..."
@@ -223,8 +223,8 @@ fi
 pkgbuild --root "$BUILD_DIR/payload" \
     --install-location "/" \
     --scripts "$BUILD_DIR/scripts" \
-    --identifier "com.effortlessapi.ssotmecli" \
-    --version "$SSOTME_VERSION" \
+    --identifier "com.effortlessapi.effortlesscli" \
+    --version "$CLI_VERSION" \
     "$BIN_DIR/unsigned/$THE_INSTALLER_FILENAME"
 
 if [ -n "$DEV_INSTALLER_KEYCHAIN_ID" ]; then

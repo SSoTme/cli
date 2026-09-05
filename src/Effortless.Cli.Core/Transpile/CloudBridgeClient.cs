@@ -4,6 +4,13 @@ namespace Effortless.Cli;
 
 public sealed class CloudBridgeClient
 {
+    /// <summary>
+    /// The file name the live cli-cloud-bridge emits in its output FileSet. This
+    /// is part of the bridge's wire contract and is not renamed by step 10; the
+    /// CLI moves it onto its own index file name after every refresh.
+    /// </summary>
+    public const string BridgeOutputFileName = "ssotme-tools.json";
+
     private readonly Func<string, EffortlessProject, bool, int>
         _runCommandLine;
 
@@ -73,6 +80,15 @@ public sealed class CloudBridgeClient
             var outputPath = Path.Combine(
                 workingDirectory,
                 outputFileName);
+            var bridgeOutputPath = Path.Combine(
+                workingDirectory,
+                BridgeOutputFileName);
+            if (!string.Equals(outputFileName, BridgeOutputFileName, StringComparison.Ordinal)
+                && File.Exists(bridgeOutputPath))
+            {
+                File.Move(bridgeOutputPath, outputPath, overwrite: true);
+            }
+
             if (!File.Exists(outputPath))
             {
                 return false;

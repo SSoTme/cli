@@ -178,7 +178,7 @@ public class BuildRunner
 
             if (withSubprojects)
             {
-                BuildSubSSoTmeProjects();
+                BuildSubProjects();
             }
 
             new EmptyFolderPruner(_project)
@@ -269,11 +269,11 @@ public class BuildRunner
         }
     }
 
-    private void BuildSubSSoTmeProjects()
+    private void BuildSubProjects()
     {
         foreach (var projectDirectory in _projectFiles)
         {
-            new DirectoryInfo(projectDirectory).InvokeSSoTmeBuild();
+            new DirectoryInfo(projectDirectory).InvokeEffortlessBuild();
         }
     }
 }

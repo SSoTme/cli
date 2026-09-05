@@ -413,7 +413,7 @@ How a tool name becomes a URL: remote index, versions, pins, upgrades.
 
 ## Tool URL overrides
 
-The per-user ~/.ssotme/tool_urls.json override table.
+The per-user ~/.effortless/tool_urls.json override table.
 
 ### `-listToolUrls`
 
@@ -532,32 +532,35 @@ GitHub-hosted Effortless seed repositories (root or child projects with a full E
 - `<root>/ssotme.json` — Legacy project file name. Also accepted as-is if the rename does not happen (e.g. effortless.json exists but is invalid).
 - `<root>/aicapture.json and <root>/SSoTmeProject.json` — Older legacy project file names. Not renamed; loaded in place and saved back under the SAME name (GetProjectFI chooses the first valid candidate).
 - `<root>/effortless.env` — Project-scoped credentials: EFFORTLESS_JWT and {ACCOUNT}_{PAT|API_KEY|APIKEY|KEY|BASEID|BASE_ID}. ssotme.env is auto-renamed to effortless.env when the latter is absent. Comment lines start with #; surrounding quotes are stripped; keys are case-insensitive.
-- `<root>/.gitignore` — Created by init with the standard ignore list; existing files get "effortless.env" appended when missing. Template lines: /**/obj/**/*, /**/bin/**/*, /**/.ssotme/**/*, /**/DSPXml/**/*, /SSoT/__patch.json, /**/.vs/**/*, /**/node_modules/**/*, /**/.vscode/**/*, ssotme.env, effortless.env (verbatim, including the DSPXml line — it is just a template).
+- `<root>/.gitignore` — Created by init with the standard ignore list; existing files get "effortless.env" appended when missing. Template lines: /**/obj/**/*, /**/bin/**/*, /**/.effortless/**/*, /**/.ssotme/**/*, /**/DSPXml/**/*, /SSoT/__patch.json, /**/.vs/**/*, /**/node_modules/**/*, /**/.vscode/**/*, ssotme.env, effortless.env (verbatim, including the DSPXml line — it is just a template). Step 10: the .effortless line is new; the .ssotme line stays so old clones stay clean.
 - `<root>/effortless-rulebook/effortless-rulebook.json` — Seed rulebook {"project":{"name":"<name>"}}.
 - `<root>/errors.json` — Per-build failure ledger (schema effortless-build-errors/v1, camelCase). Top-level: schema, generatedAt, startedAt, projectRoot, buildCommand, continueOnError, totalSteps, succeededSteps, failedSteps, skippedSteps, failedStepNames[], steps[] (name, relativePath, status, message, finishedAt), errors[] (StepRecord with exitCode, resolvedVersion, resolvedUrl, transpilerException, cliException chains).
-- `<root>/.ssotme/<RelativePath>/<toolKey>.zfs` — GZip of the FileSet XML a step last produced (minus self-source entries). toolKey = sanitized POST URL for URL tools, else LowerHyphenName(Name). .ssotme is created with the Hidden attribute.
-- `<root>/.ssotme/<RelativePath>/<toolKey>.xml` — Uncompressed copy of the ledger written with -debug. Deleted by clean alongside the .zfs.
-- `<root>/.ssotme/tempFileSet_<guid>.xml` — Transient copy of the output XML during SaveFileSet. Deleted immediately after extraction.
-- `~/.ssotme/ssotme.key (or ssotme.<runAs>.key)` — { EmailAddress, Secret, APIKeys: { account: key } }. EmailAddress/Secret are RabbitMQ-era; kept in the file format for compatibility, no longer used. Default key when the file is missing is the public cli@aicapture.io record (only ever sent to RabbitMQ) — the rebuild stops generating it.
-- `~/.ssotme/tool_urls.json` — { "<tool>": "<url>" } overrides plus the managed cli-cloud-bridge entry. Indented JSON.
-- `~/.ssotme/remote_tools/ssotme-tools.json` — Cached cli-cloud-bridge list output: transpilerVersions{ "<acct>/<pkg>/<tool>": { "vX": { urls.post, metaData.isHeadVersion, ... } } }, cliUpdateAvailable, latestBridgeVersion, latestCliVersion, fetchedAt, totalCount. fetchedAt is a CLI-stamped UTC instant proving when a valid response last replaced the cache. Both "transpilerVersions" and legacy "transpilers" keys are accepted. fetchedAt advances only after parse and structural validation succeed; refresh failure never makes stale data look current.
-- `~/.ssotme/remote_tools/cli_version` — CLI_VERSION at the time of the last refresh. Not by itself a refresh trigger.
-- `~/.ssotme/remote_tools/ssotme.json (and effortless.json)` — Minimal project so the internal bridge run has a project context. Name "remote_tools"; the internal handler then auto-migrates it to effortless.json on first load (both may exist).
-- `~/.ssotme/bridge_version_index` — Highest latestBridgeVersion.versionIndex applied so far.
-- `~/.ssotme/update_available.json` — cliUpdateAvailable object from the last refresh (name, version, installLinks{windows,windowsArm,mac,macArm}). Still maintained; the banner that reads it is off by default.
-- `~/.ssotme/github_version_check.json` — { lastCheck, latestVersion } 24h cache of the GitHub latest release tag. Only reachable through the disabled CheckForUpdateNotice; kept because -upgradeCli shares the parsing.
-- `~/.ssotme/effortlessapi_token.txt` — Global JWT.
-- `~/.ssotme/effortlessapi_token_info.json` — { Token, Email, CreatedAt, ExpiresAt(+24h) }.
-- `~/.ssotme/seed_cache/<seed>/cache/**` — Files copied into a cloned seed. Retained seed cache used by cloneSeed; independent of Airtable metadata guessing.
-- `<root>/ssotme-seed.json (+ seed-config-values.json, seed-secrets-values.json)` — Seed replacement tokens ($key$) and interactive answers. Retained explicit $key$ replacement contract. Missing required values fail clearly; Airtable schema guessing is removed.
+- `<root>/.effortless/<RelativePath>/<toolKey>.zfs` — GZip of the FileSet XML a step last produced (minus self-source entries). toolKey = sanitized POST URL for URL tools, else LowerHyphenName(Name). .effortless is created with the Hidden attribute. Step 10 (D28 option A): a legacy <root>/.ssotme is renamed to .effortless on project load; ledger file names inside are unchanged (step 15 owns them).
+- `<root>/.effortless/<RelativePath>/<toolKey>.xml` — Uncompressed copy of the ledger written with -debug. Deleted by clean alongside the .zfs.
+- `<root>/.effortless/tempFileSet_<guid>.xml` — Transient copy of the output XML during SaveFileSet. Deleted immediately after extraction.
+- `~/.effortless/effortless.key (or effortless.<runAs>.key)` — { EmailAddress, Secret, APIKeys: { account: key } }. EmailAddress/Secret are RabbitMQ-era; kept in the file format for compatibility, no longer used. An empty key is returned when the file is missing. Step 10: migrated from ~/.ssotme/ssotme.key and ssotme.<runAs>.key by UserConfigMigration.
+- `~/.effortless/tool_urls.json` — { "<tool>": "<url>" } overrides plus the managed cli-cloud-bridge entry. Indented JSON.
+- `~/.effortless/remote_tools/effortless-tools.json` — Cached cli-cloud-bridge list output: transpilerVersions{ "<acct>/<pkg>/<tool>": { "vX": { urls.post, metaData.isHeadVersion, ... } } }, cliUpdateAvailable, latestBridgeVersion, latestCliVersion, fetchedAt, totalCount. fetchedAt is a CLI-stamped UTC instant proving when a valid response last replaced the cache. Both "transpilerVersions" and legacy "transpilers" keys are accepted. fetchedAt advances only after parse and structural validation succeed; refresh failure never makes stale data look current. Step 10: migrated from remote_tools/ssotme-tools.json.
+- `~/.effortless/remote_tools/cli_version` — CLI_VERSION at the time of the last refresh. Not by itself a refresh trigger.
+- `~/.effortless/remote_tools/effortless.json` — Minimal project so the internal bridge run has a project context. Name "remote_tools". v2 writes only effortless.json here; the legacy remote_tools/ssotme.json is dropped by the step-10 migration (not copied).
+- `~/.effortless/bridge_version_index` — Highest latestBridgeVersion.versionIndex applied so far.
+- `~/.effortless/update_available.json` — cliUpdateAvailable object from the last refresh (name, version, installLinks{windows,windowsArm,mac,macArm}). Still maintained; the banner that reads it is off by default.
+- `~/.effortless/github_version_check.json` — { lastCheck, latestVersion } 24h cache of the GitHub latest release tag. Only reachable through the disabled CheckForUpdateNotice; kept because -upgradeCli shares the parsing.
+- `~/.effortless/effortlessapi_token.txt` — Global JWT.
+- `~/.effortless/effortlessapi_token_info.json` — { Token, Email, CreatedAt, ExpiresAt(+24h) }.
+- `~/.effortless/seed_cache/<seed>/cache/**` — Files copied into a cloned seed. Retained seed cache used by cloneSeed; independent of Airtable metadata guessing.
+- `<root>/effortless-seed.json (legacy ssotme-seed.json also accepted; + seed-config-values.json, seed-secrets-values.json)` — Seed replacement tokens ($key$) and interactive answers. Retained explicit $key$ replacement contract. Missing required values fail clearly; Airtable schema guessing is removed.
+- `~/.ssotme/` — Legacy user state directory (v1). Step 10: copied (never moved) to ~/.effortless with renames: ssotme.key -> effortless.key, ssotme.<runAs>.key -> effortless.<runAs>.key, remote_tools/ssotme-tools.json -> remote_tools/effortless-tools.json, remote_tools/ssotme.json dropped, everything else same relative path. If both directories exist, ~/.effortless wins and ~/.ssotme is never read again (no merging). Migration failure is fatal.
+- `~/.ssotme/MIGRATED-TO-EFFORTLESS` — Records that the legacy directory was copied to ~/.effortless. One line: target path, UTC timestamp, CLI version. The rest of ~/.ssotme is left untouched so a legacy ssotme binary keeps working.
+- `<root>/.ssotme/` — Legacy per-project ledger directory. Step 10 (D28 option A): renamed to <root>/.effortless when .effortless is absent. It is gitignored build state so a rename is safe. init writes both ignore lines so old clones stay clean.
 
 ## Environment variables and keys
 
-- `SSOTME_CHILD_PROCESS` (process-env) — Set to "1" by the CLI around spawned child "effortless -buildLocal" / "-clean" processes; read by CheckForUpdateNotice to skip update banners in children. Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards.
-- `HOME / USERPROFILE` (process-env) — Resolves ~/.ssotme through Environment.GetFolderPath(SpecialFolder.UserProfile). Black-box tests override both to sandbox all user-home state.
+- `EFFORTLESS_CHILD_PROCESS` (process-env) — Set to "1" by the CLI around spawned child "effortless -buildLocal" / "-clean" processes; read by CheckForUpdateNotice to skip update banners in children. Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards. Step 10: renamed from SSOTME_CHILD_PROCESS (D31); nothing reads the old name.
+- `HOME / USERPROFILE` (process-env) — Resolves ~/.effortless through Environment.GetFolderPath(SpecialFolder.UserProfile). Black-box tests override both to sandbox all user-home state.
 - `PATH` (process-env) — Used to locate npm (upgradeCli hint) and by spawned shells to find "effortless" for nested/sub-project builds. New build: child builds spawn the SAME executable by absolute path (Environment.ProcessPath / dotnet + dll) instead of relying on a globally installed "effortless" being on PATH. Console output of the child is unchanged.
 - `EFFORTLESS_JWT` (effortless.env) — Project-scoped JWT written by "effortless projectLogin"; takes precedence over the global token and is sent as cliJwt. Read via SsotmeEnvFile.TryLoadFromNearestProject; quotes stripped; comments (#) ignored.
-- `{ACCOUNT}_PAT | _API_KEY | _APIKEY | _KEY` (effortless.env) — With -account X, the first matching X_{suffix} value is injected as apiKey=... (case-insensitive key lookup). Precedence: effortless.env beats ~/.ssotme/ssotme.key APIKeys[X]; both beat a same-named ProjectSetting.
+- `{ACCOUNT}_PAT | _API_KEY | _APIKEY | _KEY` (effortless.env) — With -account X, the first matching X_{suffix} value is injected as apiKey=... (case-insensitive key lookup). Precedence: effortless.env beats ~/.effortless/effortless.key APIKeys[X]; both beat a same-named ProjectSetting.
 - `{ACCOUNT}_BASEID | _BASE_ID` (effortless.env) — With -account X, injected as baseId=... Same rules as the apiKey mapping.
 - `EFFORTLESS_SEED_GITHUB_ACCOUNT` (process-env) — Default GitHub account used by listSeeds and cloneSeed when the invocation does not provide an account. Defaults to ssotme when unset.
 

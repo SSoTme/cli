@@ -79,7 +79,7 @@ internal static class WorkflowTestSupport
     public static string ZfsDirectory(Sandbox sandbox, string relativePath = "") =>
         Path.Combine(
             sandbox.ProjectPath,
-            ".ssotme",
+            ".effortless",
             relativePath.Trim('/', '\\'));
 
     public static string[] ZfsFiles(Sandbox sandbox, string relativePath = "")
@@ -129,7 +129,7 @@ internal static class WorkflowTestSupport
                 CliUnderTest.TestUtcNow.ToString("O"),
         };
         sandbox.WriteHomeFile(
-            ".ssotme/remote_tools/ssotme-tools.json",
+            ".effortless/remote_tools/effortless-tools.json",
             root.ToJsonString(IndentedJson));
         server.IndexJson = root.ToJsonString(IndentedJson);
     }

@@ -123,7 +123,7 @@ internal sealed class CliUnderTest
         startInfo.Environment["USERPROFILE"] = sandbox.HomePath;
         startInfo.Environment["PATH"] =
             sandbox.BinPath + Path.PathSeparator + (Environment.GetEnvironmentVariable("PATH") ?? "");
-        startInfo.Environment.Remove("SSOTME_CHILD_PROCESS");
+        startInfo.Environment.Remove("EFFORTLESS_CHILD_PROCESS");
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["TERM"] = "dumb";
         startInfo.Environment["EFFORTLESS_CLI_TEST_UTC_NOW"] =

@@ -60,7 +60,7 @@ public sealed class AuthCommands
 
     public int SetAccountApiKey(CliInvocation invocation)
     {
-        var key = KeyFile.GetSSoTmeKey(
+        var key = KeyFile.GetKey(
             invocation.Options.runAs);
         var apiKey = (invocation.Options.setAccountAPIKey ?? string.Empty)
             .Replace("=", "/", StringComparison.Ordinal);
@@ -95,7 +95,7 @@ public sealed class AuthCommands
             key.APIKeys[values[0]] = values[1];
         }
 
-        KeyFile.SetSSoTmeKey(
+        KeyFile.SetKey(
             key,
             invocation.Options.runAs);
         return 0;

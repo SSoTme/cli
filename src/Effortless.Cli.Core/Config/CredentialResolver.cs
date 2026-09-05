@@ -57,7 +57,7 @@ public sealed class CredentialResolver
             return;
         }
 
-        var key = KeyFile.GetSSoTmeKey(invocation.Options.runAs);
+        var key = KeyFile.GetKey(invocation.Options.runAs);
         if (!key.APIKeys.TryGetValue(invocation.Account, out var apiKey))
         {
             return;

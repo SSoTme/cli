@@ -155,7 +155,7 @@ public class InputFileSetLoader
                             StringComparison.OrdinalIgnoreCase))
                     {
                         System.Console.WriteLine(
-                            $"Allowing access to parent ssotme project: {absoluteAllowedFolder}");
+                            $"Allowing access to parent effortless project: {absoluteAllowedFolder}");
                         return;
                     }
                 }
@@ -164,7 +164,7 @@ public class InputFileSetLoader
             throw new NoStackException(
                 $"Access denied: The path '{filePath}' resolves to a directory outside the current project scope ({absoluteFilePath}).\n" +
                 $"Current project: {projectName} ({absoluteProjectRoot})\n" +
-                "For security reasons, ssotme can only access files within the project directory.");
+                "For security reasons, effortless can only access files within the project directory.");
         }
         catch (NoStackException)
         {

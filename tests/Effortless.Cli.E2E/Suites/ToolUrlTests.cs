@@ -68,7 +68,7 @@ public sealed class ToolUrlTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains(
-            "Warning: 'cli-cloud-bridge' is an internal ssotme-managed tool. Overriding it may break remote tool resolution.",
+            "Warning: 'cli-cloud-bridge' is an internal Effortless-managed tool. Overriding it may break remote tool resolution.",
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -116,7 +116,7 @@ public sealed class ToolUrlTests
             bareword.Stdout,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Tool 'nope' is not configured in ~/.ssotme/tool_urls.json file.",
+            "Tool 'nope' is not configured in ~/.effortless/tool_urls.json file.",
             missingTool.Stdout,
             StringComparison.Ordinal);
 
@@ -137,7 +137,7 @@ public sealed class ToolUrlTests
 
         Assert.Equal(0, missing.ExitCode);
         Assert.Contains(
-            "No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.",
+            "No tool URLs configured. The ~/.effortless/tool_urls.json file does not exist.",
             missing.Stdout,
             StringComparison.Ordinal);
         Assert.Contains(

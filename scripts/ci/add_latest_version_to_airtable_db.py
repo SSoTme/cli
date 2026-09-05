@@ -112,17 +112,18 @@ class AirtableBaseConnector:
 
 
 AIRTABLE_PAT = os.getenv("AIRTABLE_PAT")
-SSOT_BASE_ID = os.getenv("SSOT_BASE_ID")
+# Step 10 rename; the legacy secret name is still honoured until the repo secret is renamed.
+AIRTABLE_BASE_ID = os.getenv("EFFORTLESS_AIRTABLE_BASE_ID") or os.getenv("SSOT_BASE_ID")
 
 
 def generate_installer_urls(version: str, github_repo: str) -> dict:
     """Generate installer download URLs for all platforms."""
     base_url = f"https://github.com/{github_repo}/releases/download/v{version}"
     return {
-        'WindowsInstaller': f"{base_url}/SSoTme-Installer_win-x64.msi",
-        'WindowsArmInstaller': f"{base_url}/SSoTme-Installer_win-arm64.msi",
-        'MacInstaller': f"{base_url}/SSoTme-Installer-x86_64.pkg",
-        'MacArmInstaller': f"{base_url}/SSoTme-Installer-arm64.pkg"
+        'WindowsInstaller': f"{base_url}/Effortless-Installer_win-x64.msi",
+        'WindowsArmInstaller': f"{base_url}/Effortless-Installer_win-arm64.msi",
+        'MacInstaller': f"{base_url}/Effortless-Installer-x86_64.pkg",
+        'MacArmInstaller': f"{base_url}/Effortless-Installer-arm64.pkg"
     }
 
 
@@ -135,8 +136,8 @@ async def main():
         logger.error("AIRTABLE_PAT environment variable is required")
         return 1
     
-    if not SSOT_BASE_ID:
-        logger.error("SSOT_BASE_ID environment variable is required")
+    if not AIRTABLE_BASE_ID:
+        logger.error("EFFORTLESS_AIRTABLE_BASE_ID environment variable is required")
         return 1
     
     github_repo = os.getenv("GITHUB_REPOSITORY")
@@ -146,7 +147,7 @@ async def main():
     
     try:
         # Initialize Airtable connector
-        connector = AirtableBaseConnector(SSOT_BASE_ID, AIRTABLE_PAT)
+        connector = AirtableBaseConnector(AIRTABLE_BASE_ID, AIRTABLE_PAT)
         table_name = "CLIVersions"
         
         logger.info(f"Checking for existing version: v{args.version}")

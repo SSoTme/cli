@@ -11,16 +11,16 @@ public class JwtStore
     {
         try
         {
-            string ssotmeDirectory = UserConfigDir.SSoTmeDir.FullName;
+            string configDirectory = UserConfigDir.EffortlessDir.FullName;
 
             string tokenFile = Path.Combine(
-                ssotmeDirectory,
+                configDirectory,
                 "effortlessapi_token.txt");
             File.WriteAllText(tokenFile, jwtToken);
             SetFilePermissions600(tokenFile);
 
             string tokenInfoFile = Path.Combine(
-                ssotmeDirectory,
+                configDirectory,
                 "effortlessapi_token_info.json");
             var tokenInfo = new
             {
@@ -52,7 +52,7 @@ public class JwtStore
         try
         {
             string tokenFile = Path.Combine(
-                UserConfigDir.SSoTmeDir.FullName,
+                UserConfigDir.EffortlessDir.FullName,
                 "effortlessapi_token.txt");
 
             if (File.Exists(tokenFile))
@@ -73,7 +73,7 @@ public class JwtStore
         try
         {
             string tokenInfoFile = Path.Combine(
-                UserConfigDir.SSoTmeDir.FullName,
+                UserConfigDir.EffortlessDir.FullName,
                 "effortlessapi_token_info.json");
             if (File.Exists(tokenInfoFile))
             {
@@ -140,12 +140,12 @@ public class JwtStore
     {
         try
         {
-            string ssotmeDirectory = UserConfigDir.SSoTmeDir.FullName;
+            string configDirectory = UserConfigDir.EffortlessDir.FullName;
             string tokenFile = Path.Combine(
-                ssotmeDirectory,
+                configDirectory,
                 "effortlessapi_token.txt");
             string tokenInfoFile = Path.Combine(
-                ssotmeDirectory,
+                configDirectory,
                 "effortlessapi_token_info.json");
 
             if (File.Exists(tokenFile))

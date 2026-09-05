@@ -5,7 +5,14 @@
 those tools over HTTP, and writes or cleans the generated outputs.
 
 The same CLI is installed under four compatible command names: `effortless`,
-`ssotme`, `aicapture`, and `aic`.
+`ssotme`, `aicapture`, and `aic`. It was formerly the SSoT.me CLI.
+
+User state lives in `~/.effortless`. The first run after upgrading from a
+`ssotme`-era install copies an existing `~/.ssotme` there (key files and the
+tool catalog are renamed on the way) and leaves `~/.ssotme` in place with a
+`MIGRATED-TO-EFFORTLESS` marker, so an older `ssotme` binary keeps working. A
+project's `.ssotme` build-state directory is renamed to `.effortless` the first
+time the project is loaded.
 
 ## Install
 
@@ -128,8 +135,8 @@ effortless build
 ```
 
 Set `EFFORTLESS_SEED_GITHUB_ACCOUNT` to change the default account. Projects
-containing `ssotme-seed.json` retain the `$key$` content and filename replacement
-contract when loaded.
+containing `effortless-seed.json` (or the legacy `ssotme-seed.json`) retain the
+`$key$` content and filename replacement contract when loaded.
 
 ## Build on a cloud trigger
 

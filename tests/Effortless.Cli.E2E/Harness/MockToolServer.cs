@@ -456,6 +456,7 @@ internal sealed class MockToolServer : IAsyncDisposable
         string contents;
         if (mode.Equals("list", StringComparison.OrdinalIgnoreCase))
         {
+            // The live bridge emits this legacy file name; the CLI renames it.
             fileName = "ssotme-tools.json";
             contents = IndexJson;
         }

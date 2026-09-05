@@ -122,7 +122,7 @@ public sealed class RemoteToolsIndexTests
             "Error: version 'v7' not found for tool 'effortless/common/to-uppercase'. Available versions: v2026.01.01.0001, v2025.12.31.2359",
             messages);
         Assert.Contains(
-            "Error: this tool has no head versions; please specify a version to run via ssotme to-uppercase/version. use ssotme to-uppercase -list to view all available versions",
+            "Error: this tool has no head versions; please specify a version to run via effortless to-uppercase/version. use effortless to-uppercase -list to view all available versions",
             messages);
     }
 
@@ -433,7 +433,7 @@ public sealed class RemoteToolsIndexTests
             () => index.TryGetToolUrl("to-uppercase"));
 
         Assert.Contains(
-            "Error reading ~/.ssotme/tool_urls.json",
+            "Error reading ~/.effortless/tool_urls.json",
             error.Message,
             StringComparison.Ordinal);
     }

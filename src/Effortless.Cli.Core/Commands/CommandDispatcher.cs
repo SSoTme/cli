@@ -1055,8 +1055,8 @@ public sealed class CommandDispatcher
             ConsoleColor.Yellow);
         WriteColor(
             !string.IsNullOrEmpty(invocation.Transpiler)
-                ? $"This is likely an issue with the transpiler '{invocation.Transpiler}', not with SSoTme."
-                : "This is likely an issue with the transpiler, not with SSoTme.",
+                ? $"This is likely an issue with the transpiler '{invocation.Transpiler}', not with Effortless."
+                : "This is likely an issue with the transpiler, not with Effortless.",
             ConsoleColor.Yellow);
         WriteColor(
             "The transpiler may have received invalid input or encountered an internal error.",

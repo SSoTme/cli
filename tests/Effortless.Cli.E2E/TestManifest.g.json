@@ -1702,5 +1702,77 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "home-migrates-legacy-dir",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "home-migration-renames-key-files",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "home-migration-leaves-legacy-untouched-and-marks-it",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "home-both-present-uses-effortless-only",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "home-runas-key-mapping",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "home-migration-failure-is-fatal",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "project-ledger-dir-rename",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "child-env-var-renamed",
+    "suite": "e2e-home",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "home-legacy-catalog-migrated-offline-build",
+    "suite": "e2e-home",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]

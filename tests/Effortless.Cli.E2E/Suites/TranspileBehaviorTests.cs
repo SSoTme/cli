@@ -157,7 +157,7 @@ public sealed class TranspileBehaviorTests
         var request = await server.WaitForRequestAsync();
 
         AssertSuccess(result);
-        Assert.Contains("Allowing access to parent ssotme project:", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Allowing access to parent effortless project:", result.Stdout, StringComparison.Ordinal);
         var input = Assert.Single(request.InputFiles);
         Assert.Equal("p.txt", input.RelativePath);
         Assert.Equal("parent contents", input.Text);
@@ -243,7 +243,7 @@ public sealed class TranspileBehaviorTests
         server.ThrowIfFaulted();
     }
 
-    [Fact(DisplayName = "tx-zfs-written: subdirectory runs write a gzip XML ledger under .ssotme")]
+    [Fact(DisplayName = "tx-zfs-written: subdirectory runs write a gzip XML ledger under .effortless")]
     public async Task SubdirectoryRunWritesGzipXmlLedger()
     {
         var cli = new CliUnderTest();
@@ -265,7 +265,7 @@ public sealed class TranspileBehaviorTests
         var request = Assert.Single(server.Requests);
         var ledgerPath = Path.Combine(
             sandbox.ProjectPath,
-            ".ssotme",
+            ".effortless",
             "sub",
             SanitizeUrl(server.ToolUri("echo").ToString()) + ".zfs");
         Assert.True(File.Exists(ledgerPath), $"Expected ledger '{ledgerPath}'.");
@@ -970,14 +970,14 @@ public sealed class TranspileBehaviorTests
         server.ThrowIfFaulted();
     }
 
-    [Fact(DisplayName = "tx-account-keyfile: -a falls back to the account key in ssotme.key")]
+    [Fact(DisplayName = "tx-account-keyfile: -a falls back to the account key in effortless.key")]
     public async Task AccountApiKeyFallsBackToDefaultKeyFile()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
         using var sandbox = CreateSandbox(cli, server);
         sandbox.WriteFile("in.txt", "input");
-        WriteKeyFile(sandbox, "ssotme.key", "acme", "k1");
+        WriteKeyFile(sandbox, "effortless.key", "acme", "k1");
         server.Enqueue("echo", SuccessFiles());
 
         var result = await cli.Run(
@@ -999,7 +999,7 @@ public sealed class TranspileBehaviorTests
         await using var server = new MockToolServer();
         using var sandbox = CreateSandbox(cli, server);
         sandbox.WriteFile("in.txt", "input");
-        WriteKeyFile(sandbox, "ssotme.key", "baserow", """{"token":"complex"}""");
+        WriteKeyFile(sandbox, "effortless.key", "baserow", """{"token":"complex"}""");
 
         var result = await cli.Run(
             ["echo", "-i", "in.txt", "-account", "baserow"],
@@ -1016,15 +1016,15 @@ public sealed class TranspileBehaviorTests
         server.ThrowIfFaulted();
     }
 
-    [Fact(DisplayName = "tx-account-runas: -runAs selects ssotme.<user>.key for account injection")]
+    [Fact(DisplayName = "tx-account-runas: -runAs selects effortless.<user>.key for account injection")]
     public async Task RunAsSelectsNamedKeyFile()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
         using var sandbox = CreateSandbox(cli, server);
         sandbox.WriteFile("in.txt", "input");
-        WriteKeyFile(sandbox, "ssotme.key", "acme", "default-key");
-        WriteKeyFile(sandbox, "ssotme.bob.key", "acme", "kb");
+        WriteKeyFile(sandbox, "effortless.key", "acme", "default-key");
+        WriteKeyFile(sandbox, "effortless.bob.key", "acme", "kb");
         server.Enqueue("echo", SuccessFiles());
 
         var result = await cli.Run(
@@ -1049,7 +1049,7 @@ public sealed class TranspileBehaviorTests
         const string expiredProjectJwt = "e30.eyJleHAiOjB9.signature";
         const string globalJwt = "global-token";
         sandbox.WriteFile("effortless.env", $"EFFORTLESS_JWT={expiredProjectJwt}\n");
-        sandbox.WriteHomeFile(".ssotme/effortlessapi_token.txt", globalJwt);
+        sandbox.WriteHomeFile(".effortless/effortlessapi_token.txt", globalJwt);
         server.Enqueue("echo", SuccessFiles(), SuccessFiles());
 
         var projectResult = await cli.Run(
@@ -1174,7 +1174,7 @@ public sealed class TranspileBehaviorTests
         }
 
         sandbox.WriteHomeFile(
-            ".ssotme/tool_urls.json",
+            ".effortless/tool_urls.json",
             JsonSerializer.Serialize(urls, new JsonSerializerOptions { WriteIndented = true }));
     }
 
@@ -1185,7 +1185,7 @@ public sealed class TranspileBehaviorTests
         string value)
     {
         sandbox.WriteHomeFile(
-            $".ssotme/{fileName}",
+            $".effortless/{fileName}",
             JsonSerializer.Serialize(
                 new
                 {
@@ -1216,7 +1216,7 @@ public sealed class TranspileBehaviorTests
     private static string LedgerPath(Sandbox sandbox, MockToolServer server, string toolName) =>
         Path.Combine(
             sandbox.ProjectPath,
-            ".ssotme",
+            ".effortless",
             SanitizeUrl(server.ToolUri(toolName).ToString()) + ".zfs");
 
     private static IReadOnlyList<FileSetEntry> ParseLedger(string path) =>

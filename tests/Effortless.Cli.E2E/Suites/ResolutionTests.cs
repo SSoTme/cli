@@ -358,7 +358,7 @@ public sealed class ResolutionTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains(
-            "Error: this tool has no head versions; please specify a version to run via ssotme to-uppercase/version.",
+            "Error: this tool has no head versions; please specify a version to run via effortless to-uppercase/version.",
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Contains("cli:> to-uppercase [user-set]", result.Stdout, StringComparison.Ordinal);
@@ -456,7 +456,7 @@ public sealed class ResolutionTests
         using var sandbox = Sandbox.Create(cli);
         ResolutionTestSupport.SeedHome(sandbox, index, bridge.BridgeUri);
         sandbox.WriteHomeFile(
-            ".ssotme/remote_tools/ssotme-tools.json",
+            ".effortless/remote_tools/effortless-tools.json",
             """{"transpilerVersions":{}}""");
         ResolutionTestSupport.SeedProject(sandbox);
 
@@ -472,9 +472,9 @@ public sealed class ResolutionTests
             + File.ReadAllText(
                 Path.Combine(
                     sandbox.HomePath,
-                    ".ssotme",
+                    ".effortless",
                     "remote_tools",
-                    "ssotme-tools.json")));
+                    "effortless-tools.json")));
         Assert.Contains(
             "CLOUD-BRIDGE CALL TRIGGERED: Remote tools catalog freshness required",
             result.Stdout,
@@ -517,9 +517,9 @@ public sealed class ResolutionTests
         Assert.Single(bridge.Requests);
         Assert.Single(toolServer.Requests);
 
-        var configRoot = Path.Combine(sandbox.HomePath, ".ssotme");
+        var configRoot = Path.Combine(sandbox.HomePath, ".effortless");
         Assert.True(File.Exists(Path.Combine(configRoot, "tool_urls.json")));
-        Assert.True(File.Exists(Path.Combine(configRoot, "remote_tools", "ssotme-tools.json")));
+        Assert.True(File.Exists(Path.Combine(configRoot, "remote_tools", "effortless-tools.json")));
         Assert.True(File.Exists(Path.Combine(configRoot, "remote_tools", "cli_version")));
         Assert.True(File.Exists(Path.Combine(configRoot, "remote_tools", "effortless.json")));
     }
@@ -543,7 +543,7 @@ public sealed class ResolutionTests
         toolServer.Enqueue("to-uppercase", ToolBehavior.Echo());
         using var sandbox = Sandbox.Create(cli);
         ResolutionTestSupport.SeedHome(sandbox, index, bridge.BridgeUri);
-        sandbox.WriteHomeFile(".ssotme/remote_tools/cli_version", "0000");
+        sandbox.WriteHomeFile(".effortless/remote_tools/cli_version", "0000");
         ResolutionTestSupport.SeedProject(sandbox);
 
         var result = await cli.Run(
@@ -560,7 +560,7 @@ public sealed class ResolutionTests
             File.ReadAllText(
                 Path.Combine(
                     sandbox.HomePath,
-                    ".ssotme",
+                    ".effortless",
                     "remote_tools",
                     "cli_version")));
     }
@@ -577,7 +577,7 @@ public sealed class ResolutionTests
             bridge.IndexJson = index.Json;
             using var sandbox = Sandbox.Create(cli);
             ResolutionTestSupport.SeedHome(sandbox, index, bridge.BridgeUri);
-            sandbox.WriteHomeFile(".ssotme/bridge_version_index", "9");
+            sandbox.WriteHomeFile(".effortless/bridge_version_index", "9");
 
             var result = await cli.Run([alias], sandbox.ProjectPath, sandbox);
 
@@ -593,13 +593,13 @@ public sealed class ResolutionTests
             Assert.Single(bridge.Requests);
             Assert.False(
                 File.Exists(
-                    Path.Combine(sandbox.HomePath, ".ssotme", "bridge_version_index")));
+                    Path.Combine(sandbox.HomePath, ".effortless", "bridge_version_index")));
             var persisted = File.ReadAllText(
                 Path.Combine(
                     sandbox.HomePath,
-                    ".ssotme",
+                    ".effortless",
                     "remote_tools",
-                    "ssotme-tools.json"));
+                    "effortless-tools.json"));
             Assert.Contains(
                 "effortless/common/to-uppercase",
                 persisted,
@@ -627,15 +627,15 @@ public sealed class ResolutionTests
             bridge.BridgeUri.ToString(),
             ResolutionTestSupport.ReadHomeObject(
                 sandbox,
-                ".ssotme/tool_urls.json")["cli-cloud-bridge"]?.GetValue<string>());
+                ".effortless/tool_urls.json")["cli-cloud-bridge"]?.GetValue<string>());
         Assert.Equal(
             "11",
             File.ReadAllText(
-                Path.Combine(sandbox.HomePath, ".ssotme", "bridge_version_index")));
+                Path.Combine(sandbox.HomePath, ".effortless", "bridge_version_index")));
 
         bridge.IndexJson = WithBridgeVersion(index.Json, bridge.BridgeUri, 10);
         sandbox.WriteHomeFile(
-            ".ssotme/remote_tools/ssotme-tools.json",
+            ".effortless/remote_tools/effortless-tools.json",
             """{"transpilerVersions":{}}""");
         ResolutionTestSupport.SeedProject(sandbox);
         toolServer.Enqueue("to-uppercase", ToolBehavior.Echo());
@@ -652,7 +652,7 @@ public sealed class ResolutionTests
         Assert.Equal(
             "11",
             File.ReadAllText(
-                Path.Combine(sandbox.HomePath, ".ssotme", "bridge_version_index")));
+                Path.Combine(sandbox.HomePath, ".effortless", "bridge_version_index")));
     }
 
     [Fact(DisplayName = "res-bridge-payload: bridge is called with cli_version")]
@@ -690,14 +690,14 @@ public sealed class ResolutionTests
         bridge.IndexJson = index.Json;
         using var sandbox = Sandbox.Create(cli);
         ResolutionTestSupport.SeedHome(sandbox, index, bridge.BridgeUri);
-        var urls = ResolutionTestSupport.ReadHomeObject(sandbox, ".ssotme/tool_urls.json");
+        var urls = ResolutionTestSupport.ReadHomeObject(sandbox, ".effortless/tool_urls.json");
         urls["list-transpilers"] = "http://example.invalid/legacy";
-        sandbox.WriteHomeFile(".ssotme/tool_urls.json", urls.ToJsonString());
+        sandbox.WriteHomeFile(".effortless/tool_urls.json", urls.ToJsonString());
 
         var result = await cli.Run(["-refreshTools"], sandbox.ProjectPath, sandbox);
 
         Assert.True(result.ExitCode == 0, result.Combined);
-        var afterUrls = ResolutionTestSupport.ReadHomeObject(sandbox, ".ssotme/tool_urls.json");
+        var afterUrls = ResolutionTestSupport.ReadHomeObject(sandbox, ".effortless/tool_urls.json");
         Assert.Null(afterUrls["list-transpilers"]);
     }
 
@@ -715,13 +715,13 @@ public sealed class ResolutionTests
         var withUpdate = await cli.Run(["-refreshTools"], sandbox.ProjectPath, sandbox);
 
         Assert.True(withUpdate.ExitCode == 0, withUpdate.Combined);
-        var updatePath = Path.Combine(sandbox.HomePath, ".ssotme", "update_available.json");
+        var updatePath = Path.Combine(sandbox.HomePath, ".effortless", "update_available.json");
         Assert.True(File.Exists(updatePath));
         var written = JsonNode.Parse(File.ReadAllText(updatePath))!.AsObject();
         Assert.Equal("2026.09.01.0001", written["name"]?.GetValue<string>());
 
         bridge.IndexJson = index.Json;
-        sandbox.WriteHomeFile(".ssotme/remote_tools/ssotme-tools.json", """{"transpilerVersions":{}}""");
+        sandbox.WriteHomeFile(".effortless/remote_tools/effortless-tools.json", """{"transpilerVersions":{}}""");
         ResolutionTestSupport.SeedProject(sandbox);
         toolServer.Enqueue("to-uppercase", ToolBehavior.Echo());
 
@@ -1272,9 +1272,9 @@ public sealed class ResolutionTests
             + File.ReadAllText(
                 Path.Combine(
                     sandbox.HomePath,
-                    ".ssotme",
+                    ".effortless",
                     "remote_tools",
-                    "ssotme-tools.json")));
+                    "effortless-tools.json")));
         Assert.Contains(
             "[cli] Project tools are current.",
             result.Stdout,
@@ -1411,9 +1411,9 @@ public sealed class ResolutionTests
                 ResolutionTestSupport.OldVersion));
         var indexPath = Path.Combine(
             sandbox.HomePath,
-            ".ssotme",
+            ".effortless",
             "remote_tools",
-            "ssotme-tools.json");
+            "effortless-tools.json");
         var beforeIndex = File.ReadAllBytes(indexPath);
         var beforeProject = sandbox.ReadFile("effortless.json");
 
@@ -1500,7 +1500,7 @@ public sealed class ResolutionTests
         var version = await cli.Run(["-version"], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, help.ExitCode);
-        Assert.Contains("SSoTme CLI", help.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Effortless CLI", help.Stdout, StringComparison.Ordinal);
         Assert.Equal(0, version.ExitCode);
         Assert.Equal(CliUnderTest.PackageVersion + Environment.NewLine, version.Stdout);
         Assert.Empty(bridge.Requests);
@@ -1508,9 +1508,9 @@ public sealed class ResolutionTests
             File.Exists(
                 Path.Combine(
                     sandbox.HomePath,
-                    ".ssotme",
+                    ".effortless",
                     "remote_tools",
-                    "ssotme-tools.json")));
+                    "effortless-tools.json")));
     }
 
     private static string WithBridgeVersion(string indexJson, Uri bridgeUri, long versionIndex)
@@ -1546,7 +1546,7 @@ public sealed class ResolutionTests
     {
         var root = ResolutionTestSupport.ReadHomeObject(
             sandbox,
-            ".ssotme/remote_tools/ssotme-tools.json");
+            ".effortless/remote_tools/effortless-tools.json");
         var tools = root["transpilerVersions"]?.AsObject()
             ?? throw new InvalidDataException(
                 "transpilerVersions is missing.");
@@ -1565,7 +1565,7 @@ public sealed class ResolutionTests
             },
         };
         sandbox.WriteHomeFile(
-            ".ssotme/remote_tools/ssotme-tools.json",
+            ".effortless/remote_tools/effortless-tools.json",
             root.ToJsonString());
     }
 
@@ -1580,7 +1580,7 @@ public sealed class ResolutionTests
     {
         var root = ResolutionTestSupport.ReadHomeObject(
             sandbox,
-            ".ssotme/remote_tools/ssotme-tools.json");
+            ".effortless/remote_tools/effortless-tools.json");
         if (value is null)
         {
             root.Remove("fetchedAt");
@@ -1591,7 +1591,7 @@ public sealed class ResolutionTests
         }
 
         sandbox.WriteHomeFile(
-            ".ssotme/remote_tools/ssotme-tools.json",
+            ".effortless/remote_tools/effortless-tools.json",
             root.ToJsonString());
     }
 }

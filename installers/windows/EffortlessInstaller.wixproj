@@ -1,10 +1,10 @@
 <Project Sdk="WixToolset.Sdk/6.0.0">
 
 	<PropertyGroup>
-		<OutputName>SSoTme-Installer_win-x64</OutputName>
+		<OutputName>Effortless-Installer_win-x64</OutputName>
 		<OutputType>Package</OutputType>
 		<Platform>x64</Platform>
-		<SSoTmeVersion>225.1.2.1456</SSoTmeVersion>
+		<EffortlessVersion>225.1.2.1456</EffortlessVersion>
 		<EnableDefaultItems>false</EnableDefaultItems>
 	</PropertyGroup>
 
@@ -28,7 +28,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="Scripts\CreateSsotmeHomedir.ps1" />
+		<None Include="Scripts\CreateEffortlessHomedir.ps1" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -826,7 +826,7 @@ public sealed class TranspileClient : IDisposable
                 }
 
                 Console.WriteLine(
-                    "  Files without content cannot be properly cleaned during 'ssotme clean'");
+                    "  Files without content cannot be properly cleaned during 'effortless clean'");
                 Console.WriteLine(
                     "  This may indicate the transpiler is not generating complete file entries");
             }

@@ -102,10 +102,10 @@ public class EffortlessProject
 
     internal DirectoryInfo GetZFSDI(string relativePath)
     {
-        var ssotmeDirectory = GetSSoTmeDI();
+        var ledgerDirectory = GetEffortlessDI();
         var zfsDirectory = new DirectoryInfo(
             Path.Combine(
-                ssotmeDirectory.FullName,
+                ledgerDirectory.FullName,
                 relativePath.Trim("\\/".ToCharArray())));
         if (!zfsDirectory.Exists)
         {
@@ -115,17 +115,47 @@ public class EffortlessProject
         return zfsDirectory;
     }
 
-    public DirectoryInfo GetSSoTmeDI()
+    public const string LedgerDirectoryName = ".effortless";
+    public const string LegacyLedgerDirectoryName = ".ssotme";
+
+    /// <summary>
+    /// The per-project build-state directory <c>&lt;root&gt;/.effortless</c>
+    /// (zfs ledgers, temp filesets). A legacy <c>.ssotme</c> directory is
+    /// renamed in place the first time it is seen (D28, option A).
+    /// </summary>
+    public DirectoryInfo GetEffortlessDI()
     {
-        var ssotmeDirectory = new DirectoryInfo(Path.Combine(RootPath, ".ssotme"));
-        if (ssotmeDirectory.Exists)
+        MigrateLegacyLedgerDirectory(RootPath);
+        var ledgerDirectory = new DirectoryInfo(Path.Combine(RootPath, LedgerDirectoryName));
+        if (!ledgerDirectory.Exists)
         {
-            ssotmeDirectory.Create();
-            ssotmeDirectory.Attributes =
+            ledgerDirectory.Create();
+            ledgerDirectory.Attributes =
                 FileAttributes.Directory | FileAttributes.Hidden;
         }
 
-        return ssotmeDirectory;
+        return ledgerDirectory;
+    }
+
+    /// <summary>
+    /// Renames <c>&lt;root&gt;/.ssotme</c> to <c>&lt;root&gt;/.effortless</c> when only the
+    /// legacy directory exists. It is gitignored build state, so a rename is safe.
+    /// </summary>
+    public static void MigrateLegacyLedgerDirectory(string rootPath)
+    {
+        if (string.IsNullOrEmpty(rootPath))
+        {
+            return;
+        }
+
+        var target = new DirectoryInfo(Path.Combine(rootPath, LedgerDirectoryName));
+        var legacy = new DirectoryInfo(Path.Combine(rootPath, LegacyLedgerDirectoryName));
+        if (target.Exists || !legacy.Exists)
+        {
+            return;
+        }
+
+        legacy.MoveTo(target.FullName);
     }
 
     public void AddSetting(string setting)

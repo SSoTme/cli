@@ -10,17 +10,17 @@ public sealed class InfoCommand
     {
         try
         {
-            var key = KeyFile.GetSSoTmeKey(
+            var key = KeyFile.GetKey(
                 invocation.Options.runAs);
             var keyLabel = string.IsNullOrEmpty(
                 invocation.Options.runAs)
-                ? "ssotme.key"
+                ? "effortless.key"
                 : invocation.Options.runAs + ".key";
             var project = ProjectLocator.TryToLoad(
                 new DirectoryInfo(invocation.CurrentDirectory));
 
             Console.WriteLine(
-                $"\nSSoTme CLI Version {CliVersion.Value}\n\nConfiguration for `{keyLabel}`:");
+                $"\nEffortless CLI Version {CliVersion.Value}\n\nConfiguration for `{keyLabel}`:");
             Console.WriteLine(
                 $"Project: {project?.Name ?? "<null>"}");
 

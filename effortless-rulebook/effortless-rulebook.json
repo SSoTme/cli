@@ -256,7 +256,7 @@
         "OptionCategoryId": "tool-urls",
         "Label": "Tool URL overrides",
         "SortOrder": 8,
-        "Description": "The per-user ~/.ssotme/tool_urls.json override table.",
+        "Description": "The per-user ~/.effortless/tool_urls.json override table.",
         "ParentCategory": "tools",
         "Tier": null
       },
@@ -1147,7 +1147,7 @@
         "Aliases": "f",
         "BarewordForms": "",
         "ValueType": "string",
-        "HelpText": "The keyfile to use.  By default it looks for ~/.ssotme/ssotme.key. (or ~/.ssotme/ssotme.{username}.key)",
+        "HelpText": "The keyfile to use.  By default it looks for ~/.effortless/effortless.key. (or ~/.effortless/effortless.{username}.key)",
         "Category": "dead",
         "Disposition": "drop-dead",
         "IsCommand": false,
@@ -1222,7 +1222,7 @@
         "IsCommand": false,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 6,
-        "HandlerNotes": "Selects ~/.ssotme/ssotme.{runAs}.key for GetSSoTmeKey/SetSSoTmeKey (info, setAccountAPIKey, account lookup, StartTranspile).",
+        "HandlerNotes": "Selects ~/.effortless/effortless.{runAs}.key for GetKey/SetKey (info, setAccountAPIKey, account lookup, StartTranspile).",
         "DispositionReason": "Cheap and coherent with -setAccountAPIKey multi-account key files.",
         "Description": "Use an alternate key file.",
         "Tier": "plumbing",
@@ -1383,7 +1383,7 @@
         "IsCommand": true,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 3,
-        "HandlerNotes": "Value \"acct/KEY\" or \"acct=KEY\" (= replaced by /); \"baserow/user/pass\" stored as JSON {username,password}; writes ~/.ssotme/ssotme[.runAs].key (chmod 600) via SetSSoTmeKey; bad syntax => error and -1.",
+        "HandlerNotes": "Value \"acct/KEY\" or \"acct=KEY\" (= replaced by /); \"baserow/user/pass\" stored as JSON {username,password}; writes ~/.effortless/effortless[.runAs].key (chmod 600) via SetKey; bad syntax => error and -1.",
         "DispositionReason": "Core.",
         "Description": "Store an API key for -account.",
         "Tier": "plumbing",
@@ -1595,7 +1595,7 @@
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
-        "HandlerNotes": "Prints ~/.ssotme/tool_urls.json sorted by key with \"Total: N tool(s) configured\", or the two no-file/no-entries messages.",
+        "HandlerNotes": "Prints ~/.effortless/tool_urls.json sorted by key with \"Total: N tool(s) configured\", or the two no-file/no-entries messages.",
         "DispositionReason": "Core.",
         "Description": "List URL overrides.",
         "Tier": "secondary",
@@ -1616,7 +1616,7 @@
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 9,
-        "HandlerNotes": "Prints \"Tool 'x' is configured with URL: ...\" or \"is not configured in ~/.ssotme/tool_urls.json file.\"; missing name => usage error.",
+        "HandlerNotes": "Prints \"Tool 'x' is configured with URL: ...\" or \"is not configured in ~/.effortless/tool_urls.json file.\"; missing name => usage error.",
         "DispositionReason": "Core.",
         "Description": "Show one URL override.",
         "Tier": "secondary",
@@ -2145,7 +2145,7 @@
       {
         "LifecyclePhaseId": "credential-resolution",
         "SortOrder": 7,
-        "Description": "Resolve -account credentials from effortless.env then ~/.ssotme/ssotme.key; resolve the JWT."
+        "Description": "Resolve -account credentials from effortless.env then ~/.effortless/effortless.key; resolve the JWT."
       },
       {
         "LifecyclePhaseId": "transpile-dispatch",
@@ -3492,7 +3492,7 @@
         "Phase": "transpile-dispatch",
         "SortOrder": 0,
         "Condition": "!login && !projectLogin && !logout && !skipRemoteToolsLookup",
-        "Action": "jwt = effortless.env EFFORTLESS_JWT ?? ~/.ssotme/effortlessapi_token.txt (no expiry check, no refresh).",
+        "Action": "jwt = effortless.env EFFORTLESS_JWT ?? ~/.effortless/effortlessapi_token.txt (no expiry check, no refresh).",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
         "ExitCode": "flow",
@@ -4042,7 +4042,7 @@
       {
         "ToolResolutionRuleId": "R0-catalog-freshness",
         "Precedence": 0,
-        "Source": "~/.ssotme/remote_tools/ssotme-tools.json fetchedAt",
+        "Source": "~/.effortless/remote_tools/effortless-tools.json fetchedAt",
         "Condition": "before any remote-catalog read or project tool execution; except offline/meta commands and explicit URL-only execution",
         "Result": "Validate the cached index and its CLI-stamped UTC fetchedAt using TimeProvider. Missing, malformed, more than 5 minutes in the future, or age >= 24 hours => synchronously refresh and validate before continuing. A refresh failure is fatal: keep the prior cache for diagnosis but do not resolve or run a tool from it. With a project loaded or discoverable from cwd, compare every remotely versioned non-execute step to current HEAD; any hard pin or LastVersionUsed != HEAD invokes strict transactional UpgradeAll before the requested command. Resolve every step first and save once; any missing/no-HEAD tool fails with no project mutation and the requested command does not run. Catalog list/search remain valid outside a project, where only catalog freshness can be enforced.",
         "VersionLabel": "",
@@ -4072,7 +4072,7 @@
       {
         "ToolResolutionRuleId": "R3-remote-index",
         "Precedence": 3,
-        "Source": "~/.ssotme/remote_tools/ssotme-tools.json",
+        "Source": "~/.effortless/remote_tools/effortless-tools.json",
         "Condition": "not -legacy; not a management command; name not empty",
         "Result": "Candidates = keys equal to name or ending in \"/name\" (name may carry \"/vX\" suffix). 0 => refresh once via cli-cloud-bridge then retry. >1 => SelectBestCandidate (account \"effortless\" first, else alphabetical) with \"Warning: ... matched multiple tools\". Version: explicit /vX > PinnedVersion (hard pin only) > isHeadVersion; unknown explicit/pinned version => \"Error: version ... not found ... Available versions: ...\" (generic not-found suppressed); no head => \"Error: this tool has no head versions\". targetUrl = urls.post; ResolvedVersionKey/Url/ToolName set.",
         "VersionLabel": "[latest] when head; \"\" for explicit non-head; [pinned] / [pinned, latest] when the installed step has PinnedVersion",
@@ -4082,7 +4082,7 @@
       {
         "ToolResolutionRuleId": "R4-tool-urls-json",
         "Precedence": 4,
-        "Source": "~/.ssotme/tool_urls.json[name]",
+        "Source": "~/.effortless/tool_urls.json[name]",
         "Condition": "R3 yielded nothing and not -legacy",
         "Result": "targetUrl = mapped url; transpiler = sanitized url; account extracted from \"acct/\" prefix; label \"<rawName> [user-set]\".",
         "VersionLabel": "[user-set]",
@@ -4092,7 +4092,7 @@
       {
         "ToolResolutionRuleId": "R5-local-override",
         "Precedence": 5,
-        "Source": "~/.ssotme/tool_urls.json[rawName]",
+        "Source": "~/.effortless/tool_urls.json[rawName]",
         "Condition": "not -legacy; rawName present in tool_urls.json",
         "Result": "targetUrl = override (even if R3 resolved); label \"<rawName> [user-set]\"; ResolvedToolName kept from R3.",
         "VersionLabel": "[user-set]",
@@ -4134,7 +4134,7 @@
         "Precedence": 9,
         "Source": "ssotme-tools.json latestBridgeVersion",
         "Condition": "after any refresh",
-        "Result": "If versionIndex > ~/.ssotme/bridge_version_index, tool_urls.json[cli-cloud-bridge] = url (with trailing /) and the index file is updated.",
+        "Result": "If versionIndex > ~/.effortless/bridge_version_index, tool_urls.json[cli-cloud-bridge] = url (with trailing /) and the index file is updated.",
         "VersionLabel": "",
         "Disposition": "keep",
         "Description": "Also: cliUpdateAvailable => ~/.ssotme/update_available.json written or deleted; legacy key \"list-transpilers\" removed from tool_urls.json."
@@ -4820,7 +4820,7 @@
         "LivenessOn20260830": "alive",
         "TimeoutMs": 180000,
         "Disposition": "keep",
-        "Description": "Invoked through the normal transpile mechanism with cwd=~/.ssotme/remote_tools."
+        "Description": "Invoked through the normal transpile mechanism with cwd=~/.effortless/remote_tools."
       },
       {
         "HttpEndpointId": "bridge-auth",
@@ -5012,7 +5012,7 @@
       },
       {
         "FileScopeId": "user-home",
-        "Description": "Under the user profile directory (~/.ssotme on all platforms; resolved via Environment.SpecialFolder.UserProfile, i.e. $HOME on macOS/Linux and %USERPROFILE% on Windows). Tests sandbox this by overriding HOME and USERPROFILE."
+        "Description": "Under the user profile directory (~/.effortless on all platforms; resolved via Environment.SpecialFolder.UserProfile, i.e. $HOME on macOS/Linux and %USERPROFILE% on Windows). Tests sandbox this by overriding HOME and USERPROFILE."
       },
       {
         "FileScopeId": "temp",
@@ -5175,7 +5175,7 @@
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
-        "Description": "Template lines: /**/obj/**/*, /**/bin/**/*, /**/.ssotme/**/*, /**/DSPXml/**/*, /SSoT/__patch.json, /**/.vs/**/*, /**/node_modules/**/*, /**/.vscode/**/*, ssotme.env, effortless.env (verbatim, including the DSPXml line \u2014 it is just a template)."
+        "Description": "Template lines: /**/obj/**/*, /**/bin/**/*, /**/.effortless/**/*, /**/.ssotme/**/*, /**/DSPXml/**/*, /SSoT/__patch.json, /**/.vs/**/*, /**/node_modules/**/*, /**/.vscode/**/*, ssotme.env, effortless.env (verbatim, including the DSPXml line \u2014 it is just a template). Step 10: the .effortless line is new; the .ssotme line stays so old clones stay clean."
       },
       {
         "ConfigFileId": "init-rulebook",
@@ -5205,7 +5205,7 @@
       },
       {
         "ConfigFileId": "zfs-ledger",
-        "Path": "<root>/.ssotme/<RelativePath>/<toolKey>.zfs",
+        "Path": "<root>/.effortless/<RelativePath>/<toolKey>.zfs",
         "Scope": "project-hidden",
         "Format": "gzip-xml",
         "Purpose": "GZip of the FileSet XML a step last produced (minus self-source entries).",
@@ -5214,11 +5214,11 @@
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
-        "Description": "toolKey = sanitized POST URL for URL tools, else LowerHyphenName(Name). .ssotme is created with the Hidden attribute."
+        "Description": "toolKey = sanitized POST URL for URL tools, else LowerHyphenName(Name). .effortless is created with the Hidden attribute. Step 10 (D28 option A): a legacy <root>/.ssotme is renamed to .effortless on project load; ledger file names inside are unchanged (step 15 owns them)."
       },
       {
         "ConfigFileId": "zfs-debug-xml",
-        "Path": "<root>/.ssotme/<RelativePath>/<toolKey>.xml",
+        "Path": "<root>/.effortless/<RelativePath>/<toolKey>.xml",
         "Scope": "project-hidden",
         "Format": "xml",
         "Purpose": "Uncompressed copy of the ledger written with -debug.",
@@ -5231,7 +5231,7 @@
       },
       {
         "ConfigFileId": "temp-fileset-xml",
-        "Path": "<root>/.ssotme/tempFileSet_<guid>.xml",
+        "Path": "<root>/.effortless/tempFileSet_<guid>.xml",
         "Scope": "temp",
         "Format": "xml",
         "Purpose": "Transient copy of the output XML during SaveFileSet.",
@@ -5244,7 +5244,7 @@
       },
       {
         "ConfigFileId": "key-file",
-        "Path": "~/.ssotme/ssotme.key (or ssotme.<runAs>.key)",
+        "Path": "~/.effortless/effortless.key (or effortless.<runAs>.key)",
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "{ EmailAddress, Secret, APIKeys: { account: key } }.",
@@ -5253,11 +5253,11 @@
         "IsSecret": true,
         "UnixMode": "600 (dir 700)",
         "Disposition": "keep",
-        "Description": "EmailAddress/Secret are RabbitMQ-era; kept in the file format for compatibility, no longer used. Default key when the file is missing is the public cli@aicapture.io record (only ever sent to RabbitMQ) \u2014 the rebuild stops generating it."
+        "Description": "EmailAddress/Secret are RabbitMQ-era; kept in the file format for compatibility, no longer used. An empty key is returned when the file is missing. Step 10: migrated from ~/.ssotme/ssotme.key and ssotme.<runAs>.key by UserConfigMigration."
       },
       {
         "ConfigFileId": "tool-urls",
-        "Path": "~/.ssotme/tool_urls.json",
+        "Path": "~/.effortless/tool_urls.json",
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "{ \"<tool>\": \"<url>\" } overrides plus the managed cli-cloud-bridge entry.",
@@ -5270,7 +5270,7 @@
       },
       {
         "ConfigFileId": "remote-tools-index",
-        "Path": "~/.ssotme/remote_tools/ssotme-tools.json",
+        "Path": "~/.effortless/remote_tools/effortless-tools.json",
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "Cached cli-cloud-bridge list output: transpilerVersions{ \"<acct>/<pkg>/<tool>\": { \"vX\": { urls.post, metaData.isHeadVersion, ... } } }, cliUpdateAvailable, latestBridgeVersion, latestCliVersion, fetchedAt, totalCount. fetchedAt is a CLI-stamped UTC instant proving when a valid response last replaced the cache.",
@@ -5279,11 +5279,11 @@
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
-        "Description": "Both \"transpilerVersions\" and legacy \"transpilers\" keys are accepted. fetchedAt advances only after parse and structural validation succeed; refresh failure never makes stale data look current."
+        "Description": "Both \"transpilerVersions\" and legacy \"transpilers\" keys are accepted. fetchedAt advances only after parse and structural validation succeed; refresh failure never makes stale data look current. Step 10: migrated from remote_tools/ssotme-tools.json."
       },
       {
         "ConfigFileId": "remote-tools-cli-version",
-        "Path": "~/.ssotme/remote_tools/cli_version",
+        "Path": "~/.effortless/remote_tools/cli_version",
         "Scope": "user-home",
         "Format": "text",
         "Purpose": "CLI_VERSION at the time of the last refresh.",
@@ -5296,7 +5296,7 @@
       },
       {
         "ConfigFileId": "remote-tools-project",
-        "Path": "~/.ssotme/remote_tools/ssotme.json (and effortless.json)",
+        "Path": "~/.effortless/remote_tools/effortless.json",
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "Minimal project so the internal bridge run has a project context.",
@@ -5305,11 +5305,11 @@
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
-        "Description": "Name \"remote_tools\"; the internal handler then auto-migrates it to effortless.json on first load (both may exist)."
+        "Description": "Name \"remote_tools\". v2 writes only effortless.json here; the legacy remote_tools/ssotme.json is dropped by the step-10 migration (not copied)."
       },
       {
         "ConfigFileId": "bridge-version-index",
-        "Path": "~/.ssotme/bridge_version_index",
+        "Path": "~/.effortless/bridge_version_index",
         "Scope": "user-home",
         "Format": "text",
         "Purpose": "Highest latestBridgeVersion.versionIndex applied so far.",
@@ -5322,7 +5322,7 @@
       },
       {
         "ConfigFileId": "update-available",
-        "Path": "~/.ssotme/update_available.json",
+        "Path": "~/.effortless/update_available.json",
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "cliUpdateAvailable object from the last refresh (name, version, installLinks{windows,windowsArm,mac,macArm}).",
@@ -5335,7 +5335,7 @@
       },
       {
         "ConfigFileId": "github-version-check",
-        "Path": "~/.ssotme/github_version_check.json",
+        "Path": "~/.effortless/github_version_check.json",
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "{ lastCheck, latestVersion } 24h cache of the GitHub latest release tag.",
@@ -5348,7 +5348,7 @@
       },
       {
         "ConfigFileId": "jwt-token",
-        "Path": "~/.ssotme/effortlessapi_token.txt",
+        "Path": "~/.effortless/effortlessapi_token.txt",
         "Scope": "user-home",
         "Format": "text",
         "Purpose": "Global JWT.",
@@ -5361,7 +5361,7 @@
       },
       {
         "ConfigFileId": "jwt-token-info",
-        "Path": "~/.ssotme/effortlessapi_token_info.json",
+        "Path": "~/.effortless/effortlessapi_token_info.json",
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "{ Token, Email, CreatedAt, ExpiresAt(+24h) }.",
@@ -5374,7 +5374,7 @@
       },
       {
         "ConfigFileId": "seed-cache",
-        "Path": "~/.ssotme/seed_cache/<seed>/cache/**",
+        "Path": "~/.effortless/seed_cache/<seed>/cache/**",
         "Scope": "user-home",
         "Format": "text",
         "Purpose": "Files copied into a cloned seed.",
@@ -5387,7 +5387,7 @@
       },
       {
         "ConfigFileId": "seed-json",
-        "Path": "<root>/ssotme-seed.json (+ seed-config-values.json, seed-secrets-values.json)",
+        "Path": "<root>/effortless-seed.json (legacy ssotme-seed.json also accepted; + seed-config-values.json, seed-secrets-values.json)",
         "Scope": "project-root",
         "Format": "json",
         "Purpose": "Seed replacement tokens ($key$) and interactive answers.",
@@ -5436,6 +5436,45 @@
         "UnixMode": "",
         "Disposition": "drop-rabbit",
         "Description": ""
+      },
+      {
+        "ConfigFileId": "user-home-legacy",
+        "Path": "~/.ssotme/",
+        "Scope": "user-home",
+        "Format": "dir",
+        "Purpose": "Legacy user state directory (v1).",
+        "ReadBy": "UserConfigMigration only, once, when ~/.effortless does not exist",
+        "WrittenBy": "never by v2 (except the MIGRATED-TO-EFFORTLESS marker)",
+        "IsSecret": true,
+        "UnixMode": "700",
+        "Disposition": "keep-modified",
+        "Description": "Step 10: copied (never moved) to ~/.effortless with renames: ssotme.key -> effortless.key, ssotme.<runAs>.key -> effortless.<runAs>.key, remote_tools/ssotme-tools.json -> remote_tools/effortless-tools.json, remote_tools/ssotme.json dropped, everything else same relative path. If both directories exist, ~/.effortless wins and ~/.ssotme is never read again (no merging). Migration failure is fatal."
+      },
+      {
+        "ConfigFileId": "user-home-migration-marker",
+        "Path": "~/.ssotme/MIGRATED-TO-EFFORTLESS",
+        "Scope": "user-home",
+        "Format": "text",
+        "Purpose": "Records that the legacy directory was copied to ~/.effortless.",
+        "ReadBy": "humans",
+        "WrittenBy": "UserConfigMigration after a successful copy",
+        "IsSecret": false,
+        "UnixMode": "",
+        "Disposition": "keep-modified",
+        "Description": "One line: target path, UTC timestamp, CLI version. The rest of ~/.ssotme is left untouched so a legacy ssotme binary keeps working."
+      },
+      {
+        "ConfigFileId": "project-ledger-dir-legacy",
+        "Path": "<root>/.ssotme/",
+        "Scope": "project-hidden",
+        "Format": "dir",
+        "Purpose": "Legacy per-project ledger directory.",
+        "ReadBy": "EffortlessProject.MigrateLegacyLedgerDirectory on project load",
+        "WrittenBy": "never by v2",
+        "IsSecret": false,
+        "UnixMode": "",
+        "Disposition": "keep-modified",
+        "Description": "Step 10 (D28 option A): renamed to <root>/.effortless when .effortless is absent. It is gitignored build state so a rename is safe. init writes both ignore lines so old clones stay clean."
       }
     ]
   },
@@ -5952,12 +5991,12 @@
       },
       {
         "UserMessageId": "help-header",
-        "Template": "SSoTme CLI  ... Copyright 2026, EffortlessAPI.com ... -p description=\\n\\nSYNTAX: ssotme {command} [...{additional_args}] [options]\\nOptions",
+        "Template": "Effortless CLI  version {CLI_VERSION}\\nCopyright 2026, EffortlessAPI.com",
         "Color": "default",
         "Trigger": "-help",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "Description": "Plossum header; the literal \"-p description=...\" Description text is part of the header (legacy oddity, kept)."
       },
       {
@@ -6252,22 +6291,22 @@
       },
       {
         "UserMessageId": "access-denied",
-        "Template": "Access denied: The path '{path}' resolves to a directory outside the current project scope ({abs}).\\nCurrent project: {name} ({root})\\nFor security reasons, ssotme can only access files within the project directory.",
+        "Template": "Access denied: The path '{path}' resolves to a directory outside the current project scope ({abs}).\\nCurrent project: {name} ({root})\\nFor security reasons, effortless can only access files within the project directory.",
         "Color": "red",
         "Trigger": "-i outside project (and not the parent project)",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "Description": "NoStackException => -1."
       },
       {
         "UserMessageId": "parent-project-allowed",
-        "Template": "Allowing access to parent ssotme project: {path}",
+        "Template": "Allowing access to parent effortless project: {path}",
         "Color": "default",
         "Trigger": "-i into the parent project directory",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "Description": ""
       },
       {
@@ -6282,12 +6321,12 @@
       },
       {
         "UserMessageId": "transpiler-error-box",
-        "Template": "\\n=======================================================\\n*** TRANSPILER ERROR ***\\n=======================================================\\nThis is likely an issue with the transpiler '{name}', not with SSoTme.\\nThe transpiler may have received invalid input or encountered an internal error.\\n=======================================================\\n",
+        "Template": "\\n=======================================================\\n*** TRANSPILER ERROR ***\\n=======================================================\\nThis is likely an issue with the transpiler '{name}', not with Effortless.\\nThe transpiler may have received invalid input or encountered an internal error.\\n=======================================================\\n",
         "Color": "yellow",
         "Trigger": "result.Exception (non not-found)",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "Description": "Followed by red \"ERROR: {message}\" + stack per inner exception, and the SSL HINT block when the message mentions \"SSL connection could not be established\"."
       },
       {
@@ -6302,12 +6341,12 @@
       },
       {
         "UserMessageId": "no-head-version",
-        "Template": "Error: this tool has no head versions; please specify a version to run via ssotme {tool}/version. use ssotme {tool} -list to view all available versions",
+        "Template": "Error: this tool has no head versions; please specify a version to run via effortless {tool}/version. use effortless {tool} -list to view all available versions",
         "Color": "default",
         "Trigger": "index has no isHeadVersion",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "Description": ""
       },
       {
@@ -6472,12 +6511,12 @@
       },
       {
         "UserMessageId": "tool-url-view",
-        "Template": "Tool '{name}' is configured with URL: {url} | Tool '{name}' is not configured in ~/.ssotme/tool_urls.json file.",
+        "Template": "Tool '{name}' is configured with URL: {url} | Tool '{name}' is not configured in ~/.effortless/tool_urls.json file.",
         "Color": "default",
         "Trigger": "-viewToolUrl",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "Description": ""
       },
       {
@@ -6488,7 +6527,7 @@
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
-        "Description": "Empty: \"No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.\" / \"No tool URLs configured in ~/.ssotme/tool_urls.json.\" each followed by the setToolUrl hint."
+        "Description": "Empty: \"No tool URLs configured. The ~/.effortless/tool_urls.json file does not exist.\" / \"No tool URLs configured in ~/.effortless/tool_urls.json.\" each followed by the setToolUrl hint."
       },
       {
         "UserMessageId": "tool-url-removed",
@@ -6612,12 +6651,12 @@
       },
       {
         "UserMessageId": "info-block",
-        "Template": "\\nSSoTme CLI Version {v}\\n\\nConfiguration for `{keyfile}`:\\nProject: {name|<null>}\\nLogged in as: {label|(not logged in)}\\nSubscription: {plan|n/a}\\nConfigured API keys:\\n  {k}: {v} | No API keys configured.",
+        "Template": "\\nEffortless CLI Version {v}\\n\\nConfiguration for `{keyfile}`:\\nProject: {name|<null>}\\nLogged in as: {label|(not logged in)}\\nSubscription: {plan|n/a}\\nConfigured API keys:\\n  {k}: {v} | No API keys configured.",
         "Color": "default",
         "Trigger": "-info",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "Description": "API key VALUES are printed in clear (legacy behavior, kept)."
       },
       {
@@ -6709,6 +6748,26 @@
         "IsGoldenForTests": false,
         "Disposition": "drop-rabbit",
         "Description": "Only the RabbitMQ callback printed these (the REST path has them commented out)."
+      },
+      {
+        "UserMessageId": "home-migrated",
+        "Template": "Migrated ~/.ssotme to ~/.effortless (legacy directory left in place).",
+        "Color": "default",
+        "Trigger": "first run when ~/.effortless is absent and ~/.ssotme exists",
+        "Stream": "stderr",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 10. Printed once, to stderr so `effortless -version` stdout stays a single line for scripts."
+      },
+      {
+        "UserMessageId": "home-migration-failed",
+        "Template": "Could not migrate ~/.ssotme to ~/.effortless: {reason} Fix the problem (or move ~/.ssotme aside) and run the command again; nothing was changed.",
+        "Color": "red",
+        "Trigger": "copy or marker write fails during migration",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep-modified",
+        "Description": "Step 10. Fatal (exit -1); the staged copy is removed so the CLI never runs half-migrated."
       }
     ]
   },
@@ -6840,16 +6899,16 @@
     ],
     "data": [
       {
-        "EnvVariableId": "SSOTME_CHILD_PROCESS",
+        "EnvVariableId": "EFFORTLESS_CHILD_PROCESS",
         "Source": "process-env",
         "Purpose": "Set to \"1\" by the CLI around spawned child \"effortless -buildLocal\" / \"-clean\" processes; read by CheckForUpdateNotice to skip update banners in children.",
-        "Disposition": "keep",
-        "Description": "Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards."
+        "Disposition": "keep-modified",
+        "Description": "Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards. Step 10: renamed from SSOTME_CHILD_PROCESS (D31); nothing reads the old name."
       },
       {
         "EnvVariableId": "HOME / USERPROFILE",
         "Source": "process-env",
-        "Purpose": "Resolves ~/.ssotme through Environment.GetFolderPath(SpecialFolder.UserProfile).",
+        "Purpose": "Resolves ~/.effortless through Environment.GetFolderPath(SpecialFolder.UserProfile).",
         "Disposition": "keep",
         "Description": "Black-box tests override both to sandbox all user-home state."
       },
@@ -6872,7 +6931,7 @@
         "Source": "effortless.env",
         "Purpose": "With -account X, the first matching X_{suffix} value is injected as apiKey=... (case-insensitive key lookup).",
         "Disposition": "keep",
-        "Description": "Precedence: effortless.env beats ~/.ssotme/ssotme.key APIKeys[X]; both beat a same-named ProjectSetting."
+        "Description": "Precedence: effortless.env beats ~/.effortless/effortless.key APIKeys[X]; both beat a same-named ProjectSetting."
       },
       {
         "EnvVariableId": "{ACCOUNT}_BASEID | _BASE_ID",
@@ -7555,8 +7614,8 @@
         "ApproxLines": 188,
         "Disposition": "keep-modified",
         "NewPath": "src/Effortless.Cli.Core/Config/KeyFile.cs + UserConfigDir.cs",
-        "Notes": "Keep file format, SSoTmeDir (700), SetSSoTmeKey (600), GetSSoTmeKey/runAs; drop GenerateDefaultKey constants usage (return an empty key when the file is missing), AllKeys, the NotImplemented overload.",
-        "Description": "ssotme.key."
+        "Notes": "Keep file format, EffortlessDir (700), SetKey (600), GetKey/runAs; drop GenerateDefaultKey constants usage (return an empty key when the file is missing), AllKeys, the NotImplemented overload. Step 10: ~/.effortless/effortless.key.",
+        "Description": "effortless.key (was ssotme.key)."
       },
       {
         "SourceModuleId": "auth-env",
@@ -7827,6 +7886,16 @@
         "NewPath": ".vscode/ (gitignored; provide .vscode.example or tasks in README)",
         "Notes": "Currently gitignored; keep it that way.",
         "Description": "Editor config."
+      },
+      {
+        "SourceModuleId": "user-config-migration",
+        "LegacyPath": "(new)",
+        "Kind": "file",
+        "ApproxLines": 200,
+        "Disposition": "keep-modified",
+        "NewPath": "src/Effortless.Cli.Core/Config/UserConfigMigration.cs",
+        "Notes": "The ONLY module allowed to know the legacy ~/.ssotme names. Copy-only, staged into ~/.effortless.migrating-<guid> then renamed; writes ~/.ssotme/MIGRATED-TO-EFFORTLESS; failure is fatal. Called from Program.Main and lazily from UserConfigDir.EffortlessDir.",
+        "Description": "Step 10 in-field migration of the user state directory."
       }
     ]
   },
@@ -8063,7 +8132,7 @@
         "ProjectFactId": "binary-aliases",
         "Value": "effortless,ssotme,aicapture,aic",
         "Category": "naming",
-        "Description": "All four names must keep working (npm bin entries, installer alias copies, Environment.CommandLine prefix stripping)."
+        "Description": "All four names must keep working (npm bin entries, installer alias copies, Environment.CommandLine prefix stripping). D31: `ssotme` survives only as this binary alias, the ssotme:// protocol scheme, UserConfigMigration legacy constants, legacy project-file/command-line compatibility parsing, and the default seed source account."
       },
       {
         "ProjectFactId": "canonical-command-name",
@@ -8073,9 +8142,9 @@
       },
       {
         "ProjectFactId": "help-application-name",
-        "Value": "SSoTme CLI",
+        "Value": "Effortless CLI",
         "Category": "naming",
-        "Description": "Plossum CommandLineManager ApplicationName printed in the -help header; CI smoke tests grep for it. Keep verbatim."
+        "Description": "Plossum CommandLineManager ApplicationName printed in the -help header; CI smoke tests grep for it. Step 10 (D31): renamed from \"SSoTme CLI\"."
       },
       {
         "ProjectFactId": "help-copyright",
@@ -8085,7 +8154,7 @@
       },
       {
         "ProjectFactId": "help-manager-description",
-        "Value": "-p description=\\n\\nSYNTAX: ssotme {command} [...{additional_args}] [options]\\nOptions",
+        "Value": "-p description=\\n\\nSYNTAX: effortless {command} [...{additional_args}] [options]\\nOptions",
         "Category": "naming",
         "Description": "Plossum CommandLineManager Description (verbatim, including the odd leading \"-p description=\" text); printed in the -help header. \\n are literal backslash-n sequences in the C# verbatim string."
       },
@@ -8205,9 +8274,9 @@
       },
       {
         "ProjectFactId": "installer-asset-names",
-        "Value": "SSoTme-Installer_win-x64.msi,SSoTme-Installer_win-arm64.msi,SSoTme-Installer-x86_64.pkg,SSoTme-Installer-arm64.pkg",
+        "Value": "Effortless-Installer_win-x64.msi,Effortless-Installer_win-arm64.msi,Effortless-Installer-x86_64.pkg,Effortless-Installer-arm64.pkg",
         "Category": "naming",
-        "Description": "Release asset names -upgradeCli looks for per platform/arch; the Airtable CLIVersions row stores URLs to them."
+        "Description": "Release asset names per platform/arch (step 10 rename from SSoTme-Installer-*); the Airtable CLIVersions row stores URLs to them. -upgradeCli only points at the releases page."
       },
       {
         "ProjectFactId": "project-file-candidates",
@@ -8217,7 +8286,7 @@
       },
       {
         "ProjectFactId": "zfs-dir",
-        "Value": ".ssotme/<RelativePath>/<toolKey>.zfs",
+        "Value": ".effortless/<RelativePath>/<toolKey>.zfs",
         "Category": "layout",
         "Description": "Ledger of what a step wrote last time; toolKey is the sanitized POST URL for URL/remote tools, else LowerHyphenName(Name)."
       },
@@ -8421,6 +8490,14 @@
         "RunsInCi": true,
         "NeedsNetwork": false,
         "Description": "Generation drift check, coverage gate, release dry run."
+      },
+      {
+        "TestSuiteId": "e2e-home",
+        "Harness": "tests/Effortless.Cli.E2E",
+        "Kind": "black-box",
+        "RunsInCi": true,
+        "NeedsNetwork": false,
+        "Description": "Step 10: ~/.ssotme -> ~/.effortless migration, project ledger dir rename, child env var."
       }
     ]
   },
@@ -10559,10 +10636,10 @@
         "TestCaseId": "res-bootstrap-first-run",
         "Suite": "e2e-resolution",
         "PrimaryOption": "refreshTools",
-        "Title": "first run bootstraps ~/.ssotme",
+        "Title": "first run bootstraps ~/.effortless",
         "Given": "empty sandbox home; bridge mock",
         "When": "effortless to-uppercase -i in.txt",
-        "Then": "creates ~/.ssotme/tool_urls.json with cli-cloud-bridge, remote_tools/{ssotme-tools.json,cli_version,ssotme.json}; \"[cli] Initializing CLI tool URL index...\"",
+        "Then": "creates ~/.effortless/tool_urls.json with cli-cloud-bridge, remote_tools/{ssotme-tools.json,cli_version,ssotme.json}; \"[cli] Initializing CLI tool URL index...\"",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -10632,7 +10709,7 @@
         "Title": "cliUpdateAvailable is persisted",
         "Given": "bridge returns cliUpdateAvailable {name, installLinks}",
         "When": "effortless -refreshTools",
-        "Then": "~/.ssotme/update_available.json written; a null value deletes it",
+        "Then": "~/.effortless/update_available.json written; a null value deletes it",
         "Priority": "P2",
         "Interactive": false,
         "Slow": false,
@@ -10982,7 +11059,7 @@
         "Title": "viewUrl",
         "Given": "tool_urls a=http://x",
         "When": "effortless -viewUrl a ; viewurl a ; -vu nope ; viewurl",
-        "Then": "\"Tool 'a' is configured with URL: http://x\"; \"Tool 'nope' is not configured in ~/.ssotme/tool_urls.json file.\"; missing name => usage error",
+        "Then": "\"Tool 'a' is configured with URL: http://x\"; \"Tool 'nope' is not configured in ~/.effortless/tool_urls.json file.\"; missing name => usage error",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -11150,7 +11227,7 @@
         "Title": "key file permissions",
         "Given": "macOS/Linux",
         "When": "effortless -api acme/k",
-        "Then": "~/.ssotme is 700 and ssotme.key is 600",
+        "Then": "~/.effortless is 700 and effortless.key is 600",
         "Priority": "P2",
         "Interactive": false,
         "Slow": false,
@@ -11246,7 +11323,7 @@
         "Suite": "e2e-network",
         "PrimaryOption": "refreshTools",
         "Title": "live bridge refresh",
-        "Given": "internet; real ~/.ssotme copy",
+        "Given": "internet; real ~/.effortless copy",
         "When": "effortless -refreshTools",
         "Then": "index has > 50 tools; latestBridgeVersion present",
         "Priority": "P2",
@@ -12094,6 +12171,174 @@
         "Slow": false,
         "Status": "rebuild-green",
         "Description": "D16: the *Url forms were a mistake but stay as aliases; this is the regression guard for the rename."
+      },
+      {
+        "TestCaseId": "home-migrates-legacy-dir",
+        "Suite": "e2e-home",
+        "PrimaryOption": "version",
+        "Title": "a legacy ~/.ssotme is copied to ~/.effortless on first run",
+        "Given": "sandbox home with ~/.ssotme/{tool_urls.json, remote_tools/ssotme-tools.json, remote_tools/cli_version, bridge_version_index, seed_cache/x/f.txt} and no ~/.effortless",
+        "When": "effortless -version",
+        "Then": "exit 0; stdout is exactly the version line; stderr has \"Migrated ~/.ssotme to ~/.effortless (legacy directory left in place).\"; ~/.effortless holds tool_urls.json, remote_tools/effortless-tools.json, remote_tools/cli_version, bridge_version_index, seed_cache/x/f.txt with identical bytes",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 rule 1."
+      },
+      {
+        "TestCaseId": "home-migration-renames-key-files",
+        "Suite": "e2e-home",
+        "PrimaryOption": "info",
+        "Title": "ssotme.key and ssotme.<runAs>.key become effortless.key and effortless.<runAs>.key",
+        "Given": "~/.ssotme/ssotme.key with APIKeys {acme:k1} and ~/.ssotme/ssotme.bob.key with {acme:kb}",
+        "When": "effortless -info ; effortless -info -runAs bob",
+        "Then": "both ~/.effortless/effortless.key and effortless.bob.key exist with the same JSON; info prints \"acme: k1\" then \"acme: kb\"; no ~/.effortless/ssotme*.key",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 key-file mapping."
+      },
+      {
+        "TestCaseId": "home-migration-leaves-legacy-untouched-and-marks-it",
+        "Suite": "e2e-home",
+        "PrimaryOption": "version",
+        "Title": "the legacy directory keeps every byte and gains only the marker",
+        "Given": "~/.ssotme with several files",
+        "When": "effortless -version",
+        "Then": "every legacy file still exists with identical bytes; ~/.ssotme/MIGRATED-TO-EFFORTLESS exists and names the target, a UTC timestamp and the CLI version; remote_tools/ssotme.json is NOT copied",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Owner condition: copy, never move, so a legacy ssotme binary keeps working."
+      },
+      {
+        "TestCaseId": "home-both-present-uses-effortless-only",
+        "Suite": "e2e-home",
+        "PrimaryOption": "listToolUrls",
+        "Title": "when both directories exist ~/.effortless wins and ~/.ssotme is never read",
+        "Given": "~/.effortless/tool_urls.json {a: http://new} and ~/.ssotme/tool_urls.json {a: http://old, b: http://legacy}",
+        "When": "effortless -listToolUrls ; effortless -setToolUrl c=http://c",
+        "Then": "output lists a=http://new only (no b); c is written to ~/.effortless/tool_urls.json; ~/.effortless/tool_urls.json is byte-identical afterwards; no marker file is written",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 rule 2/3: no merging, writes go only to ~/.effortless."
+      },
+      {
+        "TestCaseId": "home-runas-key-mapping",
+        "Suite": "e2e-home",
+        "PrimaryOption": "runAs",
+        "Title": "a migrated -runAs key is used for account injection",
+        "Given": "~/.ssotme/ssotme.bob.key with APIKeys {acme: kb}; mock tool; project step acme/to-uppercase",
+        "When": "effortless acme/to-uppercase -runAs bob -i in.txt",
+        "Then": "the tool receives apiKey=kb (read from ~/.effortless/effortless.bob.key); exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Legacy-seeded variant of tx-account-runas proving the migration path end to end."
+      },
+      {
+        "TestCaseId": "home-migration-failure-is-fatal",
+        "Suite": "e2e-home",
+        "PrimaryOption": "version",
+        "Title": "a migration that cannot complete stops the CLI with a clear message and leaves no half copy",
+        "Given": "~/.ssotme exists; ~/.effortless is a regular FILE (so the staged directory cannot be renamed into place)",
+        "When": "effortless -version",
+        "Then": "exit -1 (255); output contains \"Could not migrate ~/.ssotme to ~/.effortless:\" and \"nothing was changed\"; no ~/.effortless.migrating-* directory remains; no marker written",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 rule 4. Windows and Unix both fail the final rename when a file occupies the target path."
+      },
+      {
+        "TestCaseId": "project-ledger-dir-rename",
+        "Suite": "e2e-home",
+        "PrimaryOption": "build",
+        "Title": "<root>/.ssotme is renamed to <root>/.effortless on project load",
+        "Given": "project with an existing .ssotme/<rel>/<toolKey>.zfs from a previous run and no .effortless",
+        "When": "effortless build",
+        "Then": "after the run .effortless exists containing the old ledger (same file name) plus the new one; .ssotme is gone; clean afterwards removes the outputs using the migrated ledger",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D28 option A."
+      },
+      {
+        "TestCaseId": "child-env-var-renamed",
+        "Suite": "e2e-home",
+        "PrimaryOption": "buildWithSubprojects",
+        "Title": "child CLI processes are spawned with EFFORTLESS_CHILD_PROCESS=1",
+        "Given": "parent project with a nested effortless project whose step is the env-echo mock tool",
+        "When": "effortless buildWithSubprojects",
+        "Then": "the nested step observes EFFORTLESS_CHILD_PROCESS=1 and no SSOTME_CHILD_PROCESS; exit 0",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 env var rename; the mock tool echoes the environment it received through the CLI (the CLI passes env into the child only, so the test asserts via the child's own -describe/-debug output)."
+      },
+      {
+        "TestCaseId": "home-legacy-catalog-migrated-offline-build",
+        "Suite": "e2e-home",
+        "PrimaryOption": "build",
+        "Title": "a fresh catalog under ~/.ssotme lets a build run after migration without touching the bridge",
+        "Given": "~/.effortless/remote_tools/effortless-tools.json fetched now (mock index), tool_urls.json with the mock bridge; project step to-uppercase; no ~/.effortless",
+        "When": "effortless build",
+        "Then": "exit 0; the mock bridge receives zero requests; the tool ran; ~/.effortless/remote_tools/effortless-tools.json exists",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Legacy-seeded variant of the resolution suite proving R0 freshness reads the migrated catalog."
+      },
+      {
+        "TestCaseId": "unit-home-migration-map",
+        "Suite": "unit-core",
+        "PrimaryOption": "info",
+        "Title": "legacy relative paths map to their v2 names",
+        "Given": "the step-10 rename table",
+        "When": "MapRelativePath on key files, runAs key files, the catalog, remote_tools/ssotme.json, the marker, and unrelated paths",
+        "Then": "renamed / dropped / unchanged exactly per the table; nested look-alikes (seed_cache/x/ssotme.key) are untouched",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 UserConfigMigration."
+      },
+      {
+        "TestCaseId": "unit-home-migration-copy",
+        "Suite": "unit-core",
+        "PrimaryOption": "info",
+        "Title": "migrate copies with renames, marks the source, and stages atomically",
+        "Given": "temp home with a populated ~/.ssotme",
+        "When": "Migrate(legacy, target)",
+        "Then": "target has the renamed files, the dropped file is absent, the source keeps its files and gains MIGRATED-TO-EFFORTLESS, no .effortless.migrating-* remains, one summary line is emitted",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 UserConfigMigration."
+      },
+      {
+        "TestCaseId": "unit-home-migration-failure",
+        "Suite": "unit-core",
+        "PrimaryOption": "info",
+        "Title": "a blocked target fails cleanly and removes the staging copy",
+        "Given": "a regular file occupies the target path",
+        "When": "Migrate(legacy, target)",
+        "Then": "UserConfigMigrationException with \"Could not migrate\" and \"nothing was changed\"; no staging dir, no marker, the blocking file untouched",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 10 rule 4."
       }
     ]
   },
@@ -12310,7 +12555,7 @@
         "InstructionsPath": "docs/refactor-plan/step-10-effortless-home-migration.md",
         "DoneCriteria": "First run against a legacy ~/.ssotme copies it to ~/.effortless (marker left behind, source untouched); renamed inner files (effortless.key, effortless-tools.json, effortless.<runAs>.key); SSOTME_CHILD_PROCESS -> EFFORTLESS_CHILD_PROCESS; installers emit Effortless-Installer-*.pkg / EffortlessInstaller.msi and install under Effortless; grep ssotme in src hits only the migration module and the binary alias; migration e2e tests green.",
         "Owner": "opus",
-        "Status": "ready",
+        "Status": "done",
         "Description": "Owner confirmed option A: the project ledger dir also renames to .effortless with an on-load rename. Global naming rule D31: ssotme survives only as the ssotme:// protocol, the binary alias, the migration constants, the default seed source, and one formerly-SSoT.me line."
       },
       {

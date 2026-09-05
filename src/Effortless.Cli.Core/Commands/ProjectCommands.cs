@@ -72,7 +72,7 @@ public sealed class ProjectCommands
                 foreach (var nested in NestedProjectFinder.Find(
                              invocation.Project.RootPath))
                 {
-                    nested.InvokeSSoTmeDescribe();
+                    nested.InvokeEffortlessDescribe();
                 }
 
                 break;
@@ -229,6 +229,7 @@ public sealed class ProjectCommands
                 {
                     "/**/obj/**/*",
                     "/**/bin/**/*",
+                    "/**/.effortless/**/*",
                     "/**/.ssotme/**/*",
                     "/**/DSPXml/**/*",
                     "/SSoT/__patch.json",

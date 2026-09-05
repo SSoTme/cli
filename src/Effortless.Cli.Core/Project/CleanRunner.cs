@@ -108,7 +108,7 @@ public class CleanRunner
 
             if (withSubprojects)
             {
-                CleanSubSSoTmeProjects();
+                CleanSubProjects();
             }
         }
         finally
@@ -320,14 +320,14 @@ public class CleanRunner
     {
         try
         {
-            var ssotmeDirectory =
-                _project.GetSSoTmeDI();
-            if (!ssotmeDirectory.Exists)
+            var ledgerDirectory =
+                _project.GetEffortlessDI();
+            if (!ledgerDirectory.Exists)
             {
                 return;
             }
 
-            var allZfsFiles = ssotmeDirectory.GetFiles(
+            var allZfsFiles = ledgerDirectory.GetFiles(
                 "*.zfs",
                 SearchOption.AllDirectories);
 
@@ -403,12 +403,12 @@ public class CleanRunner
                         $"Processing orphaned ZFS file: {zfsFile.FullName}");
                 }
 
-                var ssotmeDirectoryPath =
-                    ssotmeDirectory.FullName;
+                var ledgerDirectoryPath =
+                    ledgerDirectory.FullName;
                 var zfsFileDirectory =
                     zfsFile.DirectoryName;
                 var relativePath = zfsFileDirectory
-                    .Substring(ssotmeDirectoryPath.Length)
+                    .Substring(ledgerDirectoryPath.Length)
                     .Trim(
                         Path.DirectorySeparatorChar,
                         Path.AltDirectorySeparatorChar);
@@ -544,11 +544,11 @@ public class CleanRunner
         }
     }
 
-    private void CleanSubSSoTmeProjects()
+    private void CleanSubProjects()
     {
         foreach (var projectDirectory in _projectFiles)
         {
-            new DirectoryInfo(projectDirectory).InvokeSSoTmeClean();
+            new DirectoryInfo(projectDirectory).InvokeEffortlessClean();
         }
     }
 

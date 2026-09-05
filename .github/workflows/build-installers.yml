@@ -79,7 +79,7 @@ jobs:
     needs: [prepare, verify]
     runs-on: macos-15
     env:
-      ASSET: SSoTme-Installer-x86_64.pkg
+      ASSET: Effortless-Installer-x86_64.pkg
       TAG: ${{ needs.prepare.outputs.tag }}
 
     steps:
@@ -138,8 +138,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.asset.outputs.exists != 'true'
         with:
-          name: SSoTme-Installer-x86_64
-          path: installers/macos/bin/signed/SSoTme-Installer-x86_64.pkg
+          name: Effortless-Installer-x86_64
+          path: installers/macos/bin/signed/Effortless-Installer-x86_64.pkg
 
       - name: Upload installer to release
         if: steps.asset.outputs.exists != 'true'
@@ -152,7 +152,7 @@ jobs:
     needs: [prepare, verify]
     runs-on: macos-15
     env:
-      ASSET: SSoTme-Installer-arm64.pkg
+      ASSET: Effortless-Installer-arm64.pkg
       TAG: ${{ needs.prepare.outputs.tag }}
 
     steps:
@@ -211,8 +211,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.asset.outputs.exists != 'true'
         with:
-          name: SSoTme-Installer-arm64
-          path: installers/macos/bin/signed/SSoTme-Installer-arm64.pkg
+          name: Effortless-Installer-arm64
+          path: installers/macos/bin/signed/Effortless-Installer-arm64.pkg
 
       - name: Upload installer to release
         if: steps.asset.outputs.exists != 'true'
@@ -225,7 +225,7 @@ jobs:
     needs: [prepare, verify]
     runs-on: windows-latest
     env:
-      ASSET: SSoTme-Installer_win-x64.msi
+      ASSET: Effortless-Installer_win-x64.msi
       TAG: ${{ needs.prepare.outputs.tag }}
 
     steps:
@@ -259,8 +259,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.asset.outputs.exists != 'true'
         with:
-          name: SSoTme-Installer-win-x64
-          path: installers/windows/bin/Release/SSoTme-Installer_win-x64.msi
+          name: Effortless-Installer-win-x64
+          path: installers/windows/bin/Release/Effortless-Installer_win-x64.msi
 
       - name: Upload installer to release
         if: steps.asset.outputs.exists != 'true'
@@ -274,7 +274,7 @@ jobs:
     needs: [prepare, verify]
     runs-on: windows-latest
     env:
-      ASSET: SSoTme-Installer_win-arm64.msi
+      ASSET: Effortless-Installer_win-arm64.msi
       TAG: ${{ needs.prepare.outputs.tag }}
 
     steps:
@@ -308,8 +308,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.asset.outputs.exists != 'true'
         with:
-          name: SSoTme-Installer-win-arm64
-          path: installers/windows/bin/Release/SSoTme-Installer_win-arm64.msi
+          name: Effortless-Installer-win-arm64
+          path: installers/windows/bin/Release/Effortless-Installer_win-arm64.msi
 
       - name: Upload installer to release
         if: steps.asset.outputs.exists != 'true'

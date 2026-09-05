@@ -729,6 +729,7 @@ public sealed class ProjectTests
     private const string StandardGitIgnore = """
         /**/obj/**/*
         /**/bin/**/*
+        /**/.effortless/**/*
         /**/.ssotme/**/*
         /**/DSPXml/**/*
         /SSoT/__patch.json

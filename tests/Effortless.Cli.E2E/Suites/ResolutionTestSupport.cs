@@ -79,7 +79,7 @@ internal static class ResolutionTestSupport
         IReadOnlyDictionary<string, string> urls)
     {
         sandbox.WriteHomeFile(
-            ".ssotme/tool_urls.json",
+            ".effortless/tool_urls.json",
             JsonSerializer.Serialize(urls, new JsonSerializerOptions { WriteIndented = true }));
     }
 
@@ -245,7 +245,7 @@ internal sealed class ResolutionBridgeServer : IAsyncDisposable
             }
 
             var xml = FileSetXml.Build(
-                [FileSetEntry.TextFile("ssotme-tools.json", IndexJson, alwaysOverwrite: true)]);
+                [FileSetEntry.TextFile("effortless-tools.json", IndexJson, alwaysOverwrite: true)]);
             var payload = new
             {
                 TranspileRequest = new

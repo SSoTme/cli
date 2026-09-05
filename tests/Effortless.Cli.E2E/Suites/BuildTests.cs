@@ -694,7 +694,7 @@ public sealed class BuildTests
         Assert.True(Assert.Single(server.Requests).CliDebug);
         var xml = Assert.Single(
             Directory.GetFiles(
-                Path.Combine(sandbox.ProjectPath, ".ssotme"),
+                Path.Combine(sandbox.ProjectPath, ".effortless"),
                 "*.xml",
                 SearchOption.AllDirectories));
         Assert.Contains("<FileSet", File.ReadAllText(xml), StringComparison.Ordinal);

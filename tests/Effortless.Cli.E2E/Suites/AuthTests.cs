@@ -296,7 +296,7 @@ public sealed class AuthTests
             invalidBaserow.Stdout,
             StringComparison.Ordinal);
 
-        var keyPath = HomeConfigPath(sandbox, "ssotme.key");
+        var keyPath = HomeConfigPath(sandbox, "effortless.key");
         using var key = JsonDocument.Parse(File.ReadAllText(keyPath));
         var apiKeys = key.RootElement.GetProperty("APIKeys");
         Assert.Equal("k2", apiKeys.GetProperty("acme").GetString());
@@ -320,9 +320,9 @@ public sealed class AuthTests
             sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        var namedPath = HomeConfigPath(sandbox, "ssotme.bob.key");
+        var namedPath = HomeConfigPath(sandbox, "effortless.bob.key");
         Assert.True(File.Exists(namedPath));
-        Assert.False(File.Exists(HomeConfigPath(sandbox, "ssotme.key")));
+        Assert.False(File.Exists(HomeConfigPath(sandbox, "effortless.key")));
         using var key = JsonDocument.Parse(File.ReadAllText(namedPath));
         Assert.Equal(
             "k",
@@ -344,11 +344,11 @@ public sealed class AuthTests
         var result = await cli.Run(["-api", "acme/k"], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        var configDir = Path.Combine(sandbox.HomePath, ".ssotme");
+        var configDir = Path.Combine(sandbox.HomePath, ".effortless");
         Assert.Equal(
             UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
             File.GetUnixFileMode(configDir));
-        AssertSecretFileMode(HomeConfigPath(sandbox, "ssotme.key"));
+        AssertSecretFileMode(HomeConfigPath(sandbox, "effortless.key"));
     }
 
     private static AuthTestBridge CreateBridge()
@@ -376,14 +376,14 @@ public sealed class AuthTests
 
     private static void WriteGlobalToken(Sandbox sandbox, string token, string email)
     {
-        sandbox.WriteHomeFile(".ssotme/effortlessapi_token.txt", token);
+        sandbox.WriteHomeFile(".effortless/effortlessapi_token.txt", token);
         sandbox.WriteHomeFile(
-            ".ssotme/effortlessapi_token_info.json",
+            ".effortless/effortlessapi_token_info.json",
             JsonSerializer.Serialize(new { Token = token, Email = email }));
     }
 
     private static string HomeConfigPath(Sandbox sandbox, string fileName) =>
-        Path.Combine(sandbox.HomePath, ".ssotme", fileName);
+        Path.Combine(sandbox.HomePath, ".effortless", fileName);
 
     private static string CreateJwt(string email)
     {

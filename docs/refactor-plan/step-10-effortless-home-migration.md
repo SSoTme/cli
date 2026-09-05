@@ -65,3 +65,35 @@ one legacy-seeded variant per suite that proves the migration path.
 
 `grep -rn ssotme src` hits only the alias registration and the migration module; installers emit
 Effortless-named artifacts; migration e2e green; `RefactorSteps.step-10.Status` → `done`.
+
+## Done 2026-09-05
+
+Implemented as specified, with these recorded decisions:
+
+- **Migration line goes to stderr.** `effortless -version` must stay a single stdout line for scripts,
+  so the one-time `Migrated ~/.ssotme to ~/.effortless (legacy directory left in place).` is written to
+  stderr (`UserMessages.home-migrated`).
+- **Staged copy.** `UserConfigMigration` copies into `~/.effortless.migrating-<guid>` and renames it into
+  place, so a partial copy is never observable as `~/.effortless`. It runs from `Program.Main` and lazily
+  from `UserConfigDir.EffortlessDir`, once per process.
+- **The bridge still emits `ssotme-tools.json`.** That file name is the live cli-cloud-bridge's output
+  contract, not ours; `CloudBridgeClient.BridgeOutputFileName` names it and the client moves it onto
+  `remote_tools/effortless-tools.json` after every refresh. The mock bridge mimics the live name.
+- **`grep -rn ssotme src` exceptions**, all deliberate and all outside the "rename" rule:
+  `UserConfigMigration` (legacy constants), the `ssotme://` scheme, JSON property names that are wire or
+  project-file contract (`SSoTmeProjectId`, `SSoTmeProject`, `SSoTmeKey`, `SSoTmeProjectFiles`), legacy
+  project-file and env-file compatibility (`ssotme.json`, `ssotme.env`, `ssotme-seed.json`, the
+  `ssotme <cmd>` prefixes stripped from stored `CommandLine`s), the `.ssotme` ledger-dir rename constant,
+  the `.gitignore` template line kept for old clones, the default seed source account (step 14), the
+  bridge output file name above, and two external bootstrap hostnames that contain the string.
+- **Installers.** `EffortlessInstaller.wixproj` → `Effortless-Installer_<rid>.msi`, payload under
+  `Effortless`, registry under `Software\Effortless`, `CreateEffortlessHomedir.ps1`; the WiX
+  `UpgradeCode` is unchanged so the MSI major-upgrades a SSoTme-era install. macOS:
+  `Effortless-Installer-<arch>.pkg`, payload `/Applications/Effortless`, identifier
+  `com.effortlessapi.effortlesscli`; `postinstall` removes a leftover `/Applications/SSoTme` after the
+  `/usr/local/bin` symlinks are repointed. Neither installer was built here (no Windows host, no signing
+  identity); step 13/16 verify them on CI.
+- **Workflow secret.** `update-airtable.yml` now passes `EFFORTLESS_AIRTABLE_BASE_ID`; the script falls
+  back to `SSOT_BASE_ID` until the owner renames the repository secret. Each workflow's header documents
+  what it needs.
+- Suite `e2e-home` holds the nine migration cases plus three `unit-core` cases for the mapping table.
