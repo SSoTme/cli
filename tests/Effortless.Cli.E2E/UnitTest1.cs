@@ -29,11 +29,11 @@ public sealed class MetaTests
         Assert.Empty(result.Stderr);
     }
 
-    [Theory(DisplayName = "meta-help: help lists every retained option")]
+    [Theory(DisplayName = "meta-help: help prints the grouped command summary")]
     [InlineData("-help")]
     [InlineData("-h")]
     [InlineData("help")]
-    public async Task HelpListsEveryRetainedOption(string argument)
+    public async Task HelpPrintsTheGroupedCommandSummary(string argument)
     {
         var cli = new CliUnderTest();
         using var sandbox = Sandbox.Create(cli);
@@ -42,11 +42,151 @@ public sealed class MetaTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("SSoTme CLI", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains("Syntax: effortless [account/]transpiler [Options]", result.Stdout, StringComparison.Ordinal);
-        foreach (var flag in RetainedFlags())
+        Assert.Contains(
+            "Syntax: effortless [account/]transpiler [Options]",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Run 'effortless -help <category|option>' for one topic,",
+            result.Stdout,
+            StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "help-default-is-primary-only: bare -help lists only primary-tier commands")]
+    public async Task DefaultHelpListsOnlyPrimaryTierCommands()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var result = await cli.Run(["-help"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        foreach (var option in RulebookOptions())
         {
-            Assert.Contains(flag, result.Stdout, StringComparison.Ordinal);
+            var flagLine = $"  {option.Flag} ";
+            if (option.Tier == "primary")
+            {
+                Assert.Contains(flagLine, result.Stdout, StringComparison.Ordinal);
+                Assert.Contains(
+                    option.HelpSummary,
+                    result.Stdout,
+                    StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.DoesNotContain(
+                    flagLine,
+                    result.Stdout,
+                    StringComparison.Ordinal);
+            }
         }
+
+        // Categories are printed by label, in the rulebook's SortOrder.
+        var metaIndex = result.Stdout.IndexOf("CLI meta", StringComparison.Ordinal);
+        var buildIndex = result.Stdout.IndexOf("\nBuild\n", StringComparison.Ordinal);
+        Assert.True(metaIndex >= 0 && buildIndex > metaIndex, result.Stdout);
+    }
+
+    [Fact(DisplayName = "help-category-filter: -help <category> lists that category at every tier")]
+    public async Task CategoryHelpListsEveryTierInThatCategory()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var result = await cli.Run(["-help", "build"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Running registered transpiler steps.", result.Stdout, StringComparison.Ordinal);
+        foreach (var option in RulebookOptions().Where(option => option.Category == "build"))
+        {
+            Assert.Contains(
+                $"  {option.Flag} ",
+                result.Stdout,
+                StringComparison.Ordinal);
+        }
+
+        // -includeDisabled is a modifier, so it only shows under its category.
+        Assert.Contains("  -includeDisabled ", result.Stdout, StringComparison.Ordinal);
+
+        // Options from other categories stay out.
+        Assert.DoesNotContain("  -listSeeds ", result.Stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain("  -logout ", result.Stdout, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "help-option-detail: -help <option> prints that option's detail")]
+    public async Task OptionHelpPrintsDetailAliasesParentAndExample()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var pin = await cli.Run(["-help", "pin"], sandbox.ProjectPath, sandbox);
+        var modifier = await cli.Run(
+            ["-help", "includeDisabled"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, pin.ExitCode);
+        Assert.Equal(0, modifier.ExitCode);
+
+        var pinRow = RulebookOptions().Single(option => option.Id == "pin");
+        Assert.Contains(pinRow.HelpDetail, pin.Stdout, StringComparison.Ordinal);
+        Assert.Contains(pinRow.Example, pin.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Barewords: pin", pin.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Category: tool-resolution", pin.Stdout, StringComparison.Ordinal);
+
+        // A modifier names the command it modifies.
+        Assert.Contains("Tier:     modifier", modifier.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Modifies: build", modifier.Stdout, StringComparison.Ordinal);
+        Assert.Contains("Aliases:  id", modifier.Stdout, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "help-all-flat: -help all dumps every retained option flat")]
+    public async Task HelpAllDumpsEveryRetainedOption()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var result = await cli.Run(["-help", "all"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        foreach (var option in RulebookOptions())
+        {
+            Assert.Contains(
+                $"  {option.Flag} ",
+                result.Stdout,
+                StringComparison.Ordinal);
+        }
+
+        // The flat dump is not grouped by category.
+        Assert.DoesNotContain(
+            "Running registered transpiler steps.",
+            result.Stdout,
+            StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "help-unknown-topic: -help with an unknown topic explains itself")]
+    public async Task UnknownHelpTopicExplainsItself()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var result = await cli.Run(["-help", "nonsense"], sandbox.ProjectPath, sandbox);
+
+        // Unlike meta-unknown-option (a Plossum parse failure, exit -1), an
+        // unknown help topic is still a successful help invocation.
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(
+            "Unknown help topic 'nonsense'.",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Run 'effortless -help <category|option>' for one topic,",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "or 'effortless -help all' for every option.",
+            result.Stdout,
+            StringComparison.Ordinal);
     }
 
     [Fact(DisplayName = "meta-help-width: help output fits an 80-column terminal")]
@@ -245,10 +385,23 @@ public sealed class MetaTests
             .Replace('/', '_');
     }
 
-    private static IEnumerable<string> RetainedFlags()
+    internal sealed record RulebookOption(
+        string Id,
+        string Flag,
+        string Category,
+        string Tier,
+        string HelpSummary,
+        string HelpDetail,
+        string Example);
+
+    internal static IReadOnlyList<RulebookOption> RulebookOptions()
     {
         using var document = JsonDocument.Parse(
-            File.ReadAllText(Path.Combine(CliUnderTest.Root, "effortless-rulebook", "effortless-rulebook.json")));
+            File.ReadAllText(
+                Path.Combine(
+                    CliUnderTest.Root,
+                    "effortless-rulebook",
+                    "effortless-rulebook.json")));
         var root = document.RootElement;
         var retained = root.GetProperty("Dispositions").GetProperty("data")
             .EnumerateArray()
@@ -259,10 +412,21 @@ public sealed class MetaTests
 
         return root.GetProperty("CliOptions").GetProperty("data")
             .EnumerateArray()
-            .Where(row =>
-                retained[row.GetProperty("Disposition").GetString()!]
-                && row.GetProperty("LegacyRefCount").GetInt32() > 0)
-            .Select(row => row.GetProperty("Flag").GetString()!)
+            .Where(row => retained[row.GetProperty("Disposition").GetString()!])
+            .Select(row => new RulebookOption(
+                row.GetProperty("CliOptionId").GetString()!,
+                row.GetProperty("Flag").GetString()!,
+                Text(row, "Category"),
+                Text(row, "Tier"),
+                Text(row, "HelpSummary"),
+                Text(row, "HelpDetail"),
+                Text(row, "Example")))
             .ToArray();
     }
+
+    private static string Text(JsonElement row, string property) =>
+        row.TryGetProperty(property, out var value)
+        && value.ValueKind == JsonValueKind.String
+            ? value.GetString()!
+            : string.Empty;
 }

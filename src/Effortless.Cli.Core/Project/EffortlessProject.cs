@@ -248,7 +248,7 @@ public class EffortlessProject
         return Name;
     }
 
-    public void Describe(string relativePath = "")
+    public void Describe(string relativePath = "", bool exactMatch = false)
     {
         Console.WriteLine("\n==========================================");
         Console.WriteLine("======  {0}", Name);
@@ -265,7 +265,8 @@ public class EffortlessProject
         {
             relativePath = GetProjectRelativePath(relativePath);
             matchingProjectTranspilers = matchingProjectTranspilers
-                .Where(projectTranspiler => projectTranspiler.IsAtPath(relativePath))
+                .Where(projectTranspiler =>
+                    projectTranspiler.IsAtPath(relativePath, exactMatch))
                 .ToList();
         }
 
@@ -278,7 +279,6 @@ public class EffortlessProject
     public void Install(
         TranspilePayload result,
         string transpilerGroup,
-        bool dryRun,
         string pinnedVersion = null)
     {
         string currentDirectory;
@@ -303,7 +303,7 @@ public class EffortlessProject
             TranspilerGroup = transpilerGroup,
         };
 
-        IntegrateNewTranspiler(projectTranspiler, dryRun);
+        IntegrateNewTranspiler(projectTranspiler);
         Save();
     }
 
@@ -431,20 +431,18 @@ public class EffortlessProject
 
     private void IntegrateExistingTranspiler(ProjectTranspiler projectTranspiler)
     {
-        IntegrateTranspiler(projectTranspiler, false, false);
+        IntegrateTranspiler(projectTranspiler, false);
     }
 
     private void IntegrateNewTranspiler(
-        ProjectTranspiler projectTranspiler,
-        bool dryRun)
+        ProjectTranspiler projectTranspiler)
     {
-        IntegrateTranspiler(projectTranspiler, true, dryRun);
+        IntegrateTranspiler(projectTranspiler, true);
     }
 
     internal void IntegrateTranspiler(
         ProjectTranspiler projectTranspiler,
-        bool addIfMissing,
-        bool dryRun)
+        bool addIfMissing)
     {
         var toolName = GetToolName(projectTranspiler.CommandLine);
         var matches = FindMatchingTranspilers(
@@ -468,23 +466,6 @@ public class EffortlessProject
         }
 
         var matchingTranspiler = matches.FirstOrDefault();
-        if (dryRun)
-        {
-            Console.WriteLine($"DRY RUN: Installing {projectTranspiler.Name}");
-            if (matchingTranspiler is null)
-            {
-                Console.WriteLine(
-                    $"DRY RUN: The {projectTranspiler.Name} transpiler will be installed in path {projectTranspiler.RelativePath}");
-            }
-            else
-            {
-                Console.WriteLine(
-                    $"DRY RUN: The existing {projectTranspiler.Name} transpiler be replaced in path {projectTranspiler.RelativePath}");
-            }
-
-            return;
-        }
-
         var firstIndex = -1;
         if (!ReferenceEquals(matchingTranspiler, null))
         {

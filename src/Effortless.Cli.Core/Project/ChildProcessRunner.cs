@@ -20,6 +20,21 @@ public static class ChildProcessRunner
             "-buildLocal");
     }
 
+    public static void InvokeSSoTmeDescribe(this DirectoryInfo directory)
+    {
+        if (!directory.Exists)
+        {
+            throw new NotImplementedException(
+                "The specified directory does not exist.");
+        }
+
+        Console.WriteLine(
+            $"Executing 'effortless -describeAll' in {directory.FullName}");
+        InvokeCurrent(
+            directory,
+            "-describeAll");
+    }
+
     public static void InvokeSSoTmeClean(this DirectoryInfo directory)
     {
         if (!directory.Exists)

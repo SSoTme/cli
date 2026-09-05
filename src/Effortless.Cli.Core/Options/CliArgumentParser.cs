@@ -27,6 +27,7 @@ public sealed class CliArgumentParser
             ["upgradeCli"] = "upgradeCli",
             ["uc"] = "upgradeCli",
             ["update"] = "upgradeCli",
+            ["pin"] = "pin",
         };
 
     public CliInvocation Parse(string[] argv)
@@ -73,6 +74,15 @@ public sealed class CliArgumentParser
             Account = options.account ?? string.Empty,
         };
 
+        // -help takes a topic, and that topic is very often itself a reserved
+        // word ("build", "pin"). Capture it before either reserved-word table
+        // consumes it as a command.
+        if (options.help)
+        {
+            invocation.HelpTopic =
+                invocation.RemainingArguments.FirstOrDefault();
+        }
+
         ApplyNoDashCommand(options, invocation.RemainingArguments);
 
         if (BarewordVerbs.TryApply(
@@ -116,6 +126,16 @@ public sealed class CliArgumentParser
                 break;
             case "setAccountAPIKey":
                 options.setAccountAPIKey = ConsumeStringValue(remainingArguments);
+                break;
+            case "pin":
+                // "pin <tool> <value>": take the value from the third slot and
+                // leave the tool where the resolver expects it.
+                if (remainingArguments.Count >= 3)
+                {
+                    options.pin = remainingArguments[2];
+                    remainingArguments.RemoveAt(2);
+                }
+
                 break;
             case "listVersions":
                 options.listVersions = true;
@@ -164,6 +184,27 @@ public sealed class CliArgumentParser
                 normalized[0],
                 out var canonicalCommand))
         {
+            // D17: "pin <tool> <version|url>" keeps the tool in the tool
+            // position and hands the trailing value to the -pin option. With
+            // the value missing, fall through so Plossum reports -pin's
+            // missing value rather than silently doing nothing.
+            if (canonicalCommand == "pin")
+            {
+                if (normalized.Length < 3)
+                {
+                    return ["-pin"];
+                }
+
+                var reordered = new List<string> { "-pin", normalized[2] };
+                reordered.Add(normalized[1]);
+                for (var index = 3; index < normalized.Length; index++)
+                {
+                    reordered.Add(normalized[index]);
+                }
+
+                return reordered.ToArray();
+            }
+
             normalized[0] = "-" + canonicalCommand;
         }
 

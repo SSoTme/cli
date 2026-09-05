@@ -140,8 +140,84 @@ public sealed class ResolutionTests
             server.Requests.Select(request => request.Version));
     }
 
-    [Fact(DisplayName = "res-latest-flag: -latest runs head and clears the pin")]
-    public async Task LatestRunsHeadAndAutomaticFreshnessClearsPin()
+    [Theory(DisplayName = "pin-version: pin fixes a step to a catalog version")]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PinFixesAStepToACatalogVersion(bool bareword)
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        var index = IndexFixture.Load(server);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index);
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "To Uppercase",
+                "",
+                "to-uppercase -i in.txt"));
+
+        string[] form = bareword
+            ? ["pin", "to-uppercase", ResolutionTestSupport.OldVersion]
+            : ["to-uppercase", "-pin", ResolutionTestSupport.OldVersion];
+        var result = await cli.Run(form, sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(
+            $"Pinned to-uppercase to {ResolutionTestSupport.OldVersion}",
+            result.Stdout,
+            StringComparison.Ordinal);
+
+        var step = ResolutionTestSupport.FindStep(
+            ResolutionTestSupport.ReadProject(sandbox),
+            "to-uppercase");
+        Assert.Equal(
+            ResolutionTestSupport.OldVersion,
+            step["PinnedVersion"]?.GetValue<string>());
+
+        // Pinning is a project edit, not a run.
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact(DisplayName = "pin-url: pin accepts a literal URL")]
+    public async Task PinAcceptsALiteralUrl()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        var index = IndexFixture.Load(server);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index);
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "To Uppercase",
+                "",
+                "to-uppercase -i in.txt"));
+        var url = server.ToolUri(
+            "to-uppercase",
+            ResolutionTestSupport.OldVersion).ToString();
+
+        var result = await cli.Run(
+            ["to-uppercase", "-pin", url],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains(
+            $"Pinned to-uppercase to {url}",
+            result.Stdout,
+            StringComparison.Ordinal);
+
+        // A version key and a URL are stored the same way.
+        var step = ResolutionTestSupport.FindStep(
+            ResolutionTestSupport.ReadProject(sandbox),
+            "to-uppercase");
+        Assert.Equal(url, step["PinnedVersion"]?.GetValue<string>());
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact(DisplayName = "pin-then-build-uses-pin: a pinned step builds against the pin, not HEAD")]
+    public async Task PinnedStepBuildsAgainstThePinRatherThanHead()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -154,47 +230,107 @@ public sealed class ResolutionTests
             new ResolutionProjectStep(
                 "To Uppercase",
                 "",
-                "to-uppercase -i in.txt",
-                ResolutionTestSupport.OldVersion));
+                "to-uppercase -i in.txt"));
+
+        var pin = await cli.Run(
+            ["to-uppercase", "-pin", ResolutionTestSupport.OldVersion],
+            sandbox.ProjectPath,
+            sandbox);
+        Assert.Equal(0, pin.ExitCode);
+
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, build.ExitCode);
+
+        // D17: the automatic freshness gate must not silently advance a
+        // deliberately pinned step to HEAD.
+        Assert.Equal(
+            ResolutionTestSupport.OldVersion,
+            Assert.Single(server.Requests).Version);
+        Assert.Contains(
+            ResolutionTestSupport.OldVersion,
+            build.Stdout,
+            StringComparison.Ordinal);
+
+        var step = ResolutionTestSupport.FindStep(
+            ResolutionTestSupport.ReadProject(sandbox),
+            "to-uppercase");
+        Assert.Equal(
+            ResolutionTestSupport.OldVersion,
+            step["PinnedVersion"]?.GetValue<string>());
+    }
+
+    [Fact(DisplayName = "latest-flag-rejected: -latest is no longer an option")]
+    public async Task LatestFlagIsRejectedAsAnUnknownOption()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        var index = IndexFixture.Load(server);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index);
+        ResolutionTestSupport.SeedProject(
+            sandbox,
+            new ResolutionProjectStep(
+                "To Uppercase",
+                "",
+                "to-uppercase -i in.txt"));
 
         var result = await cli.Run(
             ["to-uppercase", "-i", "in.txt", "-latest"],
             sandbox.ProjectPath,
             sandbox);
 
-        Assert.Equal(0, result.ExitCode);
-        Assert.Equal(
-            ResolutionTestSupport.HeadVersion,
-            Assert.Single(server.Requests).Version);
-        Assert.Contains(
-            $"{ResolutionTestSupport.HeadVersion} [latest]",
-            result.Stdout,
-            StringComparison.Ordinal);
-        if (!Behavior.IsLegacy)
-        {
-            Assert.Contains(
-                "[cli] Project tools are current.",
-                result.Stdout,
-                StringComparison.Ordinal);
-        }
+        // D17: -latest is drop-legacy, so it fails exactly like any other
+        // unrecognized flag (see meta-unknown-option).
+        Assert.True(result.Failed);
+        Assert.Contains("latest", result.Combined, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(server.Requests);
+    }
 
-        var step = ResolutionTestSupport.FindStep(
-            ResolutionTestSupport.ReadProject(sandbox),
-            "to-uppercase");
-        if (Behavior.IsLegacy)
-        {
-            Assert.Equal(
-                ResolutionTestSupport.OldVersion,
-                step["PinnedVersion"]?.GetValue<string>());
-            Assert.Null(step["LastVersionUsed"]);
-        }
-        else
-        {
-            Assert.Null(step["PinnedVersion"]);
-            Assert.Equal(
-                ResolutionTestSupport.HeadVersion,
-                step["LastVersionUsed"]?.GetValue<string>());
-        }
+    [Fact(DisplayName = "acct-tool-falls-back-to-account: acct/tool resolves tool with -account acct")]
+    public async Task CompoundAccountToolNameFallsBackToTheBareTool()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        var index = IndexFixture.Load(server);
+        server.Enqueue("to-uppercase", ToolBehavior.Echo());
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index);
+        ResolutionTestSupport.SeedProject(sandbox);
+
+        // "acme/to-uppercase" is not a catalog key, but "to-uppercase" is.
+        var result = await cli.Run(
+            ["acme/to-uppercase", "-i", "in.txt"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        var request = Assert.Single(server.Requests);
+        Assert.Equal(ResolutionTestSupport.HeadVersion, request.Version);
+        Assert.Equal("acme", request.CliAccount);
+        Assert.DoesNotContain("does not exist", result.Combined, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "acct-tool-unresolved-tool-fails: acct/tool fails when the tool is unknown too")]
+    public async Task CompoundAccountToolNameStillFailsWhenTheBareToolIsUnknown()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        var index = IndexFixture.Load(server);
+        using var sandbox = Sandbox.Create(cli);
+        ResolutionTestSupport.SeedHome(sandbox, index);
+        ResolutionTestSupport.SeedProject(sandbox);
+
+        var result = await cli.Run(
+            ["acme/nonexistent", "-i", "in.txt"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        // D20: the fallback is not a licence to succeed silently.
+        Assert.True(result.Failed);
+        Assert.Contains("does not exist", result.Combined, StringComparison.Ordinal);
+        Assert.Contains("effortless listTools", result.Combined, StringComparison.Ordinal);
+        Assert.Empty(server.Requests);
     }
 
     [Fact(DisplayName = "res-no-head: tool without a head version")]
@@ -634,12 +770,13 @@ public sealed class ResolutionTests
                 $"url: {server.ToolUri("to-uppercase", ResolutionTestSupport.HeadVersion)}",
                 result.Stdout,
                 StringComparison.Ordinal);
+            // D16: the hint names the canonical *ToolUrl verbs after the rename.
             Assert.Contains(
-                "* globally overridden via effortless -setUrl to-uppercase=http://localhost:43210/local/",
+                "* globally overridden via effortless -setToolUrl to-uppercase=http://localhost:43210/local/",
                 result.Stdout,
                 StringComparison.Ordinal);
             Assert.Contains(
-                "run 'effortless -removeUrl to-uppercase' to reset",
+                "run 'effortless -removeToolUrl to-uppercase' to reset",
                 result.Stdout,
                 StringComparison.Ordinal);
             Assert.Contains(
@@ -1170,13 +1307,16 @@ public sealed class ResolutionTests
             sandbox,
             CliUnderTest.TestUtcNow
             - TimeSpan.FromHours(24));
+        // The pin names a version the refreshed catalog does not carry, so it
+        // is stale rather than deliberate: D17 honors only pins the catalog can
+        // still satisfy, and step-03A's gate still clears the rest.
         ResolutionTestSupport.SeedProject(
             sandbox,
             new ResolutionProjectStep(
                 "To Uppercase",
                 "",
                 "to-uppercase -i in.txt",
-                ResolutionTestSupport.OldVersion,
+                "v2020.01.01.0000",
                 ResolutionTestSupport.OldVersion));
 
         var result = await cli.Run(

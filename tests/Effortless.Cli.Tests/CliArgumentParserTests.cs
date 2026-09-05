@@ -78,11 +78,13 @@ public class CliArgumentParserTests
     public void LegacyMixedCaseBarewordsRemainUnmatchable()
     {
         var pullAll = new CliArgumentParser().Parse(new[] { "pullAll" });
-        var dryRun = new CliArgumentParser().Parse(new[] { "dryRun" });
 
         Assert.False(pullAll.Options.buildAll);
         Assert.Equal(new[] { "pullAll" }, pullAll.RemainingArguments);
-        Assert.False(dryRun.Options.dryRun);
+
+        // D27: -dryRun is gone entirely, so the bareword is just an unknown
+        // tool name rather than a case-sensitivity quirk.
+        var dryRun = new CliArgumentParser().Parse(new[] { "dryRun" });
         Assert.Equal(new[] { "dryRun" }, dryRun.RemainingArguments);
     }
 
@@ -138,7 +140,7 @@ public class CliArgumentParserTests
 
         Assert.False(invocation.HasErrors, invocation.ErrorText);
         Assert.True(invocation.Options.listTools);
-        Assert.False(invocation.Options.listUrls);
+        Assert.False(invocation.Options.listToolUrls);
     }
 
     [Fact]

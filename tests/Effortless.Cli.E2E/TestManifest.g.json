@@ -352,14 +352,6 @@
     "interactive": false
   },
   {
-    "id": "inst-dry-run",
-    "suite": "e2e-install",
-    "priority": "P1",
-    "status": "rebuild-green",
-    "slow": false,
-    "interactive": false
-  },
-  {
     "id": "inst-url",
     "suite": "e2e-install",
     "priority": "P1",
@@ -1104,14 +1096,6 @@
     "interactive": false
   },
   {
-    "id": "res-latest-flag",
-    "suite": "e2e-resolution",
-    "priority": "P0",
-    "status": "rebuild-green",
-    "slow": false,
-    "interactive": false
-  },
-  {
     "id": "res-no-head",
     "suite": "e2e-resolution",
     "priority": "P1",
@@ -1549,6 +1533,174 @@
     "priority": "P2",
     "status": "skipped-external",
     "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "help-default-is-primary-only",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "help-category-filter",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "help-option-detail",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "help-unknown-topic",
+    "suite": "e2e-meta",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "help-all-flat",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "build-with-subprojects-includes-nested",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "build-all-excludes-nested",
+    "suite": "e2e-build",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "clean-with-subprojects",
+    "suite": "e2e-clean",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": true,
+    "interactive": false
+  },
+  {
+    "id": "describe-downstream",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "describe-local",
+    "suite": "e2e-project",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "describe-with-subprojects",
+    "suite": "e2e-project",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "pin-version",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "pin-url",
+    "suite": "e2e-resolution",
+    "priority": "P1",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "pin-then-build-uses-pin",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "latest-flag-rejected",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "enable-step",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "disable-step",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "acct-tool-falls-back-to-account",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "acct-tool-unresolved-tool-fails",
+    "suite": "e2e-resolution",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tool-url-verbs-canonical",
+    "suite": "e2e-tool-urls",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "tool-url-verbs-legacy-aliases",
+    "suite": "e2e-tool-urls",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
     "interactive": false
   }
 ]

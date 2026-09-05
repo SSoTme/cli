@@ -5,6 +5,17 @@ using Newtonsoft.Json.Linq;
 
 namespace Effortless.Cli.Commands;
 
+/// <summary>
+/// D12: the four scopes every project-scoped verb family supports.
+/// </summary>
+public enum DescribeScope
+{
+    Downstream,
+    Local,
+    All,
+    WithSubprojects,
+}
+
 public sealed class ProjectCommands
 {
     public EffortlessProject Init(CliInvocation invocation)
@@ -44,17 +55,113 @@ public sealed class ProjectCommands
         return project;
     }
 
-    public int Describe(CliInvocation invocation, bool all)
+    public int Describe(CliInvocation invocation, DescribeScope scope)
     {
-        if (all)
+        switch (scope)
         {
-            invocation.Project.Describe();
-        }
-        else
-        {
-            invocation.Project.Describe(invocation.CurrentDirectory);
+            case DescribeScope.Local:
+                invocation.Project.Describe(
+                    invocation.CurrentDirectory,
+                    exactMatch: true);
+                break;
+            case DescribeScope.All:
+                invocation.Project.Describe();
+                break;
+            case DescribeScope.WithSubprojects:
+                invocation.Project.Describe();
+                foreach (var nested in NestedProjectFinder.Find(
+                             invocation.Project.RootPath))
+                {
+                    nested.InvokeSSoTmeDescribe();
+                }
+
+                break;
+            default:
+                invocation.Project.Describe(invocation.CurrentDirectory);
+                break;
         }
 
+        return 0;
+    }
+
+    /// <summary>
+    /// D22: enable/disable flip <c>IsDisabled</c> on a registered step,
+    /// targeted exactly the way uninstall targets one — tool name in the
+    /// current folder plus an optional transpiler group.
+    /// </summary>
+    public int SetStepDisabled(CliInvocation invocation, bool disabled)
+    {
+        var name = invocation.RawTranspilerArg
+            ?? invocation.RemainingArguments.FirstOrDefault();
+        if (string.IsNullOrEmpty(name))
+        {
+            CliLog.LogLine(
+                $"Please specify a transpiler name to {(disabled ? "disable" : "enable")}",
+                ConsoleColor.Red);
+            return -1;
+        }
+
+        var project = invocation.Project;
+        var relativePath = project.GetProjectRelativePath(
+            invocation.CurrentDirectory);
+        var matches = project.FindMatchingTranspilers(
+            name,
+            relativePath,
+            invocation.Options.transpilerGroup);
+
+        // At the project root GetProjectRelativePath yields "" while a step
+        // stores "/". Retry once on the normalized form so enable/disable
+        // work in the root folder.
+        if (matches.Count == 0)
+        {
+            var normalized = "/" + relativePath
+                .Replace('\\', '/')
+                .Trim('/');
+            if (!string.Equals(
+                    normalized,
+                    relativePath,
+                    StringComparison.Ordinal))
+            {
+                matches = project.FindMatchingTranspilers(
+                    name,
+                    normalized,
+                    invocation.Options.transpilerGroup);
+                if (matches.Count > 0)
+                {
+                    relativePath = normalized;
+                }
+            }
+        }
+
+        if (matches.Count > 1)
+        {
+            CliLog.LogLine(
+                $"Warning: '{name}' matched multiple tools. Provide a fully-qualified name to target a specific tool.",
+                ConsoleColor.Yellow);
+            foreach (var match in matches)
+            {
+                CliLog.LogLine(
+                    $"  - {match.CommandLine}",
+                    ConsoleColor.Yellow);
+            }
+
+            return 0;
+        }
+
+        if (matches.Count == 0)
+        {
+            CliLog.LogLine(
+                $"No tools matching tool name '{name}' in path '{relativePath}'",
+                ConsoleColor.Yellow);
+            return 0;
+        }
+
+        var step = matches[0];
+        step.IsDisabled = disabled;
+        project.Save();
+        CliLog.LogLine(
+            $"{(disabled ? "Disabled" : "Enabled")} {name}",
+            disabled ? ConsoleColor.Yellow : ConsoleColor.Green);
         return 0;
     }
 

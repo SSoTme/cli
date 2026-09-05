@@ -27,6 +27,9 @@ public class CliInvocation
 
     public string? RawTranspilerArg { get; set; }
 
+    /// <summary>Topic argument for -help (a category, option or "all").</summary>
+    public string? HelpTopic { get; set; }
+
     public string? TargetUrl { get; set; }
 
     public string Transpiler { get; set; }

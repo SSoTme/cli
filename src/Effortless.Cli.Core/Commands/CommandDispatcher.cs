@@ -155,11 +155,7 @@ public sealed class CommandDispatcher
             // P05-P10: management precedence.
             if (invocation.Options.help)
             {
-                Console.Write(invocation.UsageHeader);
-                Console.WriteLine(
-                    "\n\nSyntax: effortless [account/]transpiler [Options]\n");
-                Console.Write(invocation.UsageOptions);
-                return 0;
+                return new HelpCommand().Run(invocation);
             }
 
             if (invocation.Options.info)
@@ -227,7 +223,7 @@ public sealed class CommandDispatcher
             }
 
             // T00: project token wins; otherwise use the global token as-is.
-            if (!invocation.Options.authenticate
+            if (!invocation.Options.login
                 && !invocation.Options.projectLogin
                 && !invocation.Options.logout
                 && !invocation.SkipRemoteToolsLookup)
@@ -368,7 +364,9 @@ public sealed class CommandDispatcher
             return false;
         }
 
-        plan.Apply(project);
+        // D17: the automatic gate advances unpinned steps to HEAD but never
+        // silently discards a deliberate -pin. Only -upgrade/-upgradeAll unpin.
+        plan.Apply(project, clearPins: false);
         _projectCatalogChecked = true;
         Console.WriteLine(
             "[cli] Project tools are current.");
@@ -380,7 +378,7 @@ public sealed class CommandDispatcher
         ProjectTranspiler activeStep)
     {
         var options = invocation.Options;
-        if (options.authenticate)
+        if (options.login)
         {
             return _authCommands.Login();
         }
@@ -390,9 +388,9 @@ public sealed class CommandDispatcher
             return _authCommands.ProjectLogin();
         }
 
-        if (options.subscription)
+        if (options.plan)
         {
-            return _authCommands.Subscription(
+            return _authCommands.Plan(
                 invocation.Jwt
                 ?? new JwtStore().GetStoredJWTToken());
         }
@@ -402,14 +400,32 @@ public sealed class CommandDispatcher
             return _authCommands.Logout();
         }
 
-        if (options.describe)
+        if (options.describeLocal)
         {
-            return _projectCommands.Describe(invocation, all: false);
+            return _projectCommands.Describe(
+                invocation,
+                DescribeScope.Local);
+        }
+
+        if (options.describeWithSubprojects)
+        {
+            return _projectCommands.Describe(
+                invocation,
+                DescribeScope.WithSubprojects);
         }
 
         if (options.describeAll)
         {
-            return _projectCommands.Describe(invocation, all: true);
+            return _projectCommands.Describe(
+                invocation,
+                DescribeScope.All);
+        }
+
+        if (options.describe)
+        {
+            return _projectCommands.Describe(
+                invocation,
+                DescribeScope.Downstream);
         }
 
         if (options.listSettings)
@@ -432,29 +448,34 @@ public sealed class CommandDispatcher
             return _seedCommands.Clone(invocation);
         }
 
-        if (!string.IsNullOrEmpty(options.viewUrl))
+        if (!string.IsNullOrEmpty(options.viewToolUrl))
         {
-            return _toolUrlCommands.View(options.viewUrl);
+            return _toolUrlCommands.View(options.viewToolUrl);
         }
 
-        if (!string.IsNullOrEmpty(options.setUrl))
+        if (!string.IsNullOrEmpty(options.setToolUrl))
         {
-            return _toolUrlCommands.Set(options.setUrl);
+            return _toolUrlCommands.Set(options.setToolUrl);
         }
 
-        if (options.listUrls)
+        if (options.listToolUrls)
         {
             return _toolUrlCommands.List(options.debug);
         }
 
-        if (!string.IsNullOrEmpty(options.removeUrl))
+        if (!string.IsNullOrEmpty(options.removeToolUrl))
         {
-            return _toolUrlCommands.Remove(options.removeUrl);
+            return _toolUrlCommands.Remove(options.removeToolUrl);
         }
 
         if (options.refreshTools)
         {
             return _versionCommands.Refresh(options.debug);
+        }
+
+        if (!string.IsNullOrEmpty(options.pin))
+        {
+            return _versionCommands.Pin(invocation, options.pin);
         }
 
         if (options.upgrade)
@@ -516,7 +537,6 @@ public sealed class CommandDispatcher
                     },
                 },
                 options.transpilerGroup,
-                options.dryRun,
                 invocation.ResolvedVersionKey);
             return 0;
         }
@@ -532,10 +552,20 @@ public sealed class CommandDispatcher
                 .Run(invocation, all: false);
         }
 
-        if (options.buildAll)
+        if (options.buildAll || options.buildWithSubprojects)
         {
             return new BuildCommand(RunCommandLine)
-                .Run(invocation, all: true);
+                .Run(
+                    invocation,
+                    all: true,
+                    withSubprojects: options.buildWithSubprojects);
+        }
+
+        if (options.enable || options.disable)
+        {
+            return _projectCommands.SetStepDisabled(
+                invocation,
+                disabled: options.disable);
         }
 
         if (options.uninstall)
@@ -557,7 +587,8 @@ public sealed class CommandDispatcher
 
         if ((options.clean
              || options.cleanLocal
-             || options.cleanAll)
+             || options.cleanAll
+             || options.cleanWithSubprojects)
             && !HasToolArgument(invocation))
         {
             return new CleanCommand().Run(invocation);
@@ -693,7 +724,6 @@ public sealed class CommandDispatcher
             invocation.Project.Install(
                 payload,
                 invocation.Options.transpilerGroup,
-                invocation.Options.dryRun,
                 invocation.ResolvedVersionKey);
         }
         else if (activeStep is not null)
@@ -736,24 +766,9 @@ public sealed class CommandDispatcher
             changed = true;
         }
 
-        if (invocation.Options.latest
-            && !string.IsNullOrEmpty(step.PinnedVersion))
-        {
-            CliLog.LogLine(
-                $"Cleared hard pin on {invocation.ResolvedToolName ?? invocation.Transpiler} (was {step.PinnedVersion})");
-            step.PinnedVersion = null;
-            changed = true;
-        }
-
         if (changed)
         {
             invocation.Project.Save();
-        }
-
-        if (invocation.Options.latest)
-        {
-            CliLog.LogLine(
-                $"Now using {invocation.ResolvedToolName ?? invocation.Transpiler} {invocation.ResolvedVersionKey} [latest]");
         }
     }
 
@@ -786,9 +801,9 @@ public sealed class CommandDispatcher
         !options.help
         && !options.info
         && !options.version
-        && !options.authenticate
+        && !options.login
         && !options.projectLogin
-        && !options.subscription
+        && !options.plan
         && !options.logout
         && string.IsNullOrEmpty(options.setAccountAPIKey)
         && !options.listVersions
@@ -800,10 +815,10 @@ public sealed class CommandDispatcher
         && !options.upgradeCli
         && !options.listSeeds
         && !options.cloneSeed
-        && string.IsNullOrEmpty(options.viewUrl)
-        && string.IsNullOrEmpty(options.setUrl)
-        && !options.listUrls
-        && string.IsNullOrEmpty(options.removeUrl);
+        && string.IsNullOrEmpty(options.viewToolUrl)
+        && string.IsNullOrEmpty(options.setToolUrl)
+        && !options.listToolUrls
+        && string.IsNullOrEmpty(options.removeToolUrl);
 
     private bool RequiresFreshCatalogBeforeResolution(
         CliInvocation invocation)
@@ -856,7 +871,10 @@ public sealed class CommandDispatcher
             || !string.IsNullOrWhiteSpace(
                 options.targetUrl)
             || !string.IsNullOrWhiteSpace(
-                options.execute))
+                options.execute)
+            || options.enable
+            || options.disable
+            || !string.IsNullOrWhiteSpace(options.pin))
         {
             return false;
         }
@@ -868,6 +886,7 @@ public sealed class CommandDispatcher
             || options.build
             || options.buildLocal
             || options.buildAll
+            || options.buildWithSubprojects
             || options.install)
         {
             return true;
@@ -882,12 +901,14 @@ public sealed class CommandDispatcher
         options.help
         || options.info
         || options.version
-        || options.authenticate
+        || options.login
         || options.projectLogin
-        || options.subscription
+        || options.plan
         || options.logout
         || options.describe
         || options.describeAll
+        || options.describeLocal
+        || options.describeWithSubprojects
         || options.listSeeds
         || options.cloneSeed
         || options.listSettings
@@ -895,25 +916,31 @@ public sealed class CommandDispatcher
         || options.removeSetting.Any()
         || !string.IsNullOrEmpty(
             options.setAccountAPIKey)
-        || !string.IsNullOrEmpty(options.viewUrl)
-        || !string.IsNullOrEmpty(options.setUrl)
-        || options.listUrls
-        || !string.IsNullOrEmpty(options.removeUrl)
+        || !string.IsNullOrEmpty(options.viewToolUrl)
+        || !string.IsNullOrEmpty(options.setToolUrl)
+        || options.listToolUrls
+        || !string.IsNullOrEmpty(options.removeToolUrl)
         || options.clean
         || options.cleanLocal
-        || options.cleanAll;
+        || options.cleanAll
+        || options.cleanWithSubprojects
+        || options.enable
+        || options.disable
+        || !string.IsNullOrEmpty(options.pin);
 
     private static bool IsManagementOnly(CliOptions options) =>
         options.help
         || options.info
         || options.version
         || options.init
-        || options.authenticate
+        || options.login
         || options.projectLogin
-        || options.subscription
+        || options.plan
         || options.logout
         || options.describe
         || options.describeAll
+        || options.describeLocal
+        || options.describeWithSubprojects
         || options.listSettings
         || options.addSetting.Any()
         || options.removeSetting.Any()
@@ -927,10 +954,13 @@ public sealed class CommandDispatcher
         || options.upgradeCli
         || options.listSeeds
         || options.cloneSeed
-        || !string.IsNullOrEmpty(options.viewUrl)
-        || !string.IsNullOrEmpty(options.setUrl)
-        || options.listUrls
-        || !string.IsNullOrEmpty(options.removeUrl);
+        || !string.IsNullOrEmpty(options.viewToolUrl)
+        || !string.IsNullOrEmpty(options.setToolUrl)
+        || options.listToolUrls
+        || !string.IsNullOrEmpty(options.removeToolUrl)
+        || options.enable
+        || options.disable
+        || !string.IsNullOrEmpty(options.pin);
 
     private static bool HasToolArgument(
         CliInvocation invocation) =>

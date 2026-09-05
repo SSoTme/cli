@@ -16,7 +16,7 @@ Options about the CLI itself: help, version, info, debug, self-upgrade.
 - Aliases: `h`
 - Bareword forms: `help`
 - Value type: `bool`
-- Help text: Show help about how to use the SSoT.me CLI
+- Help text: Show help about how to use the Effortless CLI
 - Description: Print usage.
 
 ### `-debug`
@@ -60,7 +60,7 @@ Creating, describing and configuring the effortless.json project.
 - Aliases: None
 - Bareword forms: `init`
 - Value type: `bool`
-- Help text: Initialize the current folder as the root of an SSoT.me project. An Optional parameter of force will create a sub-project.
+- Help text: Initialize the current folder as the root of an Effortless project. An Optional parameter of force will create a sub-project.
 - Description: Create effortless.json, .gitignore, effortless.env and an empty rulebook in cwd.
 
 ### `-describe`
@@ -68,8 +68,8 @@ Creating, describing and configuring the effortless.json project.
 - Aliases: `d`
 - Bareword forms: `list`, `describe`
 - Value type: `bool`
-- Help text: Describes the current SSoT.me Project (and all transpilers)
-- Description: Print project summary for cwd subtree.
+- Help text: Describe the transpilers in the current folder and its children
+- Description: Print project summary for steps at or below cwd (v2: downstream, like build; was local-only in v1).
 
 ### `-describeAll`
 
@@ -92,7 +92,7 @@ Creating, describing and configuring the effortless.json project.
 - Aliases: `as`
 - Bareword forms: None
 - Value type: `List<string>`
-- Help text: Adds a setting to the SSoT.me Project
+- Help text: Adds a setting to the Effortless Project
 - Description: Add/replace a ProjectSetting.
 
 ### `-removeSetting`
@@ -100,7 +100,7 @@ Creating, describing and configuring the effortless.json project.
 - Aliases: `rs`
 - Bareword forms: None
 - Value type: `List<string>`
-- Help text: Removes a setting from the SSoT.me Project
+- Help text: Removes a setting from the Effortless Project
 - Description: Remove a ProjectSetting.
 
 ### `-projectName`
@@ -111,6 +111,22 @@ Creating, describing and configuring the effortless.json project.
 - Help text: Name of the project (optional parameter to the init command)
 - Description: Project name for -init.
 
+### `-describeLocal`
+
+- Aliases: `dl`
+- Bareword forms: `describelocal`
+- Value type: `bool`
+- Help text: Describe only the transpilers installed in the current folder
+- Description: Print project summary for steps registered exactly at cwd.
+
+### `-describeWithSubprojects`
+
+- Aliases: `dws`
+- Bareword forms: `describewithsubprojects`
+- Value type: `bool`
+- Help text: Describe the whole project, including nested effortless projects normally excluded
+- Description: Print the whole project, including nested effortless projects.
+
 ## Install / uninstall tools
 
 Registering transpiler steps in effortless.json.
@@ -120,7 +136,7 @@ Registering transpiler steps in effortless.json.
 - Aliases: None
 - Bareword forms: `install`
 - Value type: `bool`
-- Help text: Saves the current command into the SSoT.me Project file
+- Help text: Saves the current command into the Effortless Project file
 - Description: Register a transpiler step in effortless.json (and run it once).
 
 ### `-uninstall`
@@ -128,7 +144,7 @@ Registering transpiler steps in effortless.json.
 - Aliases: None
 - Bareword forms: `uninstall`
 - Value type: `bool`
-- Help text: Removes the current command from the SSoT.me Project file
+- Help text: Removes the current command from the Effortless Project file
 - Description: Remove a registered step.
 
 ### `-execute`
@@ -147,13 +163,21 @@ Registering transpiler steps in effortless.json.
 - Help text: Name of a group to put a transpiler in within a specific folder
 - Description: Group tag for a step.
 
-### `-dryRun`
+### `-disable`
 
-- Aliases: `dr`
-- Bareword forms: `dryRun`
+- Aliases: None
+- Bareword forms: `disable`
 - Value type: `bool`
-- Help text: Dry run of a buid
-- Description: Preview an install without saving.
+- Help text: Marks the current command's step as disabled in the effortless.json Project file
+- Description: Mark a registered step disabled (skipped by build).
+
+### `-enable`
+
+- Aliases: None
+- Bareword forms: `enable`
+- Value type: `bool`
+- Help text: Marks the current command's step as enabled in the effortless.json Project file
+- Description: Mark a registered step enabled (included in build).
 
 ## Build
 
@@ -173,7 +197,7 @@ Running registered transpiler steps.
 - Bareword forms: `buildall`, `rebuildall`, `pullAll`
 - Value type: `bool`
 - Help text: Builds all transpilers in the project
-- Description: Run every step in the whole project, plus nested projects.
+- Description: Run every step in the whole project, excluding nested effortless projects.
 
 ### `-buildLocal`
 
@@ -182,6 +206,14 @@ Running registered transpiler steps.
 - Value type: `bool`
 - Help text: Build only the transpilers installed in the current folder
 - Description: Run only steps whose RelativePath equals cwd.
+
+### `-buildOnTrigger`
+
+- Aliases: `bot`
+- Bareword forms: None
+- Value type: `string`
+- Help text: Builds whenever a trigger is invoked (see readme for URL)
+- Description: Watch an Airtable base and rebuild on change.
 
 ### `-includeDisabled`
 
@@ -198,6 +230,14 @@ Running registered transpiler steps.
 - Value type: `bool`
 - Help text: Don't let one failing step stop the build: run every remaining transpiler, write the full exception detail of anything that failed to errors.json in the project root, and still exit 0. Defaults to off.
 - Description: Keep building after a failed step.
+
+### `-buildWithSubprojects`
+
+- Aliases: `bws`
+- Bareword forms: `buildwithsubprojects`
+- Value type: `bool`
+- Help text: Build the whole project, including nested effortless projects normally excluded
+- Description: Run every step in the whole project, including nested effortless projects.
 
 ## Clean
 
@@ -217,7 +257,7 @@ Removing generated output using the .zfs ledgers.
 - Bareword forms: `cleanall`
 - Value type: `bool`
 - Help text: Clean all project transpilers
-- Description: Clean the whole project.
+- Description: Clean the whole project, excluding nested effortless projects.
 
 ### `-cleanLocal`
 
@@ -242,6 +282,14 @@ Removing generated output using the .zfs ledgers.
 - Value type: `bool`
 - Help text: Determines if the input should be preserved.
 - Description: Keep .zfs ledgers when cleaning.
+
+### `-cleanWithSubprojects`
+
+- Aliases: `cws`
+- Bareword forms: `cleanwithsubprojects`
+- Value type: `bool`
+- Help text: Clean the whole project, including nested effortless projects normally excluded
+- Description: Clean the whole project, including nested effortless projects.
 
 ## Transpile inputs & outputs
 
@@ -300,7 +348,7 @@ Options that shape a single transpile request: inputs, output name, parameters, 
 - Aliases: `g`
 - Bareword forms: None
 - Value type: `string`
-- Help text: TargetUrl of the tool bing invoked
+- Help text: TargetUrl of the tool being invoked
 - Description: POST directly to a tool URL.
 
 ## Tool resolution & versions
@@ -347,14 +395,6 @@ How a tool name becomes a URL: remote index, versions, pins, upgrades.
 - Help text: Update the pinned version of this tool to the current head version (does not run the tool)
 - Description: Unpin a tool so it tracks HEAD.
 
-### `-latest`
-
-- Aliases: `lat`
-- Bareword forms: None
-- Value type: `bool`
-- Help text: Run this tool using the current head version and update its pinned version for this project
-- Description: Run HEAD and clear the pin.
-
 ### `-upgradeAll`
 
 - Aliases: `ua`
@@ -363,37 +403,45 @@ How a tool name becomes a URL: remote index, versions, pins, upgrades.
 - Help text: Upgrade all transpilers in the project to the latest version
 - Description: Unpin every tool.
 
+### `-pin`
+
+- Aliases: None
+- Bareword forms: `pin`
+- Value type: `string`
+- Help text: Pin this project's step to a specific catalog version or URL
+- Description: Pin an installed step to a version or URL for this project.
+
 ## Tool URL overrides
 
 The per-user ~/.ssotme/tool_urls.json override table.
 
-### `-listUrls`
+### `-listToolUrls`
 
-- Aliases: `lu`
+- Aliases: `lu`, `listUrls`
 - Bareword forms: `listtoolurls`, `listurls`, `lu`
 - Value type: `bool`
 - Help text: List all custom tool urls defined for this user
 - Description: List URL overrides.
 
-### `-viewUrl`
+### `-viewToolUrl`
 
-- Aliases: `vu`, `vt`
+- Aliases: `vu`, `vt`, `viewUrl`
 - Bareword forms: `viewtoolurl`, `viewurl`, `vu`, `vt`
 - Value type: `string`
 - Help text: View the url for the specified tool
 - Description: Show one URL override.
 
-### `-setUrl`
+### `-setToolUrl`
 
-- Aliases: `su`, `setToolUrl`
+- Aliases: `su`, `setUrl`
 - Bareword forms: `settoolurl`, `seturl`, `su`, `st`
 - Value type: `string`
 - Help text: Set a tool's URL to a custom endpoint for this user
 - Description: Add/replace a URL override.
 
-### `-removeUrl`
+### `-removeToolUrl`
 
-- Aliases: `ru`, `removeToolUrl`
+- Aliases: `ru`, `removeUrl`
 - Bareword forms: `removetoolurl`, `removeurl`, `ru`, `rt`
 - Value type: `string`
 - Help text: Remove a custom tool URL from this user's config, setting it back to the default value.
@@ -413,15 +461,15 @@ Magic-link login, project login, subscription, API keys.
 
 ### `-setAccountAPIKey`
 
-- Aliases: `api`
+- Aliases: `api`, `setAccountKey`
 - Bareword forms: None
 - Value type: `string`
 - Help text: Add an account api key
 - Description: Store an API key for -account.
 
-### `-authenticate`
+### `-login`
 
-- Aliases: `auth`, `login`
+- Aliases: `auth`, `authenticate`
 - Bareword forms: `auth`, `login`, `authenticate`
 - Value type: `bool`
 - Help text: Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).
@@ -443,9 +491,9 @@ Magic-link login, project login, subscription, API keys.
 - Help text: Logout of your cli user account
 - Description: Clear the global token.
 
-### `-subscription`
+### `-plan`
 
-- Aliases: `plan`
+- Aliases: `subscription`
 - Bareword forms: `subscription`, `plan`
 - Value type: `bool`
 - Help text: View the authenticated EffortlessAPI subscription plan (currently unavailable).
@@ -453,7 +501,7 @@ Magic-link login, project login, subscription, API keys.
 
 ## Seeds (legacy scaffolding)
 
-GitHub-hosted starter seeds. Review — recommended drop.
+GitHub-hosted Effortless seed repositories (root or child projects with a full Effortless stack and effortless.json at the root). Kept per owner decision D1; see the effortless-skills seed skill (step 14).
 
 ### `-listSeeds`
 
@@ -470,18 +518,6 @@ GitHub-hosted starter seeds. Review — recommended drop.
 - Value type: `bool`
 - Help text: Clones a public Effortless seed repository
 - Description: Clone a public Effortless seed repository.
-
-## Other legacy
-
-Bridges and agents that pre-date the rulebook/REST model.
-
-### `-buildOnTrigger`
-
-- Aliases: `bot`
-- Bareword forms: None
-- Value type: `string`
-- Help text: Builds whenever a trigger is invoked (see readme for URL)
-- Description: Watch an Airtable base and rebuild on change.
 
 ## Exit codes
 
@@ -538,5 +574,7 @@ Bridges and agents that pre-date the rulebook/REST model.
 - `-repoUrl` — Zero references.
 - `-betaRepo` — Zero references.
 - `-skipBuild` — Zero references.
+- `-dryRun` — D27: removed. Early build steps write files that later steps read, so a 'run but do not write' build is not a coherent concept - it cannot preview a real multi-step pipeline. Git on a clean tree is the dry run: run the build for real and inspect the diff.
 - `-updateUrls` — Dead host; -refreshTools/-upgrade over the remote index supersede it.
 - `-legacy` — RabbitMQ only.
+- `-latest` — D17: -latest is removed because a version is an attribute of a step, not a command to run. The same outcome is now reached with -pin (to fix a version) or -upgrade/unpin (to clear one); default resolution already tracks HEAD when unpinned. Git history on a clean tree is the audit trail for what changed and when, rather than a runtime command.

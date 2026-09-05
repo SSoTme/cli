@@ -164,9 +164,59 @@ public sealed class CleanTests
         Assert.False(Directory.Exists(sub));
     }
 
-    [Fact(DisplayName = "clean-all: cleanAll cleans root and nested projects")]
+    [Fact(DisplayName = "clean-all: cleanAll cleans the whole project from the root")]
+    public async Task CleanAllCleansTheWholeProjectFromTheRoot()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Root", "", "to-uppercase"),
+            new WorkflowStep("Sub", "/sub", "echo"));
+        var sub = Directory.CreateDirectory(
+            Path.Combine(sandbox.ProjectPath, "sub")).FullName;
+        var nested = Path.Combine(sub, "nested");
+        WorkflowTestSupport.WriteProjectAt(
+            nested,
+            new WorkflowStep("Nested", "", "echo"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("root.txt", "root", alwaysOverwrite: true)));
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("sub.txt", "sub", alwaysOverwrite: true)));
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("nested.txt", "nested", alwaysOverwrite: true)));
+        Assert.Equal(
+            0,
+            (await cli.Run(["buildAll"], sandbox.ProjectPath, sandbox)).ExitCode);
+        Assert.Equal(0, (await cli.Run(["build"], nested, sandbox)).ExitCode);
+
+        // Run from /sub: cleanAll behaves as if run from the root.
+        var result = await cli.Run(["cleanall"], sub, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "root.txt")));
+        Assert.False(File.Exists(Path.Combine(sub, "sub.txt")));
+
+        // D6/D12: the nested project is a separate project and is left alone.
+        Assert.True(File.Exists(Path.Combine(nested, "nested.txt")));
+        Assert.DoesNotContain(
+            "Executing 'effortless -clean' in ",
+            result.Stdout,
+            StringComparison.Ordinal);
+    }
+
+    [Theory(DisplayName = "clean-with-subprojects: cleanWithSubprojects cleans nested projects too")]
     [Trait("Slow", "true")]
-    public async Task CleanAllCleansNestedProjects()
+    [InlineData("cleanWithSubprojects")]
+    [InlineData("-cws")]
+    public async Task CleanWithSubprojectsCleansNestedProjects(string form)
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -174,7 +224,8 @@ public sealed class CleanTests
             cli,
             server,
             new WorkflowStep("Root", "", "to-uppercase"));
-        var sub = Directory.CreateDirectory(Path.Combine(sandbox.ProjectPath, "sub")).FullName;
+        var sub = Directory.CreateDirectory(
+            Path.Combine(sandbox.ProjectPath, "sub")).FullName;
         var nested = Path.Combine(sub, "nested");
         WorkflowTestSupport.WriteProjectAt(
             nested,
@@ -187,13 +238,13 @@ public sealed class CleanTests
             "echo",
             ToolBehavior.Files(
                 FileSetEntry.TextFile("nested.txt", "nested", alwaysOverwrite: true)));
-        var rootBuild = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
-        var nestedBuild = await cli.Run(["build"], nested, sandbox);
-        Assert.Equal(0, rootBuild.ExitCode);
-        Assert.Equal(0, nestedBuild.ExitCode);
+        Assert.Equal(
+            0,
+            (await cli.Run(["build"], sandbox.ProjectPath, sandbox)).ExitCode);
+        Assert.Equal(0, (await cli.Run(["build"], nested, sandbox)).ExitCode);
 
         var result = await cli.Run(
-            ["cleanall"],
+            [form],
             sub,
             sandbox,
             timeoutMs: 180_000);

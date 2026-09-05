@@ -86,14 +86,44 @@ public sealed class ToolResolver
             if (string.IsNullOrWhiteSpace(localOverride)
                 || _remoteTools.ContainsTool(rawName))
             {
-                var pinnedVersion = invocation.Options.latest
-                    ? null
-                    : FindHardPin(invocation, rawName);
                 remote = _remoteTools.Resolve(
                     rawName,
-                    pinnedVersion,
-                    invocation.Options.latest);
+                    FindHardPin(invocation, rawName));
                 ApplyRemoteMetadata(invocation, remote);
+            }
+
+            // D20: never fail on the compound "acct/tool" form alone. When the
+            // whole name does not resolve, retry the bare tool and keep the
+            // prefix as the account, exactly as "tool -account acct" would.
+            if ((remote is null || string.IsNullOrWhiteSpace(remote.Url))
+                && string.IsNullOrWhiteSpace(localOverride)
+                && TrySplitAccount(rawName, out var account, out var bareTool))
+            {
+                var bareOverride = _remoteTools.TryGetToolUrl(bareTool);
+                if (!string.IsNullOrWhiteSpace(bareOverride))
+                {
+                    invocation.Account = account;
+                    ApplyLocalOverride(
+                        invocation,
+                        bareTool,
+                        bareOverride,
+                        remote: null);
+                    return;
+                }
+
+                var bareRemote = _remoteTools.Resolve(
+                    bareTool,
+                    FindHardPin(invocation, bareTool));
+                if (bareRemote is not null
+                    && !string.IsNullOrWhiteSpace(bareRemote.Url))
+                {
+                    invocation.Account = account;
+                    ApplyRemoteMetadata(invocation, bareRemote);
+                    invocation.TargetUrl = bareRemote.Url;
+                    invocation.Transpiler =
+                        NameHelpers.SanitizeUrlForFilename(bareRemote.Url);
+                    return;
+                }
             }
         }
 
@@ -314,20 +344,44 @@ public sealed class ToolResolver
         }
     }
 
+    /// <summary>
+    /// D20: splits "acct/tool" into its account prefix and bare tool name.
+    /// Returns false for a bare name, a leading slash, or a trailing "/vN"
+    /// version suffix, which is a version and not an account.
+    /// </summary>
+    private static bool TrySplitAccount(
+        string rawName,
+        out string account,
+        out string toolName)
+    {
+        account = null;
+        toolName = null;
+        var stripped = StripVersionSuffix(rawName ?? string.Empty);
+        var slash = stripped.IndexOf('/');
+        if (slash <= 0 || slash == stripped.Length - 1)
+        {
+            return false;
+        }
+
+        account = stripped.Substring(0, slash);
+        toolName = stripped.Substring(slash + 1);
+        return true;
+    }
+
     private static bool IsManagementCommand(CliOptions options)
     {
         return options.listVersions
             || options.refreshTools
             || options.listTools
             || !string.IsNullOrWhiteSpace(options.searchTools)
-            || options.listUrls
+            || options.listToolUrls
             || options.version
             || options.init
             || options.uninstall
-            || options.authenticate
+            || options.login
             || options.projectLogin
             || options.logout
-            || options.subscription
+            || options.plan
             || options.info
             || options.help
             || options.upgrade
@@ -335,9 +389,12 @@ public sealed class ToolResolver
             || options.upgradeAll
             || options.listSeeds
             || options.cloneSeed
-            || !string.IsNullOrWhiteSpace(options.viewUrl)
-            || !string.IsNullOrWhiteSpace(options.setUrl)
-            || !string.IsNullOrWhiteSpace(options.removeUrl);
+            || !string.IsNullOrWhiteSpace(options.viewToolUrl)
+            || !string.IsNullOrWhiteSpace(options.setToolUrl)
+            || !string.IsNullOrWhiteSpace(options.removeToolUrl)
+            || options.enable
+            || options.disable
+            || !string.IsNullOrWhiteSpace(options.pin);
     }
 
     private static bool IsHttpUrl(string value)

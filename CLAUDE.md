@@ -21,6 +21,32 @@ manifest:
 The only way to add or rename a CLI option is to change its rulebook row and
 run `npm run generate`. CI rejects generated-file drift.
 
+`npm run generate` writes six artifacts, all of them off-limits to hand edits:
+
+- `src/Effortless.Cli.Core/Options/CliOptions.g.cs`
+- `src/Effortless.Cli.Core/Options/BarewordVerbs.g.cs`
+- `src/Effortless.Cli.Core/Options/CliOptionMetadata.g.cs` — tier, category,
+  parent, family, help detail and example; what `-help <topic>` reads at runtime
+- `docs/cli-reference.md`
+- `tests/Effortless.Cli.E2E/TestManifest.g.json`, `tests/.../Tests/TestManifest.g.json`
+
+`README.md` is the exception: only the text between its
+`<!-- cli-commands:start -->` and `<!-- cli-commands:end -->` markers is
+generated. Edit the rest of the README freely; never edit inside the markers.
+
+Two traps worth knowing before you touch a `CliOptions` row:
+
+- **`HelpSummary` has a 51-character budget**, not 72. `-help` renders
+  `"  {Flag,-26} {HelpSummary}"`, so anything longer breaks the 80-column
+  guarantee `meta-help-width` asserts. `help-summary-width` enforces it against
+  the rulebook so it fails at authoring time rather than in an E2E run.
+- **A bareword whose option takes a value needs a generator decision.** The
+  `consumedStringOptions` set in `scripts/generate-from-rulebook.mjs` handles
+  `verb <value>`; `parserHandledStringOptions` defers to
+  `CliArgumentParser.NoDashCommandForms` for `verb <tool> <value>` shapes such as
+  `pin`. A value-typed option left out of both is emitted as a `bool` setter and
+  will not compile.
+
 ## Repository layout
 
 - `src/Effortless.Cli/` — .NET 8 executable.
@@ -99,6 +125,14 @@ tool execution and `buildOnTrigger` do not require authentication.
   informational and records what ran; it does not select a version. Upgrade paths
   clear `PinnedVersion`, remove embedded command-line versions, and advance
   `LastVersionUsed` to HEAD.
+- **A pin the catalog can still satisfy survives a build (D17).**
+  `ProjectToolUpgradePlan.Apply` takes `clearPins`: the automatic currentness
+  gate in `CommandDispatcher.EnsureProjectToolsCurrent` passes `false`, so
+  `-pin` actually takes effect; only `-upgrade` / `-upgradeAll` pass `true` and
+  unpin. A pin that no longer resolves is stale rather than deliberate and the
+  gate still clears it, which is what keeps step-03A's "a stale pin must never
+  silently break a build" guarantee intact. Do not collapse these two cases back
+  into one.
 
 ## Releases
 

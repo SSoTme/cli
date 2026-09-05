@@ -5,8 +5,8 @@ Available versions for effortless/common/to-uppercase:
   v2025.12.31.2359
     url: <MOCK>tools/to-uppercase/v2025.12.31.2359/
 
-  * globally overridden via effortless -setUrl to-uppercase=http://localhost:43210/local/
-    run 'effortless -removeUrl to-uppercase' to reset
+  * globally overridden via effortless -setToolUrl to-uppercase=http://localhost:43210/local/
+    run 'effortless -removeToolUrl to-uppercase' to reset
 
 Run with: effortless to-uppercase/<versionKey>
 Run latest: effortless to-uppercase

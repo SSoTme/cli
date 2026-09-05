@@ -31,12 +31,13 @@ public sealed class CleanCommand
         }
 
         var runner = new CleanRunner(invocation.Project);
-        if (options.cleanAll)
+        if (options.cleanAll || options.cleanWithSubprojects)
         {
             runner.CleanAll(
                 options.preserveZFS,
                 options.purge,
-                options.debug);
+                options.debug,
+                options.cleanWithSubprojects);
         }
         else
         {

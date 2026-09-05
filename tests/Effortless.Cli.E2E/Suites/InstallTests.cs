@@ -224,33 +224,75 @@ public sealed class InstallTests
             steps.Select(step => step["TranspilerGroup"]!.GetValue<string>()).ToArray());
     }
 
-    [Fact(DisplayName = "inst-dry-run: dry-run executes the tool without saving the install")]
-    public async Task DryRunExecutesWithoutSaving()
+    [Theory(DisplayName = "disable-step: disable sets IsDisabled on a step")]
+    [InlineData("disable")]
+    [InlineData("-disable")]
+    public async Task DisableSetsIsDisabledOnTheMatchingStep(string form)
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
-        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(cli, server);
-        sandbox.WriteFile("in.txt", "hello");
-        var before = sandbox.ProjectFile.ToJsonString();
-        server.Enqueue(
-            "to-uppercase",
-            ToolBehavior.Files(
-                FileSetEntry.TextFile("dry.txt", "written", alwaysOverwrite: true)));
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Root", "", "to-uppercase -i in.txt"));
 
         var result = await cli.Run(
-            ["-install", "to-uppercase", "-i", "in.txt", "-dryRun"],
+            [form, "to-uppercase"],
             sandbox.ProjectPath,
             sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("DRY RUN: Installing", result.Stdout, StringComparison.Ordinal);
-        Assert.Equal("written", sandbox.ReadFile("dry.txt"));
-        Assert.Equal("workflow-project", sandbox.ProjectFile["Name"]!.GetValue<string>());
-        Assert.Empty(WorkflowTestSupport.Steps(sandbox));
-        Assert.NotEqual(
-            before,
-            sandbox.ProjectFile.ToJsonString());
-        Assert.Single(server.Requests);
+        Assert.Contains("Disabled to-uppercase", result.Stdout, StringComparison.Ordinal);
+        Assert.True(
+            WorkflowTestSupport.SingleStep(sandbox)["IsDisabled"]!.GetValue<bool>());
+
+        // A name that matches nothing reports it and changes nothing.
+        var missing = await cli.Run(
+            [form, "nosuchtool"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, missing.ExitCode);
+        Assert.Contains(
+            "No tools matching tool name 'nosuchtool'",
+            missing.Stdout,
+            StringComparison.Ordinal);
+        Assert.Empty(server.Requests);
+    }
+
+    [Theory(DisplayName = "enable-step: enable clears IsDisabled on a step")]
+    [InlineData("enable")]
+    [InlineData("-enable")]
+    public async Task EnableClearsIsDisabledOnTheMatchingStep(string form)
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep(
+                "Root",
+                "",
+                "to-uppercase -i in.txt",
+                IsDisabled: true));
+        sandbox.WriteFile("in.txt", "hello");
+
+        var result = await cli.Run(
+            [form, "to-uppercase"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Enabled to-uppercase", result.Stdout, StringComparison.Ordinal);
+        Assert.False(
+            WorkflowTestSupport.SingleStep(sandbox)["IsDisabled"]!.GetValue<bool>());
+
+        // The re-enabled step now runs in a normal build.
+        server.Enqueue("to-uppercase", ToolBehavior.Echo());
+        var build = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, build.ExitCode);
+        Assert.Equal("to-uppercase", Assert.Single(server.Requests).ToolName);
     }
 
     [Fact(DisplayName = "inst-url: installing a URL registers it without posting")]

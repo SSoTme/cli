@@ -303,6 +303,87 @@ public sealed class ProjectTests
         AssertProjectSummary(da, sandbox, includeRoot: true, includeSub: true);
     }
 
+    [Theory(DisplayName = "describe-downstream: describe shows the subtree from cwd downstream")]
+    [InlineData("describe")]
+    [InlineData("-describe")]
+    [InlineData("list")]
+    public async Task DescribeShowsEverythingBelowTheCurrentFolder(string form)
+    {
+        using var sandbox = Sandbox.Create(_cli);
+        WriteNestedDescribeProject(sandbox);
+        var subPath = CreateDirectory(sandbox.ProjectPath, "sub");
+        CreateDirectory(subPath, "deeper");
+
+        var result = await _cli.Run([form], subPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.DoesNotContain("to-uppercase", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("echo", result.Stdout, StringComparison.Ordinal);
+        Assert.Contains("cat", result.Stdout, StringComparison.Ordinal);
+    }
+
+    [Theory(DisplayName = "describe-local: describeLocal shows only the exact cwd")]
+    [InlineData("describeLocal")]
+    [InlineData("-describeLocal")]
+    [InlineData("-dl")]
+    public async Task DescribeLocalShowsOnlyTheExactFolder(string form)
+    {
+        using var sandbox = Sandbox.Create(_cli);
+        WriteNestedDescribeProject(sandbox);
+        var subPath = CreateDirectory(sandbox.ProjectPath, "sub");
+        CreateDirectory(subPath, "deeper");
+
+        var result = await _cli.Run([form], subPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("echo", result.Stdout, StringComparison.Ordinal);
+
+        // Neither the parent step nor the descendant step is listed.
+        Assert.DoesNotContain("to-uppercase", result.Stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain("cat", result.Stdout, StringComparison.Ordinal);
+    }
+
+    [Theory(DisplayName = "describe-with-subprojects: describeWithSubprojects includes nested projects")]
+    [Trait("Slow", "true")]
+    [InlineData("describeWithSubprojects")]
+    [InlineData("-dws")]
+    public async Task DescribeWithSubprojectsIncludesNestedProjects(string form)
+    {
+        using var sandbox = Sandbox.Create(_cli);
+        WriteNestedDescribeProject(sandbox);
+        var subPath = CreateDirectory(sandbox.ProjectPath, "sub");
+        CreateDirectory(subPath, "deeper");
+        var nested = CreateDirectory(sandbox.ProjectPath, "nested");
+        WorkflowTestSupport.WriteProjectAt(
+            nested,
+            new WorkflowStep("Nested", "", "nested-tool -i n.txt"));
+
+        var withSubprojects = await _cli.Run(
+            [form],
+            subPath,
+            sandbox,
+            timeoutMs: 180_000);
+        var describeAll = await _cli.Run(["-describeAll"], subPath, sandbox);
+
+        Assert.Equal(0, withSubprojects.ExitCode);
+        Assert.Equal(0, describeAll.ExitCode);
+
+        // Both ignore cwd and list the whole root project.
+        Assert.Contains("to-uppercase", withSubprojects.Stdout, StringComparison.Ordinal);
+        Assert.Contains("to-uppercase", describeAll.Stdout, StringComparison.Ordinal);
+
+        // Only the WithSubprojects scope enters the nested project.
+        Assert.Contains("nested-tool", withSubprojects.Stdout, StringComparison.Ordinal);
+        Assert.DoesNotContain("nested-tool", describeAll.Stdout, StringComparison.Ordinal);
+    }
+
+    private static void WriteNestedDescribeProject(Sandbox sandbox) =>
+        WorkflowTestSupport.WriteProject(
+            sandbox,
+            new WorkflowStep("Root Step", "", "to-uppercase -i root.txt"),
+            new WorkflowStep("Sub Step", "/sub", "echo -i sub.txt"),
+            new WorkflowStep("Deep Step", "/sub/deeper", "cat -i deep.txt"));
+
     [Fact(DisplayName = "proj-no-project-silent: legacy describe outside a project prints an error")]
     public async Task DescribeOutsideAProjectPinsLegacyErrorOutput()
     {

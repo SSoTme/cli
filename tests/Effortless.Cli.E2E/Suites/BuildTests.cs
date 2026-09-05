@@ -203,9 +203,79 @@ public sealed class BuildTests
         Assert.Equal("echo", Assert.Single(server.Requests).ToolName);
     }
 
-    [Fact(DisplayName = "build-all: buildAll runs root and nested projects")]
+    [Fact(DisplayName = "build-all: buildAll runs the whole project from the root")]
+    public async Task BuildAllRunsTheWholeProjectFromTheRoot()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Root", "", "to-uppercase"),
+            new WorkflowStep("Sub", "/sub", "echo"));
+        var sub = Directory.CreateDirectory(
+            Path.Combine(sandbox.ProjectPath, "sub")).FullName;
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("root.txt", "root", alwaysOverwrite: true)));
+        server.Enqueue(
+            "echo",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("sub.txt", "sub", alwaysOverwrite: true)));
+
+        // Run from /sub: buildAll behaves as if it were run from the root.
+        var result = await cli.Run(["buildAll"], sub, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("root", sandbox.ReadFile("root.txt"));
+        Assert.Equal("sub", sandbox.ReadFile("sub/sub.txt"));
+        Assert.Equal(
+            ["to-uppercase", "echo"],
+            server.Requests.Select(request => request.ToolName).ToArray());
+    }
+
+    [Fact(DisplayName = "build-all-excludes-nested: buildAll stops at nested project boundaries")]
+    public async Task BuildAllDoesNotEnterNestedProjects()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(
+            cli,
+            server,
+            new WorkflowStep("Root", "", "to-uppercase"));
+        var nested = Path.Combine(sandbox.ProjectPath, "nested");
+        WorkflowTestSupport.WriteProjectAt(
+            nested,
+            new WorkflowStep("Nested", "", "echo"));
+        server.Enqueue(
+            "to-uppercase",
+            ToolBehavior.Files(
+                FileSetEntry.TextFile("root.txt", "root", alwaysOverwrite: true)));
+
+        var result = await cli.Run(["buildAll"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal("root", sandbox.ReadFile("root.txt"));
+
+        // D6/D12: nested effortless projects are normally excluded. Only the
+        // root step ran, and no child process was spawned for the nested one.
+        Assert.False(File.Exists(Path.Combine(nested, "nested.txt")));
+        Assert.DoesNotContain(
+            "Executing 'effortless -buildLocal' in ",
+            result.Stdout,
+            StringComparison.Ordinal);
+        Assert.Equal(
+            ["to-uppercase"],
+            server.Requests.Select(request => request.ToolName).ToArray());
+    }
+
+    [Theory(DisplayName = "build-with-subprojects-includes-nested: buildWithSubprojects builds nested projects")]
     [Trait("Slow", "true")]
-    public async Task BuildAllRunsNestedProjects()
+    [InlineData("buildWithSubprojects")]
+    [InlineData("-buildWithSubprojects")]
+    [InlineData("-bws")]
+    public async Task BuildWithSubprojectsRunsNestedProjects(string form)
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -227,7 +297,7 @@ public sealed class BuildTests
                 FileSetEntry.TextFile("nested.txt", "nested", alwaysOverwrite: true)));
 
         var result = await cli.Run(
-            ["buildAll"],
+            [form],
             sandbox.ProjectPath,
             sandbox,
             timeoutMs: 180_000);
@@ -240,7 +310,9 @@ public sealed class BuildTests
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Contains("/nested", result.Stdout, StringComparison.Ordinal);
-        Assert.Equal(["to-uppercase", "echo"], server.Requests.Select(request => request.ToolName).ToArray());
+        Assert.Equal(
+            ["to-uppercase", "echo"],
+            server.Requests.Select(request => request.ToolName).ToArray());
     }
 
     [Fact(DisplayName = "build-fail-stops: a failed step stops the default build")]
@@ -438,14 +510,12 @@ public sealed class BuildTests
         var result = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        var pinnedVersion = Behavior.IsLegacy
-            ? WorkflowTestSupport.OldVersion
-            : WorkflowTestSupport.HeadVersion;
-        var pinnedLabel = Behavior.IsLegacy
-            ? " [pinned]"
-            : " [latest]";
+
+        // D17: a pin the catalog can still satisfy is honored by the automatic
+        // gate, so the pinned step reports its pinned version, not HEAD. The
+        // unpinned step still tracks HEAD.
         Assert.Contains(
-            $"cli:> effortless/common/to-uppercase {pinnedVersion}{pinnedLabel}",
+            $"cli:> effortless/common/to-uppercase {WorkflowTestSupport.OldVersion} [pinned]",
             result.Stdout,
             StringComparison.Ordinal);
         Assert.Contains(
@@ -454,8 +524,8 @@ public sealed class BuildTests
             StringComparison.Ordinal);
     }
 
-    [Fact(DisplayName = "build-pinned-url: automatic freshness clears PinnedVersion and selects HEAD")]
-    public async Task AutomaticFreshnessClearsPinAndSelectsHeadUrl()
+    [Fact(DisplayName = "build-pinned-url: automatic freshness honors a resolvable PinnedVersion")]
+    public async Task AutomaticFreshnessHonorsAResolvablePin()
     {
         var cli = new CliUnderTest();
         await using var server = new MockToolServer();
@@ -472,28 +542,16 @@ public sealed class BuildTests
         var result = await cli.Run(["build"], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        var request = Assert.Single(server.Requests);
-        var expectedVersion = Behavior.IsLegacy
-            ? WorkflowTestSupport.OldVersion
-            : WorkflowTestSupport.HeadVersion;
-        Assert.Equal(expectedVersion, request.Version);
+
+        // D17 supersedes step-03A here: a step is pinned or it follows HEAD.
+        // The currentness gate no longer discards a pin the catalog can still
+        // satisfy, in either the ported or the legacy binary.
         Assert.Equal(
-            expectedVersion,
-            WorkflowTestSupport.SingleStep(sandbox)["LastVersionUsed"]!.GetValue<string>());
+            WorkflowTestSupport.OldVersion,
+            Assert.Single(server.Requests).Version);
         Assert.Equal(
-            server.ToolUri("to-uppercase", expectedVersion).ToString(),
-            WorkflowTestSupport.SingleStep(sandbox)["LastUrl"]!.GetValue<string>());
-        if (Behavior.IsLegacy)
-        {
-            Assert.Equal(
-                WorkflowTestSupport.OldVersion,
-                WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]!.GetValue<string>());
-        }
-        else
-        {
-            Assert.Null(
-                WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]);
-        }
+            WorkflowTestSupport.OldVersion,
+            WorkflowTestSupport.SingleStep(sandbox)["PinnedVersion"]!.GetValue<string>());
     }
 
     [Fact(DisplayName = "build-pinned-missing: an unavailable hard pin is cleared before build")]
@@ -543,8 +601,7 @@ public sealed class BuildTests
             new WorkflowStep(
                 "Versioned",
                 "",
-                $"effortless/common/to-uppercase/{WorkflowTestSupport.OldVersion}",
-                PinnedVersion: WorkflowTestSupport.HeadVersion));
+                $"effortless/common/to-uppercase/{WorkflowTestSupport.OldVersion}"));
         server.Enqueue("to-uppercase", ToolBehavior.Files());
 
         var result = await cli.Run(["build"], sandbox.ProjectPath, sandbox);

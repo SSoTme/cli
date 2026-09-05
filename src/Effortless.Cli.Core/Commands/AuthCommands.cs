@@ -28,7 +28,7 @@ public sealed class AuthCommands
         return _auth.ProjectLogin();
     }
 
-    public int Subscription(string jwt)
+    public int Plan(string jwt)
     {
         return _auth.Subscription(jwt);
     }

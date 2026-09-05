@@ -19,19 +19,25 @@ public sealed class BuildCommand
             triggerWatcher ?? new TriggerBuildWatcher();
     }
 
-    public int Run(CliInvocation invocation, bool all)
+    public int Run(
+        CliInvocation invocation,
+        bool all,
+        bool withSubprojects = false)
     {
         if (string.IsNullOrWhiteSpace(
                 invocation.Options.buildOnTrigger))
         {
-            return RunOnce(invocation, all);
+            return RunOnce(invocation, all, withSubprojects);
         }
 
         _triggerWatcher.WatchAsync(
                 invocation.Options.buildOnTrigger,
                 () =>
                 {
-                    var result = RunOnce(invocation, all);
+                    var result = RunOnce(
+                        invocation,
+                        all,
+                        withSubprojects);
                     if (result != 0)
                     {
                         throw new InvalidOperationException(
@@ -47,14 +53,17 @@ public sealed class BuildCommand
 
     private int RunOnce(
         CliInvocation invocation,
-        bool all)
+        bool all,
+        bool withSubprojects)
     {
         var project = invocation.Project!;
-        var command = all
-            ? "buildAll"
-            : invocation.Options.buildLocal
-                ? "build -buildLocal"
-                : "build";
+        var command = withSubprojects
+            ? "buildWithSubprojects"
+            : all
+                ? "buildAll"
+                : invocation.Options.buildLocal
+                    ? "build -buildLocal"
+                    : "build";
         invocation.BuildErrorLog.Begin(
             project.RootPath,
             invocation.Options.continueOnError,
@@ -73,7 +82,8 @@ public sealed class BuildCommand
                     invocation.Options.transpilerGroup,
                     invocation.Options.buildLocal,
                     invocation.Options.debug,
-                    invocation.Options.continueOnError);
+                    invocation.Options.continueOnError,
+                    withSubprojects);
             }
             else
             {

@@ -118,14 +118,14 @@
       },
       {
         "DispositionId": "review-drop",
-        "Label": "Review — recommended DROP",
+        "Label": "Review \u2014 recommended DROP",
         "IsRetained": false,
         "NeedsUserConfirmation": false,
         "Description": "Historical review disposition. All rows that used it have been resolved to an explicit keep or drop disposition."
       },
       {
         "DispositionId": "review-keep",
-        "Label": "Review — recommended KEEP",
+        "Label": "Review \u2014 recommended KEEP",
         "IsRetained": true,
         "NeedsUserConfirmation": false,
         "Description": "Historical review disposition. All rows that used it have been resolved to an explicit keep or drop disposition."
@@ -178,6 +178,21 @@
         "nullable": true,
         "Description": "Number of options in this category.",
         "formula": "=COUNTIFS(CliOptions!{{Category}}, {{OptionCategoryId}})"
+      },
+      {
+        "name": "ParentCategory",
+        "datatype": "string",
+        "type": "relationship",
+        "nullable": true,
+        "Description": "Grouping category this category nests under in generated docs; null for a top-level category.",
+        "RelatedTo": "OptionCategories"
+      },
+      {
+        "name": "Tier",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "Default tier for options in this category when not overridden per-row (primary/secondary/modifier/plumbing)."
       }
     ],
     "data": [
@@ -185,85 +200,137 @@
         "OptionCategoryId": "cli-meta",
         "Label": "CLI meta",
         "SortOrder": 1,
-        "Description": "Options about the CLI itself: help, version, info, debug, self-upgrade."
+        "Description": "Options about the CLI itself: help, version, info, debug, self-upgrade.",
+        "ParentCategory": null,
+        "Tier": null
       },
       {
         "OptionCategoryId": "project",
         "Label": "Project file",
         "SortOrder": 2,
-        "Description": "Creating, describing and configuring the effortless.json project."
+        "Description": "Creating, describing and configuring the effortless.json project.",
+        "ParentCategory": "project-pipeline",
+        "Tier": null
       },
       {
         "OptionCategoryId": "install",
         "Label": "Install / uninstall tools",
         "SortOrder": 3,
-        "Description": "Registering transpiler steps in effortless.json."
+        "Description": "Registering transpiler steps in effortless.json.",
+        "ParentCategory": "project-pipeline",
+        "Tier": null
       },
       {
         "OptionCategoryId": "build",
         "Label": "Build",
         "SortOrder": 4,
-        "Description": "Running registered transpiler steps."
+        "Description": "Running registered transpiler steps.",
+        "ParentCategory": "project-pipeline",
+        "Tier": null
       },
       {
         "OptionCategoryId": "clean",
         "Label": "Clean",
         "SortOrder": 5,
-        "Description": "Removing generated output using the .zfs ledgers."
+        "Description": "Removing generated output using the .zfs ledgers.",
+        "ParentCategory": "project-pipeline",
+        "Tier": null
       },
       {
         "OptionCategoryId": "transpile-io",
         "Label": "Transpile inputs & outputs",
         "SortOrder": 6,
-        "Description": "Options that shape a single transpile request: inputs, output name, parameters, account credentials, timeout, target URL."
+        "Description": "Options that shape a single transpile request: inputs, output name, parameters, account credentials, timeout, target URL.",
+        "ParentCategory": null,
+        "Tier": null
       },
       {
         "OptionCategoryId": "tool-resolution",
         "Label": "Tool resolution & versions",
         "SortOrder": 7,
-        "Description": "How a tool name becomes a URL: remote index, versions, pins, upgrades."
+        "Description": "How a tool name becomes a URL: remote index, versions, pins, upgrades.",
+        "ParentCategory": "tools",
+        "Tier": null
       },
       {
         "OptionCategoryId": "tool-urls",
         "Label": "Tool URL overrides",
         "SortOrder": 8,
-        "Description": "The per-user ~/.ssotme/tool_urls.json override table."
+        "Description": "The per-user ~/.ssotme/tool_urls.json override table.",
+        "ParentCategory": "tools",
+        "Tier": null
       },
       {
         "OptionCategoryId": "auth",
         "Label": "Authentication & account",
         "SortOrder": 9,
-        "Description": "Magic-link login, project login, subscription, API keys."
+        "Description": "Magic-link login, project login, subscription, API keys.",
+        "ParentCategory": "account",
+        "Tier": null
       },
       {
         "OptionCategoryId": "seeds",
         "Label": "Seeds (legacy scaffolding)",
         "SortOrder": 10,
-        "Description": "GitHub-hosted starter seeds. Review — recommended drop."
+        "Description": "GitHub-hosted Effortless seed repositories (root or child projects with a full Effortless stack and effortless.json at the root). Kept per owner decision D1; see the effortless-skills seed skill (step 14).",
+        "ParentCategory": "tools",
+        "Tier": null
       },
       {
         "OptionCategoryId": "legacy-rabbit",
         "Label": "Legacy RabbitMQ",
         "SortOrder": 11,
-        "Description": "Options that only make sense with the RabbitMQ coordinator."
+        "Description": "Options that only make sense with the RabbitMQ coordinator.",
+        "ParentCategory": null,
+        "Tier": null
       },
       {
         "OptionCategoryId": "legacy-dspxml",
         "Label": "Legacy DSPXml docs",
         "SortOrder": 12,
-        "Description": "The DSPXml self-documentation pipeline."
+        "Description": "The DSPXml self-documentation pipeline.",
+        "ParentCategory": null,
+        "Tier": null
       },
       {
         "OptionCategoryId": "legacy-other",
         "Label": "Other legacy",
         "SortOrder": 13,
-        "Description": "Bridges and agents that pre-date the rulebook/REST model."
+        "Description": "Bridges and agents that pre-date the rulebook/REST model.",
+        "ParentCategory": null,
+        "Tier": null
       },
       {
         "OptionCategoryId": "dead",
         "Label": "Dead options",
         "SortOrder": 14,
-        "Description": "Declared in the Plossum options class but never read by any code path."
+        "Description": "Declared in the Plossum options class but never read by any code path.",
+        "ParentCategory": null,
+        "Tier": null
+      },
+      {
+        "OptionCategoryId": "project-pipeline",
+        "Label": "Project pipeline (build / clean / install / describe)",
+        "SortOrder": 15,
+        "Description": "The verb families that scope over the project tree: build, clean, install/uninstall, and describe, each following the downstream/Local/All/WithSubprojects pattern where applicable.",
+        "ParentCategory": null,
+        "Tier": "primary"
+      },
+      {
+        "OptionCategoryId": "tools",
+        "Label": "Tools (resolution, URL overrides, local host)",
+        "SortOrder": 16,
+        "Description": "How a tool name becomes a URL and version: catalog resolution, pins, per-user tool URL overrides, and (step 12) the local transpiler host.",
+        "ParentCategory": null,
+        "Tier": "secondary"
+      },
+      {
+        "OptionCategoryId": "account",
+        "Label": "Account (authentication, keys)",
+        "SortOrder": 17,
+        "Description": "Login, project login, logout, plan lookup, and stored account API keys.",
+        "ParentCategory": null,
+        "Tier": "secondary"
       }
     ]
   },
@@ -425,6 +492,63 @@
         "nullable": true,
         "Description": "Coverage gap flag: retained options with no test are not allowed to reach Step 2.",
         "formula": "=AND({{IsRetained}}, NOT({{IsTested}}))"
+      },
+      {
+        "name": "Tier",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "primary (day-one verb), secondary (real but occasional), modifier (only meaningful with a parent command), or plumbing (for scripts/CI/tooling)."
+      },
+      {
+        "name": "ParentOption",
+        "datatype": "string",
+        "type": "relationship",
+        "nullable": true,
+        "Description": "For a modifier: the CliOptionId of the command it modifies.",
+        "RelatedTo": "CliOptions"
+      },
+      {
+        "name": "VerbFamily",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "build, clean, or describe for verb-family members sharing the downstream/Local/All/WithSubprojects pattern; null otherwise."
+      },
+      {
+        "name": "Scope",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "downstream, local, all, or withSubprojects: which of the four verb-family scopes this row is, when VerbFamily is set."
+      },
+      {
+        "name": "Rationale",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "The owner's why-this-exists for the option, drawn from DispositionReason/HandlerNotes and the step-09 decision table."
+      },
+      {
+        "name": "HelpSummary",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "One line, at most 72 characters, shown in the default -help listing."
+      },
+      {
+        "name": "HelpDetail",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "Shown by -help <option> and in the generated cli-reference.md; the full explanation, aliases, and quirks."
+      },
+      {
+        "name": "Example",
+        "datatype": "string",
+        "type": "raw",
+        "nullable": true,
+        "Description": "One realistic invocation of the option."
       }
     ],
     "data": [
@@ -434,15 +558,20 @@
         "Aliases": "h",
         "BarewordForms": "help",
         "ValueType": "bool",
-        "HelpText": "Show help about how to use the SSoT.me CLI",
+        "HelpText": "Show help about how to use the Effortless CLI",
         "Category": "cli-meta",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 4,
         "HandlerNotes": "ParseCommand: prints parser.UsageInfo header + \"Syntax: effortless [account/]transpiler [Options]\" + options; SuppressTranspile.",
-        "DispositionReason": "Core.",
-        "Description": "Print usage."
+        "DispositionReason": "Step 09: -help becomes grouped by category/tier and filterable (-help <category|option>, -help all) instead of one flat list of every option; behavior implemented in a later phase.",
+        "Description": "Print usage.",
+        "Tier": "primary",
+        "Rationale": "Every CLI needs a self-describing entry point; this is where the option taxonomy (tiers, categories, families) actually gets surfaced to a user.",
+        "HelpSummary": "Show usage and available commands",
+        "HelpDetail": "Prints primary-tier commands grouped by category. `-help <category|option>` narrows to one topic; `-help all` prints the flat list of every option regardless of tier.",
+        "Example": "effortless -help"
       },
       {
         "CliOptionId": "init",
@@ -450,7 +579,7 @@
         "Aliases": "",
         "BarewordForms": "init",
         "ValueType": "bool",
-        "HelpText": "Initialize the current folder as the root of an SSoT.me project. An Optional parameter of force will create a sub-project.",
+        "HelpText": "Initialize the current folder as the root of an Effortless project. An Optional parameter of force will create a sub-project.",
         "Category": "project",
         "Disposition": "keep-modified",
         "IsCommand": true,
@@ -458,7 +587,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "ParseCommand: projectName defaults to cwd name; force = (args.Length==2 && args[1]==\"force\"); AICaptureProject.Init(force, name); then continueToLoad=true and build=true (init implies a build).",
         "DispositionReason": "Modified only in that \"force\" must work through the npm shim too (argv passthrough); output identical.",
-        "Description": "Create effortless.json, .gitignore, effortless.env and an empty rulebook in cwd."
+        "Description": "Create effortless.json, .gitignore, effortless.env and an empty rulebook in cwd.",
+        "Tier": "primary",
+        "Rationale": "The first command any new project runs; creates the effortless.json/rulebook scaffold a build needs to exist at all.",
+        "HelpSummary": "Create effortless.json and an empty rulebook here",
+        "HelpDetail": "Initializes the current folder as an Effortless project root. Pass `force` as the next argument to create a nested sub-project instead of failing when a parent project already exists.",
+        "Example": "effortless -init"
       },
       {
         "CliOptionId": "install",
@@ -466,7 +600,7 @@
         "Aliases": "",
         "BarewordForms": "install",
         "ValueType": "bool",
-        "HelpText": "Saves the current command into the SSoT.me Project file",
+        "HelpText": "Saves the current command into the Effortless Project file",
         "Category": "install",
         "Disposition": "keep",
         "IsCommand": true,
@@ -474,7 +608,12 @@
         "LegacyRefCount": 6,
         "HandlerNotes": "Runs the tool first (StartTranspile/SaveFileSet) then Install() in the finally block; URL tools install without running; ShouldAutoBuildForInstall builds first when -i file is missing; ProjectTranspiler ctor captures Environment.CommandLine and strips exe/verb prefixes.",
         "DispositionReason": "Core.",
-        "Description": "Register a transpiler step in effortless.json (and run it once)."
+        "Description": "Register a transpiler step in effortless.json (and run it once).",
+        "Tier": "primary",
+        "Rationale": "How a transpiler step becomes part of the project rather than a one-off run; every build depends on steps registered this way.",
+        "HelpSummary": "Register a transpiler step in effortless.json",
+        "HelpDetail": "Runs the named tool once and, on success, saves it as a step in effortless.json so future builds include it. Combine with -transpilerGroup to tag the step into a group.",
+        "Example": "effortless install rulebook-to-postgres"
       },
       {
         "CliOptionId": "uninstall",
@@ -482,7 +621,7 @@
         "Aliases": "",
         "BarewordForms": "uninstall",
         "ValueType": "bool",
-        "HelpText": "Removes the current command from the SSoT.me Project file",
+        "HelpText": "Removes the current command from the Effortless Project file",
         "Category": "install",
         "Disposition": "keep",
         "IsCommand": true,
@@ -490,7 +629,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "TranspileProject: name from RemainingArguments[0]; SSoTmeProject.Uninstall matches by short/qualified name + cwd RelativePath + optional -tg; prompts y/n to clean when a .zfs exists.",
         "DispositionReason": "Core.",
-        "Description": "Remove a registered step."
+        "Description": "Remove a registered step.",
+        "Tier": "primary",
+        "Rationale": "The inverse of install; needed whenever a project's pipeline changes.",
+        "HelpSummary": "Remove a registered step from effortless.json",
+        "HelpDetail": "Removes the named step from the current folder's effortless.json entries, matching by tool name and (optionally) -transpilerGroup. Offers to clean the step's previous output first.",
+        "Example": "effortless uninstall rulebook-to-postgres"
       },
       {
         "CliOptionId": "build",
@@ -506,7 +650,14 @@
         "LegacyRefCount": 4,
         "HandlerNotes": "TranspileProject: BuildErrorLog.Begin(\"build\"); project.Rebuild(cwd, includeDisabled, tg, buildOnTrigger, copilotConnect, buildLocal=false, debug, continueOnError); Finish.",
         "DispositionReason": "Core.",
-        "Description": "Run every enabled step at or below cwd."
+        "Description": "Run every enabled step at or below cwd.",
+        "VerbFamily": "build",
+        "Scope": "downstream",
+        "Tier": "primary",
+        "Rationale": "The core day-one verb: runs every enabled step at or below the current folder. The build/clean pair and their All/Local/WithSubprojects scopes are the whole project-pipeline family (D12).",
+        "HelpSummary": "Build steps in this folder and its children",
+        "HelpDetail": "Runs every enabled transpiler step registered at or below the current folder (downstream scope). Use -buildLocal for exactly this folder, -buildAll for the whole project, or -buildWithSubprojects to also include nested effortless projects.",
+        "Example": "effortless build"
       },
       {
         "CliOptionId": "buildAll",
@@ -520,9 +671,16 @@
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 2,
-        "HandlerNotes": "RebuildAll from RootPath; isBuildAll=true also discovers nested effortless.json files (FindSSoTmeJsonFiles) and spawns \"effortless -buildLocal\" in each.",
-        "DispositionReason": "Sub-project builds spawn the current executable by path instead of \"effortless\" from PATH (see PATH env row). Note the bareword \"pullAll\" is case-sensitive in legacy (switch lowercases input, so \"pullall\" never matches) — preserved as-is.",
-        "Description": "Run every step in the whole project, plus nested projects."
+        "HandlerNotes": "RebuildAll from RootPath (isBuildAll=true). D6/D12: nested effortless.json subprojects are NOT traversed; that moved to buildWithSubprojects, which passes withSubprojects=true and drives NestedProjectFinder + ChildProcessRunner.",
+        "DispositionReason": "D6/D12 behavior change: All now means strictly \"as if run from the project root\". v1's buildAll also spawned \"effortless -buildLocal\" in every nested effortless project; the owner confirmed nested projects are generally NOT included in a build, so that traversal moved to the new buildWithSubprojects scope. Sub-project builds still spawn the current executable by path instead of \"effortless\" from PATH. Note the bareword \"pullAll\" is case-sensitive in legacy (switch lowercases input, so \"pullall\" never matches) - preserved as-is.",
+        "Description": "Run every step in the whole project, excluding nested effortless projects.",
+        "VerbFamily": "build",
+        "Scope": "all",
+        "Tier": "primary",
+        "Rationale": "D6/D12: runs the project as if invoked from its root, without walking into nested effortless.json subprojects (which are normally excluded and require -buildWithSubprojects).",
+        "HelpSummary": "Build the whole project from its root",
+        "HelpDetail": "Builds every step in the project as if run from the project root, regardless of the current folder. Nested effortless.json subprojects are excluded (spawned separately via -buildLocal in each); use -buildWithSubprojects to include them.",
+        "Example": "effortless buildAll"
       },
       {
         "CliOptionId": "buildLocal",
@@ -538,7 +696,14 @@
         "LegacyRefCount": 6,
         "HandlerNotes": "IsAtPath(exactMatch:true); also skips the parent-root-seed check.",
         "DispositionReason": "Core.",
-        "Description": "Run only steps whose RelativePath equals cwd."
+        "Description": "Run only steps whose RelativePath equals cwd.",
+        "VerbFamily": "build",
+        "Scope": "local",
+        "Tier": "primary",
+        "Rationale": "The exact-folder scope of the build family (D12); used when you only want to run what is registered right here, ignoring child folders.",
+        "HelpSummary": "Build only steps registered exactly here",
+        "HelpDetail": "Runs only the steps whose RelativePath equals the current folder exactly, ignoring child folders and skipping the parent-root-seed check.",
+        "Example": "effortless buildLocal"
       },
       {
         "CliOptionId": "buildOnTrigger",
@@ -547,14 +712,19 @@
         "BarewordForms": "",
         "ValueType": "string",
         "HelpText": "Builds whenever a trigger is invoked (see readme for URL)",
-        "Category": "legacy-other",
+        "Category": "build",
         "Disposition": "keep-modified",
         "IsCommand": false,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 3,
         "HandlerNotes": "TriggerBuildWatcher polls the live Airtable bridge every 3s and rebuilds after 10 quiet seconds. HTTP, status, or JSON failures stop the watcher with non-zero status; there is no silent polling fallback.",
         "DispositionReason": "Owner decision D2: keep the lightweight cloud-trigger monitor independently of effortless-rulebook-editor.",
-        "Description": "Watch an Airtable base and rebuild on change."
+        "Description": "Watch an Airtable base and rebuild on change.",
+        "Tier": "secondary",
+        "Rationale": "D24: a lightweight, dependency-free way to watch a cloud source (Airtable today) for changes without running a whole editor/Docker stack. Kept as its own small polling loop precisely because that is not overkill for common single-purpose use cases.",
+        "HelpSummary": "Rebuild automatically when a remote trigger fires",
+        "HelpDetail": "Polls the Airtable change-trigger bridge for the given base id every few seconds and rebuilds after a quiet period once it reports a change. Independent of the effortless-rulebook-editor's own change detection. Polling, HTTP, or payload failures are fatal, not a silently-ignored 'unchanged' result.",
+        "Example": "effortless build -buildOnTrigger appXXXXXXXXXXXXXX"
       },
       {
         "CliOptionId": "copilotConnect",
@@ -586,7 +756,12 @@
         "LegacyRefCount": 78,
         "HandlerNotes": "Gates DEBUG: lines everywhere; appended as \" -debug\" to every build step command line; makes SavePreviousFileSet also write <tool>.xml; shows debug-level tool logs.",
         "DispositionReason": "Core.",
-        "Description": "Verbose diagnostics."
+        "Description": "Verbose diagnostics.",
+        "Tier": "plumbing",
+        "Rationale": "Verbose diagnostics for scripts, CI, and troubleshooting a failed build; not something a first-time user reaches for.",
+        "HelpSummary": "Print verbose diagnostics for this invocation",
+        "HelpDetail": "Turns on DEBUG output across the build, appends -debug to every spawned step's command line, and writes an extra debug XML fileset snapshot alongside normal output.",
+        "Example": "effortless build -debug"
       },
       {
         "CliOptionId": "describe",
@@ -594,15 +769,20 @@
         "Aliases": "d",
         "BarewordForms": "list,describe",
         "ValueType": "bool",
-        "HelpText": "Describes the current SSoT.me Project (and all transpilers)",
+        "HelpText": "Describe the transpilers in the current folder and its children",
         "Category": "project",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 2,
-        "HandlerNotes": "project.Describe(cwd): header, settings, transpilers filtered by IsAtPath(cwd). QUIRK: bareword \"list\" means describe, while flag -list means listVersions.",
-        "DispositionReason": "Core (quirk preserved).",
-        "Description": "Print project summary for cwd subtree."
+        "HandlerNotes": "v2 behavior change: project.Describe(cwd) now filters by IsAtOrBelowPath(cwd) instead of IsAtPath(exactMatch:true), matching the build/clean downstream convention. The old local-only behavior moves to the new describeLocal row. QUIRK preserved: bareword \"list\" means describe, while flag -list means listVersions.",
+        "DispositionReason": "D12: describe joins the build/clean verb-family pattern. v1's local-only describe becomes v2's describeLocal; plain describe now means downstream to match build.",
+        "Description": "Print project summary for steps at or below cwd (v2: downstream, like build; was local-only in v1).",
+        "VerbFamily": "describe",
+        "Scope": "downstream",
+        "Tier": "primary",
+        "Rationale": "D12/D23: describe is the steps view of a project; joining the build/clean verb family (D12) means it now defaults to downstream scope instead of local-only, matching how build already behaves.",
+        "HelpSummary": "Describe steps in this folder and its children"
       },
       {
         "CliOptionId": "describeAll",
@@ -618,7 +798,14 @@
         "LegacyRefCount": 2,
         "HandlerNotes": "project.Describe() unfiltered.",
         "DispositionReason": "Core.",
-        "Description": "Print the whole project."
+        "Description": "Print the whole project.",
+        "VerbFamily": "describe",
+        "Scope": "all",
+        "Tier": "secondary",
+        "Rationale": "D23: describe is the steps view of a project; describeAll is its whole-project scope, unfiltered by folder.",
+        "HelpSummary": "Print the whole project's steps, unfiltered",
+        "HelpDetail": "Prints every step in the project regardless of folder.",
+        "Example": "effortless describeAll"
       },
       {
         "CliOptionId": "discuss",
@@ -650,7 +837,12 @@
         "LegacyRefCount": 4,
         "HandlerNotes": "LoadInputFiles/ImportFile: comma split, \"newname=pattern\" rename, trailing \"?\" marks optional, directory part validated against project scope (parent project allowed), glob via DirectoryInfo.GetFiles(pattern); binary detected by control chars; contents zipped.",
         "DispositionReason": "Core.",
-        "Description": "Input file(s) sent to the tool."
+        "Description": "Input file(s) sent to the tool.",
+        "Tier": "secondary",
+        "Rationale": "The explicit way to send specific files to a tool instead of relying on its own fileset discovery; used by scripted/CI invocations and by -execute-adjacent local tooling.",
+        "HelpSummary": "Send specific input file(s) to the tool",
+        "HelpDetail": "Comma-separated file names or glob patterns sent to the tool. Supports `newname=pattern` renaming and a trailing `?` to mark a file optional.",
+        "Example": "effortless to-uppercase -input in.txt"
       },
       {
         "CliOptionId": "output",
@@ -666,7 +858,12 @@
         "LegacyRefCount": 0,
         "HandlerNotes": "Copied into payload.CLIOutput by SaveCLIOptions (LegacyRefCount counts only \"this.output\"; it IS used).",
         "DispositionReason": "Core.",
-        "Description": "Requested output filename for the tool."
+        "Description": "Requested output filename for the tool.",
+        "Tier": "secondary",
+        "Rationale": "D21: output shape is the tool's call, not the CLI's \u2014 a tool may write one file or a whole tree. The CLI's only job is to pass the requested name through.",
+        "HelpSummary": "Requested output name, passed through to the tool",
+        "HelpDetail": "Whatever the tool decides: the CLI passes this value to the tool as OutputFileName and does not interpret, validate, or default it. The tool may use it as a single file name or as the root of a directory tree it writes.",
+        "Example": "effortless to-uppercase -input in.txt -output out.txt"
       },
       {
         "CliOptionId": "clean",
@@ -682,7 +879,14 @@
         "LegacyRefCount": 8,
         "HandlerNotes": "Three branches: with a .zfs given via -i (clean that ledger); with no remaining args (project.Clean(cwd, preserveZFS, purge, debug) + reverse seed replacements); with a tool name (result.CleanFileSet instead of SaveFileSet after running).",
         "DispositionReason": "Core.",
-        "Description": "Delete generated files recorded in .zfs ledgers."
+        "Description": "Delete generated files recorded in .zfs ledgers.",
+        "VerbFamily": "clean",
+        "Scope": "downstream",
+        "Tier": "primary",
+        "Rationale": "The build/clean pair is the core loop; clean removes what a previous build wrote so the next build starts from a known state.",
+        "HelpSummary": "Delete generated output here and below",
+        "HelpDetail": "Deletes files recorded in the .zfs ledger for every step registered at or below the current folder. Combine with -purge to also clean orphaned ledgers for steps no longer registered, or -preserveZFS to keep the ledger files themselves.",
+        "Example": "effortless clean"
       },
       {
         "CliOptionId": "cleanAll",
@@ -692,13 +896,20 @@
         "ValueType": "bool",
         "HelpText": "Clean all project transpilers",
         "Category": "clean",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 4,
-        "HandlerNotes": "project.CleanAll: whole root, nested projects via spawned \"effortless -clean\", RemoveEmptyFolders(root).",
-        "DispositionReason": "Core (child spawn modified like buildAll).",
-        "Description": "Clean the whole project."
+        "HandlerNotes": "CleanRunner.CleanAll from RootPath (cleanAll=true). D6/D12: nested effortless.json subprojects are NOT traversed; that moved to cleanWithSubprojects, which passes withSubprojects=true.",
+        "DispositionReason": "D6/D12 behavior change: All now means strictly \"as if run from the project root\". v1's cleanAll also spawned \"effortless -clean\" in every nested effortless project; that traversal moved to the new cleanWithSubprojects scope.",
+        "Description": "Clean the whole project, excluding nested effortless projects.",
+        "VerbFamily": "clean",
+        "Scope": "all",
+        "Tier": "primary",
+        "Rationale": "D12: the whole-project scope of clean, mirroring buildAll; also removes empty folders left behind.",
+        "HelpSummary": "Clean the whole project from its root",
+        "HelpDetail": "Cleans every step's output across the whole project (spawning -clean in nested effortless.json subprojects) and removes folders left empty afterward.",
+        "Example": "effortless cleanAll"
       },
       {
         "CliOptionId": "cleanLocal",
@@ -714,7 +925,14 @@
         "LegacyRefCount": 2,
         "HandlerNotes": "IsAtPath(exactMatch:true).",
         "DispositionReason": "Core.",
-        "Description": "Clean only steps registered exactly at cwd."
+        "Description": "Clean only steps registered exactly at cwd.",
+        "VerbFamily": "clean",
+        "Scope": "local",
+        "Tier": "primary",
+        "Rationale": "D12: the exact-folder scope of clean, mirroring buildLocal.",
+        "HelpSummary": "Clean only steps registered exactly here",
+        "HelpDetail": "Cleans only the steps whose RelativePath equals the current folder exactly.",
+        "Example": "effortless cleanLocal"
       },
       {
         "CliOptionId": "purge",
@@ -730,7 +948,13 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "RemoveUnusedZFSFiles: any .zfs under .ssotme not matching a current step is cleaned (in its RelativePath) then deleted, plus its debug .xml. Only when !preserveZFS.",
         "DispositionReason": "Core.",
-        "Description": "Also clean ledgers of steps that are no longer registered."
+        "Description": "Also clean ledgers of steps that are no longer registered.",
+        "Tier": "modifier",
+        "ParentOption": "clean",
+        "Rationale": "Keeps a project's .ssotme ledger directory from accumulating stale entries for steps that were uninstalled without ever being cleaned.",
+        "HelpSummary": "Also delete ledgers for steps no longer registered",
+        "HelpDetail": "When passed with clean, any .zfs ledger under .ssotme that no longer corresponds to a currently-registered step is cleaned (its recorded output files are deleted) and then the ledger file itself is removed, along with its debug XML. Has no effect when -preserveZFS is also set.",
+        "Example": "effortless clean -purge"
       },
       {
         "CliOptionId": "skipClean",
@@ -746,7 +970,13 @@
         "LegacyRefCount": 2,
         "HandlerNotes": "SaveFileSet(skipClean): skips CleanFileSet of the previous .zfs before writing.",
         "DispositionReason": "Core.",
-        "Description": "Write outputs without first cleaning the previous run."
+        "Description": "Write outputs without first cleaning the previous run.",
+        "Tier": "modifier",
+        "ParentOption": "build",
+        "Rationale": "Lets a tool run write outputs on top of whatever is already there instead of first deleting the previous run's files; useful when a tool's own output is additive or when a previous clean already ran.",
+        "HelpSummary": "Write outputs without cleaning the previous ones",
+        "HelpDetail": "Skips deleting the files recorded in the previous .zfs ledger before a step writes its new output. The previous output is left in place; anything the new run does not overwrite survives untouched.",
+        "Example": "effortless to-uppercase -input in.txt -skipClean"
       },
       {
         "CliOptionId": "localGuide",
@@ -778,7 +1008,12 @@
         "LegacyRefCount": 5,
         "HandlerNotes": "SeedCatalogClient lists public repositories under the requested/default GitHub account and retains only repositories with effortless.json at the root.",
         "DispositionReason": "Owner decision D1: root and child Effortless repositories remain first-class seeds.",
-        "Description": "List public Effortless seed repositories."
+        "Description": "List public Effortless seed repositories.",
+        "Tier": "secondary",
+        "Rationale": "D25: seed discovery is real but occasional \u2014 used when scaffolding a new project from an existing public Effortless repository, not on every-day builds.",
+        "HelpSummary": "List public Effortless seed repositories",
+        "HelpDetail": "Lists public repositories under the requested (or default) GitHub account that have effortless.json at the repository root, making them discoverable as seeds.",
+        "Example": "effortless -listSeeds effortlessapi"
       },
       {
         "CliOptionId": "cloneSeed",
@@ -794,7 +1029,12 @@
         "LegacyRefCount": 5,
         "HandlerNotes": "SeedRepositoryManager runs argument-safe git clone, preserves repository history, verifies effortless.json at the root, and prints the explicit build command without executing cloned code automatically.",
         "DispositionReason": "Owner decision D1. Modernized to preserve .git and avoid executing downloaded code without a separate user action.",
-        "Description": "Clone a public Effortless seed repository."
+        "Description": "Clone a public Effortless seed repository.",
+        "Tier": "secondary",
+        "Rationale": "D25: the other half of seed discovery \u2014 turning a listed seed into a local starting project.",
+        "HelpSummary": "Clone a public Effortless seed repository",
+        "HelpDetail": "Runs an argument-safe git clone of the named seed repository, preserving its .git history, and verifies effortless.json exists at the root. Does not execute any cloned code automatically; prints the explicit build command to run next.",
+        "Example": "effortless -cloneSeed effortlessapi/some-seed"
       },
       {
         "CliOptionId": "account",
@@ -804,13 +1044,18 @@
         "ValueType": "string",
         "HelpText": "The account which the transpiler belongs to",
         "Category": "transpile-io",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": false,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 20,
-        "HandlerNotes": "Also auto-extracted from \"acct/tool\" names when no URL resolves. Drives credential injection: effortless.env {ACCOUNT}_{PAT|API_KEY|APIKEY|KEY}->apiKey, {ACCOUNT}_{BASEID|BASE_ID}->baseId, else ssotme.key APIKeys[account]->apiKey (JSON-valued key => error). Sent as cliAccount.",
-        "DispositionReason": "Core.",
-        "Description": "Credential/account selector for a tool."
+        "HandlerNotes": "Also auto-extracted from \"acct/tool\" names when no URL resolves. D20: resolution never fails on acct/tool alone - if acct/tool does not resolve in the catalog, the CLI resolves tool and behaves as tool -account acct, failing only if tool itself does not resolve either. Drives credential injection: effortless.env {ACCOUNT}_{PAT|API_KEY|APIKEY|KEY}->apiKey, {ACCOUNT}_{BASEID|BASE_ID}->baseId, else effortless.key APIKeys[account]->apiKey (JSON-valued key => error). Sent as cliAccount.",
+        "DispositionReason": "D20: acct/tool extraction behavior is changing from an implicit fallback to a documented never-fail contract (ToolResolutionRules R6/R7).",
+        "Description": "Credential/account selector for a tool.",
+        "Tier": "secondary",
+        "Rationale": "D19/D20: selects which stored credentials apply to a tool invocation, whether given explicitly or extracted from an `acct/tool` name.",
+        "HelpSummary": "Account whose stored credentials apply to this tool",
+        "HelpDetail": "Selects the account used for credential injection (see -setAccountAPIKey) and is also auto-extracted from an `acct/tool` name when the combined name does not resolve in the catalog (D20: resolution then falls back to `tool -account acct` instead of failing).",
+        "Example": "effortless mytool -account myaccount"
       },
       {
         "CliOptionId": "parameters",
@@ -826,7 +1071,12 @@
         "LegacyRefCount": 8,
         "HandlerNotes": "Sent as cliParams; extra positional args become param{n}=value; ProjectSettings appended as name=value unless already present; account credentials appended last (replacing same-named entries).",
         "DispositionReason": "Core.",
-        "Description": "key=value parameters for the tool."
+        "Description": "key=value parameters for the tool.",
+        "Tier": "secondary",
+        "Rationale": "The general-purpose way to pass key=value data into a tool invocation without a dedicated flag for every possible input.",
+        "HelpSummary": "key=value parameters passed to the tool",
+        "HelpDetail": "A comma-separated list of key=value pairs sent to the tool as cliParams. Extra positional arguments become param0, param1, etc. Project settings and account credentials are appended automatically, with credentials taking precedence on a name collision.",
+        "Example": "effortless mytool -parameters name=value,other=123"
       },
       {
         "CliOptionId": "listSettings",
@@ -842,7 +1092,12 @@
         "LegacyRefCount": 1,
         "HandlerNotes": "project.ListSettings(): \"SETTINGS:\" then \"    - name = value\" or \"NO settings added to the project yet.\"",
         "DispositionReason": "Core.",
-        "Description": "Print ProjectSettings."
+        "Description": "Print ProjectSettings.",
+        "Tier": "secondary",
+        "Rationale": "D23: project settings (persistent key=value values on the project) are a distinct concept from user-level state (info) and from steps (describe); this prints just that layer.",
+        "HelpSummary": "List this project's settings",
+        "HelpDetail": "Prints every ProjectSetting stored in effortless.json, or a message that none have been added yet.",
+        "Example": "effortless -listSettings"
       },
       {
         "CliOptionId": "addSetting",
@@ -850,7 +1105,7 @@
         "Aliases": "as",
         "BarewordForms": "",
         "ValueType": "list",
-        "HelpText": "Adds a setting to the SSoT.me Project",
+        "HelpText": "Adds a setting to the Effortless Project",
         "Category": "project",
         "Disposition": "keep",
         "IsCommand": true,
@@ -858,7 +1113,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "project.AddSetting(\"name=value\") per item then Save; \"project-name\" also renames the project; missing name => exception.",
         "DispositionReason": "Core.",
-        "Description": "Add/replace a ProjectSetting."
+        "Description": "Add/replace a ProjectSetting.",
+        "Tier": "secondary",
+        "Rationale": "The write side of project settings; used to configure a project once rather than repeat a parameter on every build.",
+        "HelpSummary": "Add or replace a project setting",
+        "HelpDetail": "Adds a name=value ProjectSetting to effortless.json, replacing any existing setting with the same name. The special name `project-name` renames the project instead.",
+        "Example": "effortless -addSetting env=production"
       },
       {
         "CliOptionId": "removeSetting",
@@ -866,7 +1126,7 @@
         "Aliases": "rs",
         "BarewordForms": "",
         "ValueType": "list",
-        "HelpText": "Removes a setting from the SSoT.me Project",
+        "HelpText": "Removes a setting from the Effortless Project",
         "Category": "project",
         "Disposition": "keep",
         "IsCommand": true,
@@ -874,7 +1134,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "project.RemoveSetting(name) then Save; unknown => exception \"Can't find matching setting\".",
         "DispositionReason": "Core.",
-        "Description": "Remove a ProjectSetting."
+        "Description": "Remove a ProjectSetting.",
+        "Tier": "secondary",
+        "Rationale": "The inverse of addSetting; needed whenever a project setting is no longer wanted.",
+        "HelpSummary": "Remove a project setting",
+        "HelpDetail": "Removes the named ProjectSetting from effortless.json. Fails clearly when no setting with that name exists.",
+        "Example": "effortless -removeSetting env"
       },
       {
         "CliOptionId": "keyFile",
@@ -938,7 +1203,12 @@
         "LegacyRefCount": 6,
         "HandlerNotes": "Default 180000 ms; HttpClient.Timeout, retry loop budget, waitForCook bound, -execute WaitForExit; sent as cliWaitTimeout.",
         "DispositionReason": "Core.",
-        "Description": "Timeout in milliseconds."
+        "Description": "Timeout in milliseconds.",
+        "Tier": "plumbing",
+        "Rationale": "Controls how long the CLI will wait on a slow or cold-starting remote tool before giving up; mainly a knob for scripts and CI against slow workloads.",
+        "HelpSummary": "Timeout in milliseconds for the tool call",
+        "HelpDetail": "Bounds the HTTP client timeout, the retry-loop budget, and (for -execute) how long a local process is given to exit. Defaults to 180000 ms (3 minutes). Sent to the tool as cliWaitTimeout.",
+        "Example": "effortless mytool -waitTimeout 300000"
       },
       {
         "CliOptionId": "runAs",
@@ -954,7 +1224,12 @@
         "LegacyRefCount": 6,
         "HandlerNotes": "Selects ~/.ssotme/ssotme.{runAs}.key for GetSSoTmeKey/SetSSoTmeKey (info, setAccountAPIKey, account lookup, StartTranspile).",
         "DispositionReason": "Cheap and coherent with -setAccountAPIKey multi-account key files.",
-        "Description": "Use an alternate key file."
+        "Description": "Use an alternate key file.",
+        "Tier": "plumbing",
+        "Rationale": "D7: cheap to keep and coherent with -setAccountAPIKey's multi-account key files; useful for CI or shared machines running as more than one identity.",
+        "HelpSummary": "Use an alternate user's key file",
+        "HelpDetail": "Selects ~/.effortless/effortless.<user>.key instead of the default key file for this invocation, matching whatever account key was stored under that user with -setAccountAPIKey -runAs <user>.",
+        "Example": "effortless mytool -runAs alice"
       },
       {
         "CliOptionId": "preserveZFS",
@@ -970,7 +1245,13 @@
         "LegacyRefCount": 4,
         "HandlerNotes": "Clean keeps the .zfs ledger files; also disables -purge.",
         "DispositionReason": "Core.",
-        "Description": "Keep .zfs ledgers when cleaning."
+        "Description": "Keep .zfs ledgers when cleaning.",
+        "Tier": "modifier",
+        "ParentOption": "clean",
+        "Rationale": "Lets a clean remove generated files while keeping the ledger record of what was written, useful when you want to re-run clean logic without losing the manifest, or you distrust deleting the ledger itself.",
+        "HelpSummary": "Keep the .zfs ledger files when cleaning",
+        "HelpDetail": "Clean still deletes the generated output files it finds recorded, but keeps the .zfs ledger file itself instead of deleting it. Also disables -purge, since purge's whole point is removing orphaned ledgers.",
+        "Example": "effortless clean -preserveZFS"
       },
       {
         "CliOptionId": "checkResults",
@@ -1018,7 +1299,12 @@
         "LegacyRefCount": 2,
         "HandlerNotes": "ProcessCommandLine: first token is the executable, rest are args; WaitForExit(waitTimeout); Win32Exception => NoStackException \"The system couldn't find the command\"; with -install registers a \"LocalCommand\" step whose CommandLine starts with -execute.",
         "DispositionReason": "Local build steps are REST-agnostic and used by projects.",
-        "Description": "Run a local command as a (registered) step."
+        "Description": "Run a local command as a (registered) step.",
+        "Tier": "secondary",
+        "Rationale": "D26: a shell step with no fileset is a real, distinct need from a REST tool call \u2014 local build tooling (compilers, scripts, package managers) that isn't fileset-aware. Step 12's local transpiler host coexists with this rather than replacing it.",
+        "HelpSummary": "Run a local command as a (registered) step",
+        "HelpDetail": "Runs the given command line as a child process, waiting up to -waitTimeout for it to exit. Combine with -install to register it as a LocalCommand step that runs on every future build.",
+        "Example": "effortless -execute \"npm run build\" -install"
       },
       {
         "CliOptionId": "includeDisabled",
@@ -1034,7 +1320,13 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "DoRebuild runs IsDisabled steps too.",
         "DispositionReason": "Core.",
-        "Description": "Build disabled steps as well."
+        "Description": "Build disabled steps as well.",
+        "Tier": "modifier",
+        "ParentOption": "build",
+        "Rationale": "D22: disabled steps (IsDisabled in effortless.json) are normally skipped; this is the explicit override to run them anyway, paired with the new enable/disable verbs that set IsDisabled directly.",
+        "HelpSummary": "Also run steps marked disabled",
+        "HelpDetail": "Normally a build skips any step with IsDisabled true in effortless.json. This flag runs those steps too, without changing their disabled flag.",
+        "Example": "effortless build -includeDisabled"
       },
       {
         "CliOptionId": "projectName",
@@ -1050,7 +1342,13 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "Init: sets Name (spaces stripped when renaming an existing project).",
         "DispositionReason": "Core.",
-        "Description": "Project name for -init."
+        "Description": "Project name for -init.",
+        "Tier": "modifier",
+        "ParentOption": "init",
+        "Rationale": "The only way to name a project explicitly at creation time instead of accepting the current folder's name.",
+        "HelpSummary": "Project name to use with -init",
+        "HelpDetail": "Sets the project's Name when creating it with -init. When renaming an existing project via -addSetting project-name, spaces are stripped.",
+        "Example": "effortless -init -projectName \"My Project\""
       },
       {
         "CliOptionId": "transpilerGroup",
@@ -1066,12 +1364,17 @@
         "LegacyRefCount": 7,
         "HandlerNotes": "Install sets TranspilerGroup; build/clean/uninstall filter by it (case-insensitive).",
         "DispositionReason": "Core.",
-        "Description": "Group tag for a step."
+        "Description": "Group tag for a step.",
+        "Tier": "secondary",
+        "Rationale": "D14: the way to scope a build, clean, or uninstall to just one group of steps within a folder, e.g. running only the postgres-related steps without touching everything else installed there.",
+        "HelpSummary": "Restrict the command to one named group of steps",
+        "HelpDetail": "Tags a step into a named group at install time, and filters build/clean/uninstall to just that group thereafter (case-insensitive match).",
+        "Example": "effortless build -transpilerGroup postgres"
       },
       {
         "CliOptionId": "setAccountAPIKey",
         "Flag": "-setAccountAPIKey",
-        "Aliases": "api",
+        "Aliases": "api,setAccountKey",
         "BarewordForms": "",
         "ValueType": "string",
         "HelpText": "Add an account api key",
@@ -1082,12 +1385,17 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "Value \"acct/KEY\" or \"acct=KEY\" (= replaced by /); \"baserow/user/pass\" stored as JSON {username,password}; writes ~/.ssotme/ssotme[.runAs].key (chmod 600) via SetSSoTmeKey; bad syntax => error and -1.",
         "DispositionReason": "Core.",
-        "Description": "Store an API key for -account."
+        "Description": "Store an API key for -account.",
+        "Tier": "plumbing",
+        "Rationale": "D19: a stored account key is injected automatically as a parameter whenever a tool registered under that account runs, so credentials don't have to be repeated on every invocation; -account selects one explicitly.",
+        "HelpSummary": "Store an API key for use with -account",
+        "HelpDetail": "Stores name=value under the given account in the local key file (chmod 600). When a tool runs under that account, the stored key is automatically appended to its parameters as name=value; `-account foo` also selects it explicitly for a tool not otherwise tied to that account.",
+        "Example": "effortless -setAccountAPIKey myaccount/MYKEY=abc123"
       },
       {
-        "CliOptionId": "authenticate",
-        "Flag": "-authenticate",
-        "Aliases": "auth,login",
+        "CliOptionId": "login",
+        "Flag": "-login",
+        "Aliases": "auth,authenticate",
         "BarewordForms": "auth,login,authenticate",
         "ValueType": "bool",
         "HelpText": "Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).",
@@ -1098,7 +1406,12 @@
         "LegacyRefCount": 6,
         "HandlerNotes": "Retained as an explicit non-networking stub until the server-side magic-link endpoint is enabled. It exits nonzero with a clear unavailable message and never creates token files or calls the bridge.",
         "DispositionReason": "Keep and clean the command surface for future magic-link authentication, but do not implement or call authentication infrastructure yet. Tool builds and buildOnTrigger remain unauthenticated.",
-        "Description": "Email magic-link login."
+        "Description": "Email magic-link login.",
+        "Tier": "secondary",
+        "Rationale": "D18: shown in help under its plain-English display name; 'authenticate' is kept as an alias since the owner did not insist on removing it. Wiring to the real effortless-auth workload is step 13.",
+        "HelpSummary": "Log in with an email magic link",
+        "HelpDetail": "Authenticates with EffortlessAPI using an emailed magic link. Currently a non-networking stub: it prints an explicit unavailable message and exits nonzero without writing token files or calling the bridge, until the step-13 auth workload is live.",
+        "Example": "effortless login"
       },
       {
         "CliOptionId": "projectLogin",
@@ -1114,7 +1427,12 @@
         "LegacyRefCount": 5,
         "HandlerNotes": "Retained as an explicit non-networking stub. Future behavior may write EFFORTLESS_JWT to effortless.env after service-side authentication is enabled; current behavior never modifies the project.",
         "DispositionReason": "Keep the project-auth command surface without pretending authentication is currently available.",
-        "Description": "Project-scoped login."
+        "Description": "Project-scoped login.",
+        "Tier": "secondary",
+        "Rationale": "D18: kept visible as a real command surface for project-scoped auth; wiring to the real workload is step 13.",
+        "HelpSummary": "Authenticate this project with EffortlessAPI",
+        "HelpDetail": "Authenticates this specific project (as opposed to the global user login) with EffortlessAPI. Currently a non-networking stub that never modifies the project; future behavior may write EFFORTLESS_JWT to effortless.env once the service is enabled.",
+        "Example": "effortless projectLogin"
       },
       {
         "CliOptionId": "logout",
@@ -1130,7 +1448,12 @@
         "LegacyRefCount": 4,
         "HandlerNotes": "If not authenticated: \"No active session found.\"; else prints email and asks \"Are you sure you want to log out? (y/N): \"; deletes the two token files on y/yes.",
         "DispositionReason": "Local-only; works today.",
-        "Description": "Clear the global token."
+        "Description": "Clear the global token.",
+        "Tier": "secondary",
+        "Rationale": "The one auth command that already works fully locally today: it only clears stored tokens.",
+        "HelpSummary": "Clear the stored login token",
+        "HelpDetail": "Prints the logged-in account (if any) and asks for confirmation before deleting the global and project token files.",
+        "Example": "effortless logout"
       },
       {
         "CliOptionId": "repoUrl",
@@ -1194,7 +1517,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "HandleInfoCommand: version, key file name, project name (loads project if present), \"Logged in as: <email> [project|global]\" (refreshing an expired project JWT), \"Subscription: <plan|n/a>\", API keys or \"No API keys configured.\"",
         "DispositionReason": "Core (plan lookup silently n/a while the bridge is short-circuited).",
-        "Description": "Show CLI/user configuration."
+        "Description": "Show CLI/user configuration.",
+        "Tier": "primary",
+        "Rationale": "D23: info is the user-level state view (CLI version, key file, login status, plan) as distinct from listSettings (project settings) and describe (steps). It's also where catalog freshness gets surfaced to a user asking 'why is this stale'.",
+        "HelpSummary": "Show CLI/user configuration and login status",
+        "HelpDetail": "Prints the CLI version, key file name, current project name (if any), login status, subscription plan, and configured API keys. Also reports how long ago the remote tools catalog was last refreshed and its age (step 11 implements the age calculation).",
+        "Example": "effortless -info"
       },
       {
         "CliOptionId": "version",
@@ -1210,7 +1538,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "Prints CLI_VERSION and nothing else; SuppressTranspile.",
         "DispositionReason": "Core.",
-        "Description": "Print the version."
+        "Description": "Print the version.",
+        "Tier": "primary",
+        "Rationale": "The universal, script-safe way to check what's installed.",
+        "HelpSummary": "Print the CLI version",
+        "HelpDetail": "Prints the CLI's own version string and nothing else.",
+        "Example": "effortless -version"
       },
       {
         "CliOptionId": "dryRun",
@@ -1218,14 +1551,14 @@
         "Aliases": "dr",
         "BarewordForms": "dryRun",
         "ValueType": "bool",
-        "HelpText": "Dry run of a buid",
+        "HelpText": "Dry run of a build",
         "Category": "install",
-        "Disposition": "keep",
+        "Disposition": "drop-legacy",
         "IsCommand": false,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 4,
         "HandlerNotes": "IntegrateTranspiler prints \"DRY RUN: ...\" and does not modify effortless.json (the tool still runs). QUIRK: the bareword case label is \"dryRun\" but FixParameters lowercases the input, so the bareword never matches; only -dryRun/-dr work.",
-        "DispositionReason": "Core (quirk preserved; help text typo \"buid\" preserved).",
+        "DispositionReason": "D27: removed. Early build steps write files that later steps read, so a 'run but do not write' build is not a coherent concept - it cannot preview a real multi-step pipeline. Git on a clean tree is the dry run: run the build for real and inspect the diff.",
         "Description": "Preview an install without saving."
       },
       {
@@ -1234,7 +1567,7 @@
         "Aliases": "g",
         "BarewordForms": "",
         "ValueType": "string",
-        "HelpText": "TargetUrl of the tool bing invoked",
+        "HelpText": "TargetUrl of the tool being invoked",
         "Category": "transpile-io",
         "Disposition": "keep",
         "IsCommand": false,
@@ -1242,71 +1575,97 @@
         "LegacyRefCount": 31,
         "HandlerNotes": "Highest-precedence tool resolution: transpiler = SanitizeUrlForFilename(url); POST goes to this URL; .zfs key is the sanitized URL. A bare URL as the tool argument behaves the same.",
         "DispositionReason": "Core (help typo \"bing\" preserved).",
-        "Description": "POST directly to a tool URL."
+        "Description": "POST directly to a tool URL.",
+        "Tier": "modifier",
+        "Rationale": "D15: a tool name plus -targetUrl is a temporary override that posts to a different URL for this one invocation while keeping the tool's identity (name, resolved version, ledger key) intact; a bare URL as the tool argument behaves the same way without a separate flag. Its parent is the transpile invocation, recorded here as build (the same convention skipClean uses), so -help targetUrl names a command a user can actually type.",
+        "HelpSummary": "POST to this URL instead of the resolved tool URL",
+        "HelpDetail": "Overrides where the transpile request is sent for this invocation only, without changing what tool the CLI thinks it ran (unlike -setToolUrl, which is a persistent per-user override). A bare URL given as the tool name argument has the same effect.",
+        "Example": "effortless mytool -targetUrl http://localhost:5000",
+        "ParentOption": "build"
       },
       {
-        "CliOptionId": "listUrls",
-        "Flag": "-listUrls",
-        "Aliases": "lu",
+        "CliOptionId": "listToolUrls",
+        "Flag": "-listToolUrls",
+        "Aliases": "lu,listUrls",
         "BarewordForms": "listtoolurls,listurls,lu",
         "ValueType": "bool",
         "HelpText": "List all custom tool urls defined for this user",
         "Category": "tool-urls",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 5,
         "HandlerNotes": "Prints ~/.ssotme/tool_urls.json sorted by key with \"Total: N tool(s) configured\", or the two no-file/no-entries messages.",
         "DispositionReason": "Core.",
-        "Description": "List URL overrides."
+        "Description": "List URL overrides.",
+        "Tier": "secondary",
+        "Rationale": "D16: canonical counterpart to setToolUrl; lists every per-user override at once.",
+        "HelpDetail": "Prints every tool URL override configured for this user, sorted by tool name, with a total count. `-listUrls`/`lu` still work as hidden aliases.",
+        "Example": "effortless -listToolUrls",
+        "HelpSummary": "List every per-user tool URL override"
       },
       {
-        "CliOptionId": "viewUrl",
-        "Flag": "-viewUrl",
-        "Aliases": "vu,vt",
+        "CliOptionId": "viewToolUrl",
+        "Flag": "-viewToolUrl",
+        "Aliases": "vu,vt,viewUrl",
         "BarewordForms": "viewtoolurl,viewurl,vu,vt",
         "ValueType": "string",
         "HelpText": "View the url for the specified tool",
         "Category": "tool-urls",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 9,
         "HandlerNotes": "Prints \"Tool 'x' is configured with URL: ...\" or \"is not configured in ~/.ssotme/tool_urls.json file.\"; missing name => usage error.",
         "DispositionReason": "Core.",
-        "Description": "Show one URL override."
+        "Description": "Show one URL override.",
+        "Tier": "secondary",
+        "Rationale": "D16: canonical counterpart to setToolUrl; inspects one override without listing all of them.",
+        "HelpDetail": "Prints the configured URL override for the named tool, or a message that it is not configured. `-viewUrl`/`vu`/`vt` still work as hidden aliases.",
+        "Example": "effortless -viewToolUrl mytool",
+        "HelpSummary": "Show the URL override configured for a tool"
       },
       {
-        "CliOptionId": "setUrl",
-        "Flag": "-setUrl",
-        "Aliases": "su,setToolUrl",
+        "CliOptionId": "setToolUrl",
+        "Flag": "-setToolUrl",
+        "Aliases": "su,setUrl",
         "BarewordForms": "settoolurl,seturl,su,st",
         "ValueType": "string",
         "HelpText": "Set a tool's URL to a custom endpoint for this user",
         "Category": "tool-urls",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 7,
         "HandlerNotes": "Value \"name=url\" (exactly one =); prepends https:// when no scheme; warns when name is cli-cloud-bridge; writes tool_urls.json.",
         "DispositionReason": "Core.",
-        "Description": "Add/replace a URL override."
+        "Description": "Add/replace a URL override.",
+        "Tier": "secondary",
+        "Rationale": "D16: ToolUrl is the canonical family name; the original setUrl/removeUrl/viewUrl/listUrls names were a naming mistake kept only as hidden aliases for compatibility.",
+        "HelpDetail": "Adds or replaces a per-user URL override for the named tool in ~/.effortless/tool_urls.json. Distinct from the per-project -pin: this override applies to every project on this machine, not just one. `-setUrl`/`su` still work as hidden aliases.",
+        "Example": "effortless -setToolUrl mytool=http://localhost:3000",
+        "HelpSummary": "Set a per-user URL override for a tool"
       },
       {
-        "CliOptionId": "removeUrl",
-        "Flag": "-removeUrl",
-        "Aliases": "ru,removeToolUrl",
+        "CliOptionId": "removeToolUrl",
+        "Flag": "-removeToolUrl",
+        "Aliases": "ru,removeUrl",
         "BarewordForms": "removetoolurl,removeurl,ru,rt",
         "ValueType": "string",
         "HelpText": "Remove a custom tool URL from this user's config, setting it back to the default value.",
         "Category": "tool-urls",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 7,
         "HandlerNotes": "Removes the key; for cli-cloud-bridge restores the bootstrap URL instead. QUIRK: bareword \"rt\" means removeUrl while flag -rt means refreshTools.",
         "DispositionReason": "Core (quirk preserved).",
-        "Description": "Remove a URL override."
+        "Description": "Remove a URL override.",
+        "Tier": "secondary",
+        "Rationale": "D16: canonical counterpart to setToolUrl; removes the per-user override.",
+        "HelpDetail": "Removes the named tool's per-user URL override, reverting resolution to the catalog default. For cli-cloud-bridge, restores the bootstrap URL instead of deleting the entry outright. `-removeUrl`/`ru` still work as hidden aliases.",
+        "Example": "effortless -removeToolUrl mytool",
+        "HelpSummary": "Remove a per-user URL override for a tool"
       },
       {
         "CliOptionId": "updateUrls",
@@ -1338,7 +1697,12 @@
         "LegacyRefCount": 4,
         "HandlerNotes": "DoRebuild catches TranspilerStepFailedException and any other exception per step, records them in BuildErrorLog, continues; exit 0.",
         "DispositionReason": "Core (newest feature, well documented in README).",
-        "Description": "Keep building after a failed step."
+        "Description": "Keep building after a failed step.",
+        "Tier": "secondary",
+        "Rationale": "Lets a multi-step build survive one failing step and report everything that broke at the end, instead of stopping at the first failure \u2014 useful for CI where you want the full picture in one run.",
+        "HelpSummary": "Keep building after a failed step",
+        "HelpDetail": "Runs every remaining transpiler even after a step fails, recording full exception detail for each failure to errors.json in the project root, and still exits 0.",
+        "Example": "effortless build -continueOnError"
       },
       {
         "CliOptionId": "listVersions",
@@ -1354,7 +1718,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "ListTranspilerVersions(rawArg): from cached ssotme-tools.json; sorted desc by ParseVersionKey; \"(latest)\" mark; url per version; override note; \"Run with:\"/\"Run latest:\" hints; not found => \"No versions for ... It may still exist in our legacy system.\"",
         "DispositionReason": "Core (the legacy-system sentence stays verbatim).",
-        "Description": "List versions of a tool from the remote index."
+        "Description": "List versions of a tool from the remote index.",
+        "Tier": "secondary",
+        "Rationale": "The way to see what versions of a tool actually exist in the catalog before pinning to one or troubleshooting a resolution failure.",
+        "HelpSummary": "List available versions of a tool",
+        "HelpDetail": "Lists every version of the named tool from the cached remote tools index, newest first, marking the head version and any user-set URL override.",
+        "Example": "effortless mytool -listVersions"
       },
       {
         "CliOptionId": "refreshTools",
@@ -1370,7 +1739,12 @@
         "LegacyRefCount": 4,
         "HandlerNotes": "Deletes ssotme-tools.json, cli_version, bridge_version_index; EnsureRemoteToolsInitialized; RunRemoteToolsRefresh (prints the CLOUD-BRIDGE banner); \"Remote tools index refreshed.\"",
         "DispositionReason": "Core.",
-        "Description": "Force a re-download of the tools index."
+        "Description": "Force a re-download of the tools index.",
+        "Tier": "secondary",
+        "Rationale": "The explicit way to force a re-download of the tools catalog when you don't want to wait for automatic freshness checks.",
+        "HelpSummary": "Force a re-download of the remote tools catalog",
+        "HelpDetail": "Deletes the cached tools index and re-fetches it from the bridge immediately.",
+        "Example": "effortless -refreshTools"
       },
       {
         "CliOptionId": "listTools",
@@ -1386,7 +1760,12 @@
         "LegacyRefCount": 0,
         "HandlerNotes": "RemoteToolsIndex.ListTools: require a fresh catalog, collapse versions to one row per canonical tool name, show the HEAD version or NO HEAD, and sort canonical names ordinal-ignore-case.",
         "DispositionReason": "New behavior requested for catalog discovery; the legacy CLI can list versions only when the tool name is already known.",
-        "Description": "List canonical remote tool names and their current head versions."
+        "Description": "List canonical remote tool names and their current head versions.",
+        "Tier": "secondary",
+        "Rationale": "New catalog-discovery behavior: lets a user find out what tools exist at all, rather than needing to already know a tool's exact name.",
+        "HelpSummary": "List every tool in the remote catalog",
+        "HelpDetail": "Lists canonical tool names from the current remote tools catalog, one row per tool showing its current head version (or NO HEAD if it has none), sorted case-insensitively. Requires a fresh catalog.",
+        "Example": "effortless -listTools"
       },
       {
         "CliOptionId": "searchTools",
@@ -1402,7 +1781,12 @@
         "LegacyRefCount": 0,
         "HandlerNotes": "RemoteToolsIndex.SearchTools(query): require a non-empty query and fresh catalog; case-insensitive ordinal substring match over canonical and short tool names; output uses the same one-row-per-tool projection as listTools. Bareword normalization copies the next argument into searchTools.",
         "DispositionReason": "New behavior requested for catalog discovery; no metadata description is assumed because the wire contract guarantees names and versions only.",
-        "Description": "Find tools by canonical or short name without guessing an exact tool name."
+        "Description": "Find tools by canonical or short name without guessing an exact tool name.",
+        "Tier": "secondary",
+        "Rationale": "New catalog-discovery behavior alongside listTools: finds tools by partial name instead of requiring an exact match.",
+        "HelpSummary": "Search the remote catalog by tool name",
+        "HelpDetail": "Case-insensitive substring search over canonical and short tool names in the current remote tools catalog. Requires a fresh catalog and a non-empty query.",
+        "Example": "effortless -searchTools postgres"
       },
       {
         "CliOptionId": "legacy",
@@ -1432,9 +1816,14 @@
         "IsCommand": true,
         "ConsumesNextArgAsTool": true,
         "LegacyRefCount": 4,
-        "HandlerNotes": "HandleUpgradeCommand: RefreshRemoteTools first; with a tool: resolve HEAD, find the installed step (DisambiguateByCurrentDirectory), PinnedVersion=null, LastVersionUsed=head, Save, \"Upgraded x: old -> HEAD (v, unpinned — will track latest)\"; not installed => informational message; without a tool: UpgradeAllTools.",
+        "HandlerNotes": "HandleUpgradeCommand: RefreshRemoteTools first; with a tool: resolve HEAD, find the installed step (DisambiguateByCurrentDirectory), PinnedVersion=null, LastVersionUsed=head, Save, \"Upgraded x: old -> HEAD (v, unpinned \u2014 will track latest)\"; not installed => informational message; without a tool: UpgradeAllTools. D17: this is the only path that clears PinnedVersion - it calls ProjectToolFreshness.Apply(project, clearPins: true). The automatic build-time gate passes false and leaves pins alone.",
         "DispositionReason": "Core.",
-        "Description": "Unpin a tool so it tracks HEAD."
+        "Description": "Unpin a tool so it tracks HEAD.",
+        "Tier": "secondary",
+        "Rationale": "D17: a step is either pinned or it follows HEAD; upgrade is how you remove a pin from one step so it starts tracking HEAD again. Alias unpin makes that meaning explicit.",
+        "HelpSummary": "Unpin a tool so it tracks the catalog HEAD",
+        "HelpDetail": "Refreshes the remote tools catalog, then clears the named tool's pin (set by -pin or by installing a specific version) so future builds resolve it at HEAD instead of a fixed version. With no tool name, unpins every step in the project (same as -upgradeAll). Does not run the tool.",
+        "Example": "effortless mytool -upgrade"
       },
       {
         "CliOptionId": "latest",
@@ -1444,18 +1833,18 @@
         "ValueType": "bool",
         "HelpText": "Run this tool using the current head version and update its pinned version for this project",
         "Category": "tool-resolution",
-        "Disposition": "keep",
+        "Disposition": "drop-legacy",
         "IsCommand": false,
         "ConsumesNextArgAsTool": false,
         "LegacyRefCount": 2,
         "HandlerNotes": "TryGetUrlFromRemoteTools ignores the pin; after a successful run the finally block sets LastVersionUsed/LastUrl, clears PinnedVersion (\"Cleared hard pin on ...\") and prints \"Now using <tool> <v> [latest]\".",
-        "DispositionReason": "Core.",
+        "DispositionReason": "D17: -latest is removed because a version is an attribute of a step, not a command to run. The same outcome is now reached with -pin (to fix a version) or -upgrade/unpin (to clear one); default resolution already tracks HEAD when unpinned. Git history on a clean tree is the audit trail for what changed and when, rather than a runtime command.",
         "Description": "Run HEAD and clear the pin."
       },
       {
-        "CliOptionId": "subscription",
-        "Flag": "-subscription",
-        "Aliases": "plan",
+        "CliOptionId": "plan",
+        "Flag": "-plan",
+        "Aliases": "subscription",
         "BarewordForms": "subscription,plan",
         "ValueType": "bool",
         "HelpText": "View the authenticated EffortlessAPI subscription plan (currently unavailable).",
@@ -1466,7 +1855,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "Retained as an explicit non-networking stub until account authentication and plan lookup are enabled server-side.",
         "DispositionReason": "Keep the account-plan command surface without issuing auth bridge calls yet.",
-        "Description": "Show the account plan."
+        "Description": "Show the account plan.",
+        "Tier": "secondary",
+        "Rationale": "D18: kept visible as a real, if currently stubbed, command surface for the account plan; wiring to the live effortless-auth workload happens in step 13.",
+        "HelpSummary": "Show the authenticated account's plan",
+        "HelpDetail": "Displays the account's EffortlessAPI subscription plan. Currently a non-networking stub: it prints an explicit unavailable message and exits nonzero without calling the auth bridge, until the server-side endpoint from step 13 is live.",
+        "Example": "effortless plan"
       },
       {
         "CliOptionId": "upgradeCli",
@@ -1482,7 +1876,12 @@
         "LegacyRefCount": 3,
         "HandlerNotes": "Checks GitHub releases/latest and compares the published version. Reports @effortlessapi/cli@latest and the GitHub release as explicit supported upgrade locations; it does not silently substitute another package or artifact.",
         "DispositionReason": "Core.",
-        "Description": "Self-update from GitHub releases."
+        "Description": "Self-update from GitHub releases.",
+        "Tier": "secondary",
+        "Rationale": "Self-update is a real, if occasional, need distinct from tool/catalog upgrades.",
+        "HelpSummary": "Self-update the effortless CLI from GitHub releases",
+        "HelpDetail": "Checks the latest GitHub release for this CLI and reports whether a newer version is available, pointing at the supported upgrade paths (npm install -g @effortlessapi/cli@latest, or the GitHub release download) without silently substituting another source.",
+        "Example": "effortless -upgradeCli"
       },
       {
         "CliOptionId": "upgradeAll",
@@ -1498,7 +1897,168 @@
         "LegacyRefCount": 4,
         "HandlerNotes": "RefreshRemoteTools then UpgradeAllTools: per step (skipping -exec/-execute) resolve HEAD; \"SKIP\"/\"OK\"/\"UP\" lines; Save; summary \"Upgraded N tool(s)[, skipped M].\"",
         "DispositionReason": "Core.",
-        "Description": "Unpin every tool."
+        "Description": "Unpin every tool.",
+        "Tier": "secondary",
+        "Rationale": "D17: the project-wide counterpart to -upgrade/unpin \u2014 removes every step's pin at once so the whole project tracks HEAD.",
+        "HelpSummary": "Unpin every tool in the project",
+        "HelpDetail": "Refreshes the remote tools catalog, then clears the pin on every registered step so the whole project tracks HEAD going forward. Prints a per-step SKIP/OK/UP summary and does not run any tool.",
+        "Example": "effortless -upgradeAll"
+      },
+      {
+        "CliOptionId": "buildWithSubprojects",
+        "Flag": "-buildWithSubprojects",
+        "Aliases": "bws",
+        "BarewordForms": "buildwithsubprojects",
+        "ValueType": "bool",
+        "HelpText": "Build the whole project, including nested effortless projects normally excluded",
+        "Category": "build",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "New in v2 (D12). Same traversal as buildAll (RebuildAll from RootPath) but does not exclude nested effortless.json subprojects; those are built in place rather than skipped.",
+        "DispositionReason": "D12: the fourth verb-family scope (All, plus nested effortless projects that All normally excludes).",
+        "Description": "Run every step in the whole project, including nested effortless projects.",
+        "VerbFamily": "build",
+        "Scope": "withSubprojects",
+        "Tier": "secondary",
+        "Rationale": "D12: the fourth verb-family scope. Rare enough (most projects don't nest effortless projects on purpose) to be secondary rather than primary, but real whenever a monorepo-style layout needs one command to build everything including nested projects.",
+        "HelpSummary": "Build the whole project plus nested projects"
+      },
+      {
+        "CliOptionId": "cleanWithSubprojects",
+        "Flag": "-cleanWithSubprojects",
+        "Aliases": "cws",
+        "BarewordForms": "cleanwithsubprojects",
+        "ValueType": "bool",
+        "HelpText": "Clean the whole project, including nested effortless projects normally excluded",
+        "Category": "clean",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "New in v2 (D12). Same traversal as cleanAll (project.CleanAll from root) but does not exclude nested effortless.json subprojects.",
+        "DispositionReason": "D12: the fourth verb-family scope, applied to clean.",
+        "Description": "Clean the whole project, including nested effortless projects.",
+        "VerbFamily": "clean",
+        "Scope": "withSubprojects",
+        "Tier": "secondary",
+        "Rationale": "D12: mirrors buildWithSubprojects for the clean side of the family; occasional use, same monorepo-style justification.",
+        "HelpSummary": "Clean the whole project plus nested projects"
+      },
+      {
+        "CliOptionId": "describeLocal",
+        "Flag": "-describeLocal",
+        "Aliases": "dl",
+        "BarewordForms": "describelocal",
+        "ValueType": "bool",
+        "HelpText": "Describe only the transpilers installed in the current folder",
+        "Category": "project",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "New in v2 (D12): carries forward v1's plain -describe behavior (IsAtPath(exactMatch:true)) now that -describe itself means downstream.",
+        "DispositionReason": "D12: preserves the exact-folder describe behavior under its own name once describe becomes downstream.",
+        "Description": "Print project summary for steps registered exactly at cwd.",
+        "VerbFamily": "describe",
+        "Scope": "local",
+        "Tier": "secondary",
+        "Rationale": "D12: preserves v1's plain -describe behavior under its own name now that plain describe means downstream; needed by anyone who relied on the old exact-folder default.",
+        "HelpSummary": "Describe only steps registered exactly here"
+      },
+      {
+        "CliOptionId": "describeWithSubprojects",
+        "Flag": "-describeWithSubprojects",
+        "Aliases": "dws",
+        "BarewordForms": "describewithsubprojects",
+        "ValueType": "bool",
+        "HelpText": "Describe the whole project, including nested effortless projects normally excluded",
+        "Category": "project",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "New in v2 (D12). Same unfiltered listing as describeAll but also walks into nested effortless.json subprojects instead of stopping at their boundary.",
+        "DispositionReason": "D12: the fourth verb-family scope, applied to describe.",
+        "Description": "Print the whole project, including nested effortless projects.",
+        "VerbFamily": "describe",
+        "Scope": "withSubprojects",
+        "Tier": "secondary",
+        "Rationale": "D12: completes the describe family's fourth scope alongside buildWithSubprojects/cleanWithSubprojects.",
+        "HelpSummary": "Describe the whole project plus nested projects"
+      },
+      {
+        "CliOptionId": "pin",
+        "Flag": "-pin",
+        "Aliases": "",
+        "BarewordForms": "pin",
+        "ValueType": "string",
+        "HelpText": "Pin this project's step to a specific catalog version or URL",
+        "Category": "tool-resolution",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "New in v2 (D17). Stores a hard pin (a catalog version key or a literal URL) on this project's installed step in effortless.json (PinnedVersion), distinct from the per-user -setToolUrl override which applies machine-wide across every project. IMPORTANT: ProjectToolFreshness.Apply takes clearPins; the automatic build-time gate (CommandDispatcher.EnsureProjectToolsCurrent) passes false so a deliberate pin survives a build, while -upgrade/-upgradeAll pass true and unpin. Without that split the gate would null PinnedVersion on every build and -pin could never take effect. Invocation shapes: the flag form is 'effortless <tool> -pin <version|url>'; the bareword form 'effortless pin <tool> <version|url>' is normalized by CliArgumentParser.NoDashCommandForms into the flag form (the trailing value becomes -pin's value and the tool stays in the tool position). 'pin <tool>' with no value falls through to Plossum, which reports \"Missing required value for option pin\".",
+        "DispositionReason": "D17: a step is either pinned or it follows HEAD. -pin is the explicit way to fix a version or URL for this project; -upgrade (alias unpin) or -upgradeAll clear it. Default stays unpinned = HEAD; pin-on-install by default is not assumed.",
+        "Description": "Pin an installed step to a version or URL for this project.",
+        "Tier": "secondary",
+        "ParentOption": null,
+        "VerbFamily": null,
+        "Scope": null,
+        "Rationale": "D17: gives a project a way to freeze a step's version deliberately (reproducibility, a known-good release) without reaching for the per-user -setToolUrl override, which is not project-scoped.",
+        "HelpSummary": "Pin an installed step to a version or URL",
+        "HelpDetail": "Pins the named step (already registered in this project) to either a specific catalog version key or a literal URL. Future builds of this project use the pin instead of HEAD until -upgrade (alias unpin) removes it.",
+        "Example": "effortless mytool -pin 2026.01.01.0000"
+      },
+      {
+        "CliOptionId": "disable",
+        "Flag": "-disable",
+        "Aliases": "",
+        "BarewordForms": "disable",
+        "ValueType": "bool",
+        "HelpText": "Marks the current command's step as disabled in the effortless.json Project file",
+        "Category": "install",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "New in v2 (D22). Targeted the same way uninstall is: tool name in the current folder, optional -transpilerGroup. Sets IsDisabled=true on the matching step and saves; a disabled step is skipped by build unless -includeDisabled is also given.",
+        "DispositionReason": "D22: makes IsDisabled a first-class verb pair instead of a hand-edit-effortless.json-only setting.",
+        "Description": "Mark a registered step disabled (skipped by build).",
+        "Tier": "secondary",
+        "ParentOption": null,
+        "VerbFamily": null,
+        "Scope": null,
+        "Rationale": "D22: disabling a step should not require hand-editing effortless.json; enable/disable are the verb pair for IsDisabled, targeted like uninstall.",
+        "HelpSummary": "Mark a registered step disabled",
+        "HelpDetail": "Sets IsDisabled=true on the matching step (same targeting as uninstall: tool name in the current folder, optional -transpilerGroup). A disabled step is skipped by build unless -includeDisabled is given.",
+        "Example": "effortless disable rulebook-to-postgres"
+      },
+      {
+        "CliOptionId": "enable",
+        "Flag": "-enable",
+        "Aliases": "",
+        "BarewordForms": "enable",
+        "ValueType": "bool",
+        "HelpText": "Marks the current command's step as enabled in the effortless.json Project file",
+        "Category": "install",
+        "Disposition": "keep-modified",
+        "IsCommand": true,
+        "ConsumesNextArgAsTool": true,
+        "LegacyRefCount": 0,
+        "HandlerNotes": "New in v2 (D22). Targeted the same way uninstall is: tool name in the current folder, optional -transpilerGroup. Sets IsDisabled=false on the matching step and saves.",
+        "DispositionReason": "D22: the inverse of disable; both are new so IsDisabled has a documented verb pair.",
+        "Description": "Mark a registered step enabled (included in build).",
+        "Tier": "secondary",
+        "ParentOption": null,
+        "VerbFamily": null,
+        "Scope": null,
+        "Rationale": "D22: the inverse of disable.",
+        "HelpSummary": "Mark a registered step enabled",
+        "HelpDetail": "Sets IsDisabled=false on the matching step (same targeting as uninstall).",
+        "Example": "effortless enable rulebook-to-postgres"
       }
     ]
   },
@@ -2048,7 +2608,7 @@
         "LifecycleStateId": "B07-continue-or-abort",
         "Phase": "build-loop",
         "SortOrder": 7,
-        "Entry": "TranspilerStepFailedException: rethrow unless continueOnError (then red message + \"-continueOnError is set — moving on to the next step.\"); other exceptions: rethrow unless continueOnError (then RecordFailure(pt,-1,null,ex) + \"Transpiler 'x' threw: msg\").",
+        "Entry": "TranspilerStepFailedException: rethrow unless continueOnError (then red message + \"-continueOnError is set \u2014 moving on to the next step.\"); other exceptions: rethrow unless continueOnError (then RecordFailure(pt,-1,null,ex) + \"Transpiler 'x' threw: msg\").",
         "ImplementedIn": "SSoTmeProject.DoRebuild",
         "NewHome": "Project/BuildRunner.cs",
         "Disposition": "keep",
@@ -2078,7 +2638,7 @@
         "LifecycleStateId": "B10-errors-json",
         "Phase": "build-loop",
         "SortOrder": 10,
-        "Entry": "BuildErrorLog.Finish: no failures => delete stale errors.json (\"[cli] build clean — removed stale errors.json\"); failures => summary block + write errors.json (camelCase, schema effortless-build-errors/v1).",
+        "Entry": "BuildErrorLog.Finish: no failures => delete stale errors.json (\"[cli] build clean \u2014 removed stale errors.json\"); failures => summary block + write errors.json (camelCase, schema effortless-build-errors/v1).",
         "ImplementedIn": "BuildErrorLog.Finish/PrintSummary",
         "NewHome": "Project/BuildErrorLog.cs",
         "Disposition": "keep",
@@ -2907,7 +3467,7 @@
         "DispatchRuleId": "P10-management-flags",
         "Phase": "management-dispatch",
         "SortOrder": 10,
-        "Condition": "listVersions|listTools|searchTools|refreshTools|authenticate|projectLogin|discuss|listSeeds|cloneSeed|localGuide|upgrade|upgradeCli|upgradeAll|viewUrl|setUrl|listUrls|removeUrl|updateUrls",
+        "Condition": "listVersions|listTools|searchTools|refreshTools|login|projectLogin|discuss|listSeeds|cloneSeed|localGuide|upgrade|upgradeCli|upgradeAll|viewToolUrl|setToolUrl|listToolUrls|removeToolUrl|updateUrls",
         "Action": "continueToLoad = false (no project load, no input load).",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
@@ -2919,7 +3479,7 @@
         "DispatchRuleId": "P11-load-project",
         "Phase": "project-load",
         "SortOrder": 11,
-        "Condition": "continueToLoad && !setAccountAPIKey && !help && !authenticate && !listSeeds && !cloneSeed && !updateUrls",
+        "Condition": "continueToLoad && !setAccountAPIKey && !help && !login && !listSeeds && !cloneSeed && !updateUrls",
         "Action": "Load project (walk up); bad cwd => error -1; none => \"No project found ... Run `effortless -init`\" -1; append ProjectSettings as params; auto-build for install when -i file missing; LoadInputFiles; resolve -account credentials; detect a .zfs input.",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
@@ -2931,7 +3491,7 @@
         "DispatchRuleId": "T00-jwt",
         "Phase": "transpile-dispatch",
         "SortOrder": 0,
-        "Condition": "!authenticate && !projectLogin && !logout && !skipRemoteToolsLookup",
+        "Condition": "!login && !projectLogin && !logout && !skipRemoteToolsLookup",
         "Action": "jwt = effortless.env EFFORTLESS_JWT ?? ~/.ssotme/effortlessapi_token.txt (no expiry check, no refresh).",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
@@ -2940,16 +3500,16 @@
         "Description": "Build path never talks to the bridge."
       },
       {
-        "DispatchRuleId": "T01-authenticate",
+        "DispatchRuleId": "T01-login",
         "Phase": "transpile-dispatch",
         "SortOrder": 1,
-        "Condition": "authenticate",
+        "Condition": "login",
         "Action": "Print the explicit authentication-unavailable message; return nonzero without a bridge call.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
         "ExitCode": "-1",
         "Disposition": "keep-modified",
-        "Description": "Retains the future magic-link command surface as a clear non-networking stub."
+        "Description": "Retains the future magic-link command surface as a clear non-networking stub. Displayed as login (alias authenticate) per D18."
       },
       {
         "DispatchRuleId": "T02-project-login",
@@ -2964,16 +3524,16 @@
         "Description": "Reserves project-scoped authentication without implementing the server flow."
       },
       {
-        "DispatchRuleId": "T03-subscription",
+        "DispatchRuleId": "T03-plan",
         "Phase": "transpile-dispatch",
         "SortOrder": 3,
-        "Condition": "subscription",
+        "Condition": "plan",
         "Action": "Print the explicit subscription-unavailable message; return nonzero without a bridge call.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
         "ExitCode": "-1",
         "Disposition": "keep-modified",
-        "Description": "Reserves authenticated plan lookup until authentication is enabled."
+        "Description": "Reserves authenticated plan lookup until authentication is enabled. Displayed as plan (alias subscription) per D18."
       },
       {
         "DispatchRuleId": "T04-logout",
@@ -3075,7 +3635,7 @@
         "DispatchRuleId": "T12-view-url",
         "Phase": "transpile-dispatch",
         "SortOrder": 12,
-        "Condition": "viewUrl != \"\"",
+        "Condition": "viewToolUrl != \"\"",
         "Action": "HandleViewToolUrlCommand.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
@@ -3087,7 +3647,7 @@
         "DispatchRuleId": "T13-set-url",
         "Phase": "transpile-dispatch",
         "SortOrder": 13,
-        "Condition": "setUrl != \"\"",
+        "Condition": "setToolUrl != \"\"",
         "Action": "HandleSetToolUrlCommand.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
@@ -3099,7 +3659,7 @@
         "DispatchRuleId": "T14-list-urls",
         "Phase": "transpile-dispatch",
         "SortOrder": 14,
-        "Condition": "listUrls",
+        "Condition": "listToolUrls",
         "Action": "ListAllConfiguredToolUrls.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
@@ -3111,7 +3671,7 @@
         "DispatchRuleId": "T15-remove-url",
         "Phase": "transpile-dispatch",
         "SortOrder": 15,
-        "Condition": "removeUrl != \"\"",
+        "Condition": "removeToolUrl != \"\"",
         "Action": "HandleRemoveToolUrlCommand.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
@@ -3220,7 +3780,7 @@
         "Phase": "transpile-dispatch",
         "SortOrder": 24,
         "Condition": "install && rawArg is URL",
-        "Action": "project.Install(payload with Transpiler.Name = sanitized url) — no transpile.",
+        "Action": "project.Install(payload with Transpiler.Name = sanitized url) \u2014 no transpile.",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
         "ExitCode": "0",
@@ -3542,12 +4102,12 @@
       {
         "ToolResolutionRuleId": "R6-account-prefix",
         "Precedence": 6,
-        "Source": "name contains \"/\" and no URL resolved",
-        "Condition": "targetUrl empty && name has \"/\"",
-        "Result": "account = before first \"/\"; transpiler = after.",
+        "Source": "name contains \"/\" and the compound name resolved to no URL",
+        "Condition": "targetUrl empty && name has \"/\" (and the segment after the last \"/\" is not a vN version suffix)",
+        "Result": "D20 never-fail: account = before the first \"/\", tool = after. The bare tool is re-resolved against tool_urls and then the catalog; if it resolves, the invocation proceeds exactly as \"effortless <tool> -account <acct>\". If the bare tool also fails to resolve, R7 produces the normal tool-not-found error.",
         "VersionLabel": "",
-        "Disposition": "keep",
-        "Description": "Used for -account credential lookup."
+        "Disposition": "keep-modified",
+        "Description": "D20: resolution never fails on the compound acct/tool form alone. In v1 the split only populated -account for credential lookup and left targetUrl empty, so acct/tool died with tool-not-found even when tool alone existed; v2 retries the bare tool. Implemented in ToolResolver.Resolve (TrySplitAccount + the bare-tool retry)."
       },
       {
         "ToolResolutionRuleId": "R7-rabbit-proxy",
@@ -3557,7 +4117,7 @@
         "Result": "Legacy: POST to the RabbitMQ HTTP proxy (host dead 2026-08-30).",
         "VersionLabel": "",
         "Disposition": "drop-rabbit",
-        "Description": "New behavior: unresolved names produce the existing \"ERROR: Tool 'x' does not exist.\" message and exit -1 without any network call."
+        "Description": "New behavior: unresolved names produce the existing \"ERROR: Tool 'x' does not exist.\" message and exit -1 without any network call. D20: this is reached for a compound acct/tool name only after R6 has also failed to resolve the bare tool."
       },
       {
         "ToolResolutionRuleId": "R8-version-suffix-parse",
@@ -4267,7 +4827,7 @@
         "Method": "POST",
         "UrlPattern": "{bridge} -p mode=auth|verify|refresh|viewPlan|checkProject|registerProject|getQuota|updateQuota",
         "Purpose": "Magic-link auth and (disabled) telemetry; output file auth-result.json.",
-        "UsedByOption": "authenticate, projectLogin, subscription, info (plan)",
+        "UsedByOption": "login, projectLogin, plan, info (plan)",
         "LivenessOn20260830": "alive",
         "TimeoutMs": 180000,
         "Disposition": "keep-modified",
@@ -4309,13 +4869,13 @@
       {
         "HttpEndpointId": "airtable-bridge-check",
         "Method": "GET",
-        "UrlPattern": "https://ssotme-cli-airtable-bridge-ahrnz660db6k4.aws-us-east-1.controlplane.us/check?baseId={id} (and /mark)",
+        "UrlPattern": "https://ssotme-cli-airtable-bridge-ahrnz660db6k4.aws-us-east-1.controlplane.us/check?baseId={id}",
         "Purpose": "Airtable change polling.",
         "UsedByOption": "buildOnTrigger",
         "LivenessOn20260830": "alive",
         "TimeoutMs": 100000,
         "Disposition": "keep-modified",
-        "Description": "Owner decision D2. Polling transport and payload failures are fatal rather than treated as unchanged state."
+        "Description": "Owner decision D24 (formerly D2). Verified route: TriggerBuildWatcher issues GET /check?baseId={id} every 3s and reads JSON {changed:bool}; rebuilds after a 10s quiet period following the last reported change. Polling transport, HTTP status, and payload failures are fatal rather than treated as unchanged state. No /mark, /set, or /get route exists in the codebase; how the Airtable side flips 'changed' is outside this repo."
       },
       {
         "HttpEndpointId": "copilot-bridge",
@@ -4399,7 +4959,7 @@
         "Method": "n/a",
         "UrlPattern": "https://bases.effortlessapi.com/dashboard/contact",
         "Purpose": "Printed as an upgrade hint on the free plan.",
-        "UsedByOption": "subscription",
+        "UsedByOption": "plan",
         "LivenessOn20260830": "n/a",
         "TimeoutMs": 0,
         "Disposition": "keep",
@@ -4559,7 +5119,7 @@
         "Format": "json",
         "Purpose": "The project: Name, SSoTmeProjectId, ProjectSettings, ProjectTranspilers (see ProjectFileFields).",
         "ReadBy": "every command that needs a project (walks up from cwd)",
-        "WrittenBy": "init, install, uninstall, addSetting, removeSetting, build (soft pin / version sync), upgrade, upgradeAll, -latest, Load (when SSoTmeProjectId was missing)",
+        "WrittenBy": "init, install, uninstall, enable, disable, addSetting, removeSetting, build (soft pin / version sync), pin, upgrade, upgradeAll, Load (when SSoTmeProjectId was missing)",
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
@@ -4615,7 +5175,7 @@
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
-        "Description": "Template lines: /**/obj/**/*, /**/bin/**/*, /**/.ssotme/**/*, /**/DSPXml/**/*, /SSoT/__patch.json, /**/.vs/**/*, /**/node_modules/**/*, /**/.vscode/**/*, ssotme.env, effortless.env (verbatim, including the DSPXml line — it is just a template)."
+        "Description": "Template lines: /**/obj/**/*, /**/bin/**/*, /**/.ssotme/**/*, /**/DSPXml/**/*, /SSoT/__patch.json, /**/.vs/**/*, /**/node_modules/**/*, /**/.vscode/**/*, ssotme.env, effortless.env (verbatim, including the DSPXml line \u2014 it is just a template)."
       },
       {
         "ConfigFileId": "init-rulebook",
@@ -4693,7 +5253,7 @@
         "IsSecret": true,
         "UnixMode": "600 (dir 700)",
         "Disposition": "keep",
-        "Description": "EmailAddress/Secret are RabbitMQ-era; kept in the file format for compatibility, no longer used. Default key when the file is missing is the public cli@aicapture.io record (only ever sent to RabbitMQ) — the rebuild stops generating it."
+        "Description": "EmailAddress/Secret are RabbitMQ-era; kept in the file format for compatibility, no longer used. Default key when the file is missing is the public cli@aicapture.io record (only ever sent to RabbitMQ) \u2014 the rebuild stops generating it."
       },
       {
         "ConfigFileId": "tool-urls",
@@ -4701,8 +5261,8 @@
         "Scope": "user-home",
         "Format": "json",
         "Purpose": "{ \"<tool>\": \"<url>\" } overrides plus the managed cli-cloud-bridge entry.",
-        "ReadBy": "tool resolution (R4/R5), listUrls, viewUrl, listVersions note, bridge refresh",
-        "WrittenBy": "setUrl, removeUrl, index refresh (bridge entry, legacy list-transpilers removal, latestBridgeVersion), dead-bridge recovery",
+        "ReadBy": "tool resolution (R4/R5), listToolUrls, viewToolUrl, listVersions note, bridge refresh",
+        "WrittenBy": "setToolUrl, removeToolUrl, index refresh (bridge entry, legacy list-transpilers removal, latestBridgeVersion), dead-bridge recovery",
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
@@ -4792,7 +5352,7 @@
         "Scope": "user-home",
         "Format": "text",
         "Purpose": "Global JWT.",
-        "ReadBy": "jwt resolution, info, logout, subscription",
+        "ReadBy": "jwt resolution, info, logout, plan",
         "WrittenBy": "login (StoreJWTToken), refresh",
         "IsSecret": true,
         "UnixMode": "600",
@@ -5064,7 +5624,7 @@
         "IsModelOwned": false,
         "WrittenWhen": "runtime (SetCurrentFromRequestDirectory)",
         "Disposition": "keep",
-        "Description": "Written as null when the project was loaded with updateCurrent=false (the CLI path) — matches existing files."
+        "Description": "Written as null when the project was loaded with updateCurrent=false (the CLI path) \u2014 matches existing files."
       },
       {
         "ProjectFileFieldId": "p-projectfiles",
@@ -5260,7 +5820,7 @@
         "ClrType": "string",
         "SerializationRule": "IgnoreAndPopulate",
         "IsModelOwned": true,
-        "WrittenWhen": "install (ResolvedVersionKey), cleared by upgrade/upgradeAll/-latest",
+        "WrittenWhen": "install (ResolvedVersionKey) or pin (explicit version/URL); cleared by upgrade/upgradeAll",
         "Disposition": "keep",
         "Description": "HARD pin: resolution uses this version. Save() must not resurrect it (modelOwnedProps skip)."
       },
@@ -5578,7 +6138,7 @@
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
-        "Description": "Grammar typo \"be replaced\" preserved."
+        "Description": "Grammar typo \"be replaced\" preserved. D27: -dryRun removed (drop-legacy); message retained for history only, no longer reachable in v2."
       },
       {
         "UserMessageId": "build-banner",
@@ -5622,7 +6182,7 @@
       },
       {
         "UserMessageId": "coe-moving-on",
-        "Template": "[cli] -continueOnError is set — moving on to the next step.",
+        "Template": "[cli] -continueOnError is set \u2014 moving on to the next step.",
         "Color": "yellow",
         "Trigger": "build with -coe after a failure",
         "Stream": "stdout",
@@ -5632,17 +6192,17 @@
       },
       {
         "UserMessageId": "build-summary-failed",
-        "Template": "============================================================\\nBUILD FAILED — {n} failed step(s), {m} succeeded.\\n============================================================\\n  FAILED: {Name}  ({RelativePath})\\n    command: effortless {cmd}\\n    error:   {msg}\\nFull exception detail (stack traces, inner exceptions): {errorsPath}",
+        "Template": "============================================================\\nBUILD FAILED \u2014 {n} failed step(s), {m} succeeded.\\n============================================================\\n  FAILED: {Name}  ({RelativePath})\\n    command: effortless {cmd}\\n    error:   {msg}\\nFull exception detail (stack traces, inner exceptions): {errorsPath}",
         "Color": "yellow/red/cyan with [cli]",
         "Trigger": "BuildErrorLog.Finish with failures",
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
-        "Description": "With -coe the first line reads \"BUILD FINISHED WITH {n} FAILED STEP(S) — {m} step(s) succeeded and are usable.\" and a final cyan line explains -continueOnError."
+        "Description": "With -coe the first line reads \"BUILD FINISHED WITH {n} FAILED STEP(S) \u2014 {m} step(s) succeeded and are usable.\" and a final cyan line explains -continueOnError."
       },
       {
         "UserMessageId": "build-clean-stale",
-        "Template": "[cli] build clean — removed stale errors.json",
+        "Template": "[cli] build clean \u2014 removed stale errors.json",
         "Color": "default",
         "Trigger": "clean build with a stale errors.json",
         "Stream": "stdout",
@@ -5848,7 +6408,7 @@
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
-        "Description": "Plus \"  * globally overridden via effortless -setUrl {tool}={url}\" / \"    run 'effortless -removeUrl {tool}' to reset\" when tool_urls.json has the tool."
+        "Description": "Plus \"  * globally overridden via effortless -setToolUrl {tool}={url}\" / \"    run 'effortless -removeToolUrl {tool}' to reset\" when tool_urls.json has the tool."
       },
       {
         "UserMessageId": "no-versions",
@@ -5862,7 +6422,7 @@
       },
       {
         "UserMessageId": "upgraded",
-        "Template": "Upgraded {tool}: {old} → HEAD ({new}, unpinned — will track latest)",
+        "Template": "Upgraded {tool}: {old} \u2192 HEAD ({new}, unpinned \u2014 will track latest)",
         "Color": "default",
         "Trigger": "-upgrade",
         "Stream": "stdout",
@@ -5872,7 +6432,7 @@
       },
       {
         "UserMessageId": "upgrade-not-used",
-        "Template": "{tool} is not used in this project — nothing to unpin here.\\nRefreshed the core tools index; '{tool}' will track latest (HEAD {v}) wherever it is used unpinned.",
+        "Template": "{tool} is not used in this project \u2014 nothing to unpin here.\\nRefreshed the core tools index; '{tool}' will track latest (HEAD {v}) wherever it is used unpinned.",
         "Color": "default",
         "Trigger": "-upgrade on an uninstalled tool",
         "Stream": "stdout",
@@ -5882,7 +6442,7 @@
       },
       {
         "UserMessageId": "upgrade-all-lines",
-        "Template": "  SKIP {tool} — not found in remote tools index | \"  OK   {tool} — already unpinned at HEAD ({v})\" | \"  UP   {tool}: {old} → HEAD ({v}, unpinned)\" | \"\\nUpgraded {n} tool(s)[, skipped {m}].\"",
+        "Template": "  SKIP {tool} \u2014 not found in remote tools index | \"  OK   {tool} \u2014 already unpinned at HEAD ({v})\" | \"  UP   {tool}: {old} \u2192 HEAD ({v}, unpinned)\" | \"\\nUpgraded {n} tool(s)[, skipped {m}].\"",
         "Color": "default",
         "Trigger": "-upgradeAll",
         "Stream": "stdout",
@@ -5904,17 +6464,17 @@
         "UserMessageId": "tool-url-set",
         "Template": "Tool '{name}' URL set to: {url}",
         "Color": "default",
-        "Trigger": "-setUrl",
+        "Trigger": "-setToolUrl",
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
-        "Description": "Errors: \"Error: Invalid format. Usage: effortless -setUrl toolname=url\"; bridge warning \"Warning: 'cli-cloud-bridge' is an internal ssotme-managed tool...\""
+        "Description": "Errors: \"Error: Invalid format. Usage: effortless -setToolUrl toolname=url\"; bridge warning \"Warning: 'cli-cloud-bridge' is an internal ssotme-managed tool...\""
       },
       {
         "UserMessageId": "tool-url-view",
         "Template": "Tool '{name}' is configured with URL: {url} | Tool '{name}' is not configured in ~/.ssotme/tool_urls.json file.",
         "Color": "default",
-        "Trigger": "-viewUrl",
+        "Trigger": "-viewToolUrl",
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
@@ -5924,17 +6484,17 @@
         "UserMessageId": "tool-url-list",
         "Template": "Configured tool URL Overrides:\\n\\n  {name}: {url}\\n\\nTotal: {n} tool(s) configured",
         "Color": "default",
-        "Trigger": "-listUrls",
+        "Trigger": "-listToolUrls",
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
-        "Description": "Empty: \"No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.\" / \"No tool URLs configured in ~/.ssotme/tool_urls.json.\" each followed by the setUrl hint."
+        "Description": "Empty: \"No tool URLs configured. The ~/.ssotme/tool_urls.json file does not exist.\" / \"No tool URLs configured in ~/.ssotme/tool_urls.json.\" each followed by the setToolUrl hint."
       },
       {
         "UserMessageId": "tool-url-removed",
         "Template": "Tool '{name}' URL has been removed from your user configuration. | Tool 'cli-cloud-bridge' URL restored to built-in default: {bootstrap}",
         "Color": "default",
-        "Trigger": "-removeUrl",
+        "Trigger": "-removeToolUrl",
         "Stream": "stdout",
         "IsGoldenForTests": true,
         "Disposition": "keep",
@@ -7025,7 +7585,7 @@
         "ApproxLines": 700,
         "Disposition": "drop-rabbit",
         "NewPath": "",
-        "Notes": "Transpiler-host base classes (XSLT) — the tools repo has its own CLIClassLibrary.",
+        "Notes": "Transpiler-host base classes (XSLT) \u2014 the tools repo has its own CLIClassLibrary.",
         "Description": "Host-side."
       },
       {
@@ -7124,7 +7684,7 @@
         "Kind": "dir",
         "ApproxLines": 700,
         "Disposition": "drop-legacy",
-        "NewPath": "installers/macos/entitlements.plist (the plist only — it is used by codesign)",
+        "NewPath": "installers/macos/entitlements.plist (the plist only \u2014 it is used by codesign)",
         "Notes": "Python packaging is removed; entitlements.plist survives independently for native macOS codesigning.",
         "Description": "Removed Python/pip packaging."
       },
@@ -7235,7 +7795,7 @@
         "ApproxLines": 700,
         "Disposition": "keep",
         "NewPath": "LICENSE",
-        "Notes": "As-is (GNU per package.json / MPL headers in files — leave as-is; not in scope).",
+        "Notes": "As-is (GNU per package.json / MPL headers in files \u2014 leave as-is; not in scope).",
         "Description": "License."
       },
       {
@@ -7772,7 +8332,7 @@
         "Kind": "black-box",
         "RunsInCi": true,
         "NeedsNetwork": false,
-        "Description": "install/uninstall/execute/dryRun against the mock tool server."
+        "Description": "install/uninstall/execute against the mock tool server."
       },
       {
         "TestSuiteId": "e2e-build",
@@ -7812,7 +8372,7 @@
         "Kind": "black-box",
         "RunsInCi": true,
         "NeedsNetwork": false,
-        "Description": "setUrl/viewUrl/listUrls/removeUrl and [user-set] precedence."
+        "Description": "setToolUrl/viewToolUrl/listToolUrls/removeToolUrl and [user-set] precedence."
       },
       {
         "TestSuiteId": "e2e-auth",
@@ -7820,7 +8380,7 @@
         "Kind": "black-box",
         "RunsInCi": true,
         "NeedsNetwork": false,
-        "Description": "login/projectLogin/logout/subscription/setAccountAPIKey/runAs/jwt propagation against the mock bridge."
+        "Description": "login/projectLogin/logout/plan/setAccountAPIKey/runAs/jwt propagation against the mock bridge."
       },
       {
         "TestSuiteId": "e2e-shim",
@@ -8606,8 +9166,8 @@
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
-        "Status": "rebuild-green",
-        "Description": "Legacy dry-run avoids the install while still rewriting model-owned defaults."
+        "Status": "deleted",
+        "Description": "D27: -dryRun removed (drop-legacy). Test retired, not exercised in v2."
       },
       {
         "TestCaseId": "inst-url",
@@ -8845,7 +9405,7 @@
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "Covers both build-skips-disabled and build-include-disabled from the step-09 plan: one case asserts the default skip and the -id override. Steps are now flipped with the enable/disable verbs (enable-step / disable-step)."
       },
       {
         "TestCaseId": "build-group",
@@ -8893,15 +9453,15 @@
         "TestCaseId": "build-all",
         "Suite": "e2e-build",
         "PrimaryOption": "buildAll",
-        "Title": "buildAll builds nested projects",
-        "Given": "root project + nested/effortless.json with its own step",
-        "When": "effortless buildAll",
-        "Then": "root steps run, then \"Executing 'effortless -buildLocal' in <nested>\" and the nested step runs (child process)",
+        "Title": "buildAll runs the whole project from the root",
+        "Given": "root project with steps at / and /sub plus nested/effortless.json; cwd=<root>/sub",
+        "When": "effortless buildAll ; effortless -buildAll ; effortless -ba ; effortless pullAll",
+        "Then": "both root steps run regardless of cwd, in file order; the nested project is not entered; exit 0",
         "Priority": "P1",
         "Interactive": false,
         "Slow": true,
         "Status": "rebuild-green",
-        "Description": "Requires the PATH shim for legacy; new build spawns itself."
+        "Description": "D6/D12 re-record: All means \"as if run from the project root\". The nested-project traversal this case used to assert now belongs to buildWithSubprojects (build-with-subprojects-includes-nested)."
       },
       {
         "TestCaseId": "build-fail-stops",
@@ -8924,7 +9484,7 @@
         "Title": "continueOnError runs every step and exits 0",
         "Given": "same",
         "When": "effortless build -continueOnError ; -coe ; -ignoreErrors",
-        "Then": "B runs; \"-continueOnError is set — moving on\"; \"BUILD FINISHED WITH 1 FAILED STEP(S) — 1 step(s) succeeded and are usable.\"; errors.json continueOnError true, succeededSteps 1; exit 0",
+        "Then": "B runs; \"-continueOnError is set \u2014 moving on\"; \"BUILD FINISHED WITH 1 FAILED STEP(S) \u2014 1 step(s) succeeded and are usable.\"; errors.json continueOnError true, succeededSteps 1; exit 0",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -8952,7 +9512,7 @@
         "Title": "a clean build deletes a stale errors.json",
         "Given": "errors.json from a previous run; all steps pass",
         "When": "effortless build",
-        "Then": "\"[cli] build clean — removed stale errors.json\"; file gone",
+        "Then": "\"[cli] build clean \u2014 removed stale errors.json\"; file gone",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -8977,29 +9537,29 @@
         "TestCaseId": "build-version-label",
         "Suite": "e2e-build",
         "PrimaryOption": "build",
-        "Title": "automatic freshness labels project tools at HEAD",
-        "Given": "one step hard-pinned to a non-head version + one unpinned step",
+        "Title": "automatic freshness labels unpinned tools at HEAD",
+        "Given": "one step pinned to a non-head version that still resolves + one unpinned step",
         "When": "effortless build",
-        "Then": "the automatic currentness gate clears the hard pin, then both steps print \"cli:> <tool> <vHead> [latest]\"",
+        "Then": "the pinned step prints \"cli:> <tool> <vPinned> [pinned]\" and the unpinned step prints \"cli:> <tool> <vHead> [latest]\"; the resolvable pin is not discarded",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "D17 supersedes step-03A for a resolvable pin: a step is pinned or it follows HEAD."
       },
       {
         "TestCaseId": "build-pinned-url",
         "Suite": "e2e-build",
         "PrimaryOption": "build",
-        "Title": "automatic freshness clears PinnedVersion and selects HEAD",
+        "Title": "automatic freshness honors a resolvable PinnedVersion",
         "Given": "index fixture with v1 (head) and v0; step PinnedVersion v0",
         "When": "effortless build",
-        "Then": "PinnedVersion is cleared before execution; POST goes to v1 HEAD; LastVersionUsed == v1",
+        "Then": "PinnedVersion survives the currentness gate; the POST goes to v0, not v1 HEAD",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "D17 supersedes step-03A here. Only -upgrade/-upgradeAll clear a pin; the automatic gate passes clearPins:false. A pin that no longer resolves is still cleared (build-pinned-missing)."
       },
       {
         "TestCaseId": "build-pinned-missing",
@@ -9020,14 +9580,14 @@
         "Suite": "e2e-build",
         "PrimaryOption": "build",
         "Title": "automatic freshness removes embedded /vX",
-        "Given": "CommandLine \"effortless/common/to-uppercase/v0 -i in.txt\", PinnedVersion v1",
+        "Given": "unpinned step whose CommandLine is \"effortless/common/to-uppercase/v0 -i in.txt\"",
         "When": "effortless build",
-        "Then": "the command's version suffix and PinnedVersion are removed, LastVersionUsed becomes HEAD, and the step runs HEAD",
+        "Then": "the command's embedded version suffix is removed, LastVersionUsed becomes HEAD, and the step runs HEAD",
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "Exercises suffix stripping on an unpinned step. A pinned step is now left alone by the gate (D17), so the fixture no longer carries a PinnedVersion."
       },
       {
         "TestCaseId": "build-soft-pin-updates",
@@ -9173,15 +9733,15 @@
         "TestCaseId": "clean-all",
         "Suite": "e2e-clean",
         "PrimaryOption": "cleanAll",
-        "Title": "cleanAll cleans everything incl. nested projects",
-        "Given": "root + nested project built; cwd=/sub",
-        "When": "effortless cleanall",
-        "Then": "all outputs cleaned; \"Executing 'effortless -clean' in <nested>\"",
+        "Title": "cleanAll cleans the whole project from the root",
+        "Given": "root project with steps at / and /sub plus nested/effortless.json, all built; cwd=<root>/sub",
+        "When": "effortless cleanall ; effortless -cleanAll ; effortless -ca",
+        "Then": "every root output is cleaned regardless of cwd; the nested project's output is left alone; exit 0",
         "Priority": "P1",
         "Interactive": false,
         "Slow": true,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "D6/D12 re-record: the nested traversal moves to cleanWithSubprojects (clean-with-subprojects)."
       },
       {
         "TestCaseId": "clean-purge",
@@ -9867,7 +10427,7 @@
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": ""
+        "Description": "Reviewed for D17: exercises HEAD resolution and the [latest] version label, not the removed -latest command; unaffected by the -latest removal."
       },
       {
         "TestCaseId": "res-explicit-version",
@@ -9922,8 +10482,8 @@
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
-        "Status": "rebuild-green",
-        "Description": "Legacy cannot associate a direct invocation with the installed project step for persistent mutation."
+        "Status": "deleted",
+        "Description": "D17: -latest removed (drop-legacy); replaced conceptually by -pin/-upgrade. Test retired, not exercised in v2."
       },
       {
         "TestCaseId": "res-no-head",
@@ -10196,14 +10756,14 @@
         "Suite": "e2e-resolution",
         "PrimaryOption": "upgradeAll",
         "Title": "24-hour catalog refresh upgrades the active project before build",
-        "Given": "fetchedAt = test clock minus exactly 24 hours; project has v0 hard pin and stale LastVersionUsed; bridge returns valid v2 HEAD",
+        "Given": "fetchedAt = test clock minus exactly 24 hours; project has a STALE pin (a version the refreshed catalog does not carry) and stale LastVersionUsed; bridge returns valid v2 HEAD",
         "When": "effortless build",
-        "Then": "mandatory refresh occurs once; all remote steps resolve before one project save; pins cleared and LastVersionUsed=v2; requested build runs afterward against v2",
+        "Then": "mandatory refresh occurs once; all remote steps resolve before one project save; the stale pin is cleared and LastVersionUsed=v2; requested build runs afterward against v2",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
         "Status": "rebuild-green",
-        "Description": "New behavior. The boundary is age >= 24 hours, not greater than 24 hours."
+        "Description": "D17: the gate clears only pins the catalog can no longer satisfy. A resolvable pin is deliberate and survives (build-pinned-url)."
       },
       {
         "TestCaseId": "res-freshness-invalid-time",
@@ -10282,7 +10842,7 @@
         "Title": "upgrade clears the pin",
         "Given": "step pinned v0",
         "When": "effortless upgrade to-uppercase ; effortless to-uppercase -upgrade ; effortless unpin to-uppercase",
-        "Then": "refresh banner; \"Upgraded to-uppercase: v0 → HEAD (v1, unpinned — will track latest)\"; PinnedVersion gone; LastVersionUsed v1; tool NOT run",
+        "Then": "refresh banner; \"Upgraded to-uppercase: v0 \u2192 HEAD (v1, unpinned \u2014 will track latest)\"; PinnedVersion gone; LastVersionUsed v1; tool NOT run",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -10296,7 +10856,7 @@
         "Title": "upgrade of an uninstalled tool",
         "Given": "project without the step",
         "When": "effortless upgrade to-uppercase",
-        "Then": "\"to-uppercase is not used in this project — nothing to unpin here.\" + refreshed line; exit 0",
+        "Then": "\"to-uppercase is not used in this project \u2014 nothing to unpin here.\" + refreshed line; exit 0",
         "Priority": "P1",
         "Interactive": false,
         "Slow": false,
@@ -10348,7 +10908,7 @@
       {
         "TestCaseId": "res-user-set-override",
         "Suite": "e2e-resolution",
-        "PrimaryOption": "setUrl",
+        "PrimaryOption": "setToolUrl",
         "Title": "tool_urls override beats the index",
         "Given": "index has to-uppercase; tool_urls to-uppercase=<mock alt url>",
         "When": "effortless to-uppercase -i in.txt",
@@ -10362,7 +10922,7 @@
       {
         "TestCaseId": "res-user-set-unknown-tool",
         "Suite": "e2e-resolution",
-        "PrimaryOption": "setUrl",
+        "PrimaryOption": "setToolUrl",
         "Title": "tool_urls-only tool",
         "Given": "index without mytool; tool_urls mytool=<mock>",
         "When": "effortless mytool -i in.txt",
@@ -10376,7 +10936,7 @@
       {
         "TestCaseId": "urls-set",
         "Suite": "e2e-tool-urls",
-        "PrimaryOption": "setUrl",
+        "PrimaryOption": "setToolUrl",
         "Title": "setUrl writes tool_urls.json",
         "Given": "sandbox",
         "When": "effortless -setUrl a=http://x ; seturl b=y.com ; -su c=https://z",
@@ -10390,7 +10950,7 @@
       {
         "TestCaseId": "urls-set-invalid",
         "Suite": "e2e-tool-urls",
-        "PrimaryOption": "setUrl",
+        "PrimaryOption": "setToolUrl",
         "Title": "setUrl format errors",
         "Given": "sandbox",
         "When": "effortless -setUrl noequals ; -setUrl a=b=c ; -setUrl =x",
@@ -10404,7 +10964,7 @@
       {
         "TestCaseId": "urls-set-bridge-warning",
         "Suite": "e2e-tool-urls",
-        "PrimaryOption": "setUrl",
+        "PrimaryOption": "setToolUrl",
         "Title": "overriding the bridge warns",
         "Given": "sandbox",
         "When": "effortless -setUrl cli-cloud-bridge=http://localhost:9",
@@ -10418,7 +10978,7 @@
       {
         "TestCaseId": "urls-view",
         "Suite": "e2e-tool-urls",
-        "PrimaryOption": "viewUrl",
+        "PrimaryOption": "viewToolUrl",
         "Title": "viewUrl",
         "Given": "tool_urls a=http://x",
         "When": "effortless -viewUrl a ; viewurl a ; -vu nope ; viewurl",
@@ -10432,7 +10992,7 @@
       {
         "TestCaseId": "urls-list",
         "Suite": "e2e-tool-urls",
-        "PrimaryOption": "listUrls",
+        "PrimaryOption": "listToolUrls",
         "Title": "listUrls",
         "Given": "none / two entries",
         "When": "effortless -listUrls ; listurls ; -lu",
@@ -10446,7 +11006,7 @@
       {
         "TestCaseId": "urls-remove",
         "Suite": "e2e-tool-urls",
-        "PrimaryOption": "removeUrl",
+        "PrimaryOption": "removeToolUrl",
         "Title": "removeUrl",
         "Given": "tool_urls a",
         "When": "effortless -removeUrl a ; removeurl nope ; -ru cli-cloud-bridge",
@@ -10460,7 +11020,7 @@
       {
         "TestCaseId": "urls-bareword-rt-quirk",
         "Suite": "e2e-tool-urls",
-        "PrimaryOption": "removeUrl",
+        "PrimaryOption": "removeToolUrl",
         "Title": "bareword rt means removeUrl",
         "Given": "tool_urls a",
         "When": "effortless rt a",
@@ -10474,7 +11034,7 @@
       {
         "TestCaseId": "auth-login-flow",
         "Suite": "e2e-auth",
-        "PrimaryOption": "authenticate",
+        "PrimaryOption": "login",
         "Title": "login command is an explicit future-auth stub",
         "Given": "authentication endpoint is not enabled",
         "When": "effortless login",
@@ -10488,7 +11048,7 @@
       {
         "TestCaseId": "auth-login-already",
         "Suite": "e2e-auth",
-        "PrimaryOption": "authenticate",
+        "PrimaryOption": "login",
         "Title": "login stub preserves existing local token",
         "Given": "valid token",
         "When": "effortless login",
@@ -10530,7 +11090,7 @@
       {
         "TestCaseId": "auth-subscription-no-token",
         "Suite": "e2e-auth",
-        "PrimaryOption": "subscription",
+        "PrimaryOption": "plan",
         "Title": "subscription command is stubbed without login",
         "Given": "no token",
         "When": "effortless plan ; -subscription",
@@ -10544,7 +11104,7 @@
       {
         "TestCaseId": "auth-subscription",
         "Suite": "e2e-auth",
-        "PrimaryOption": "subscription",
+        "PrimaryOption": "plan",
         "Title": "subscription command does not use a stored token while stubbed",
         "Given": "stored token and authentication endpoint is not enabled",
         "When": "effortless plan",
@@ -10604,7 +11164,7 @@
         "Title": "cli.js passes arguments",
         "Given": "built dll; node",
         "When": "node cli.js -version ; node cli.js -p \"a=b c\" (mock echo)",
-        "Then": "version printed; the mock receives cliParams [\"a=b c\"] intact (rebuild) — legacy golden shows [\"a=b\",\"param1=c\"]",
+        "Then": "version printed; the mock receives cliParams [\"a=b c\"] intact (rebuild) \u2014 legacy golden shows [\"a=b\",\"param1=c\"]",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
@@ -11212,6 +11772,328 @@
         "Slow": false,
         "Status": "rebuild-green",
         "Description": ""
+      },
+      {
+        "TestCaseId": "help-default-is-primary-only",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "help",
+        "Title": "bare -help lists only primary-tier commands",
+        "Given": "any cwd",
+        "When": "effortless -help ; -h ; help",
+        "Then": "output groups options by OptionCategories.Label in SortOrder and lists one line per Tier=primary retained option (its Flag plus HelpSummary); no secondary/modifier/plumbing option appears; the footer names -help <category|option> and -help all; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 09 \u00a74: default help must fit one screen instead of dumping all 54+ retained options."
+      },
+      {
+        "TestCaseId": "help-category-filter",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "help",
+        "Title": "-help <category> lists that category at every tier",
+        "Given": "any cwd",
+        "When": "effortless -help build ; effortless -help tool-urls",
+        "Then": "only the named category's heading is printed and every retained option in it appears regardless of Tier (for build that includes the modifier -includeDisabled); options from other categories are absent; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Category topics accept the OptionCategoryId."
+      },
+      {
+        "TestCaseId": "help-option-detail",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "help",
+        "Title": "-help <option> prints that option's detail",
+        "Given": "any cwd",
+        "When": "effortless -help pin ; effortless -help includeDisabled",
+        "Then": "prints the option's Flag, HelpDetail, its Aliases and BarewordForms, its Example, and for a modifier the parent command from ParentOption (includeDisabled names build); exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Option topics accept the CliOptionId."
+      },
+      {
+        "TestCaseId": "help-unknown-topic",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "help",
+        "Title": "-help with an unknown topic explains itself",
+        "Given": "any cwd",
+        "When": "effortless -help nonsense",
+        "Then": "prints \"Unknown help topic 'nonsense'.\" plus the hint naming -help, -help <category>, -help <option> and -help all; exit 0 (help is never an error path)",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Unlike meta-unknown-option (a Plossum parse failure, exit -1), an unknown help topic is a successful help invocation."
+      },
+      {
+        "TestCaseId": "help-all-flat",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "help",
+        "Title": "-help all dumps every retained option flat",
+        "Given": "any cwd",
+        "When": "effortless -help all",
+        "Then": "one line per retained CliOptions row regardless of Tier, no category grouping required; every Flag emitted by CliOptions.g.cs is present; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Replaces meta-help's old role as the exhaustive listing."
+      },
+      {
+        "TestCaseId": "help-summary-width",
+        "Suite": "unit-core",
+        "PrimaryOption": "help",
+        "Title": "every HelpSummary fits the -help column budget",
+        "Given": "the rulebook on disk",
+        "When": "read CliOptions.data and measure HelpSummary for every retained row",
+        "Then": "every retained option has a non-empty HelpSummary and none exceeds 51 characters",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "HelpCommand renders \"  {Flag,-26} {HelpSummary}\", so 80 - 2 - 26 - 1 = 51 is the real budget that keeps -help inside an 80-column terminal (meta-help-width). Asserted against the rulebook, not the console, so an over-long summary fails at authoring time."
+      },
+      {
+        "TestCaseId": "readme-commands-block-matches-rulebook",
+        "Suite": "devops",
+        "PrimaryOption": "help",
+        "Title": "README command block matches the rulebook",
+        "Given": "CI",
+        "When": "node scripts/generate-from-rulebook.mjs --check",
+        "Then": "the text between README.md's <!-- cli-commands:start --> and <!-- cli-commands:end --> markers equals what the generator emits from the rulebook; no drift",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 09 \u00a74: the README summary and -help are generated from the same rows so they cannot drift."
+      },
+      {
+        "TestCaseId": "build-with-subprojects-includes-nested",
+        "Suite": "e2e-build",
+        "PrimaryOption": "buildWithSubprojects",
+        "Title": "buildWithSubprojects builds nested effortless projects",
+        "Given": "root project with a step at / plus nested/effortless.json carrying its own step",
+        "When": "effortless buildWithSubprojects ; effortless -buildWithSubprojects ; effortless -bws",
+        "Then": "the root step runs, then \"Executing 'effortless -buildLocal' in <nested>\" is printed and the nested step runs in a child process; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": true,
+        "Status": "rebuild-green",
+        "Description": "D12: the withSubprojects scope. Carries forward v1's buildAll nested-project traversal, which buildAll itself no longer performs."
+      },
+      {
+        "TestCaseId": "build-all-excludes-nested",
+        "Suite": "e2e-build",
+        "PrimaryOption": "buildAll",
+        "Title": "buildAll stops at nested project boundaries",
+        "Given": "root project with a step at / plus nested/effortless.json carrying its own step",
+        "When": "effortless buildAll",
+        "Then": "the root step runs; no \"Executing 'effortless -buildLocal' in <nested>\" line appears and the nested step is not run; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D6/D12 behavior change: buildAll means \"as if run from the project root\" and nested effortless projects are normally excluded. build-all is re-recorded for the new scope; buildWithSubprojects is the opt-in."
+      },
+      {
+        "TestCaseId": "clean-with-subprojects",
+        "Suite": "e2e-clean",
+        "PrimaryOption": "cleanWithSubprojects",
+        "Title": "cleanWithSubprojects cleans nested projects too",
+        "Given": "root project and nested/effortless.json both built; cwd=<root>/sub",
+        "When": "effortless cleanWithSubprojects ; effortless -cws",
+        "Then": "every root output is cleaned and \"Executing 'effortless -clean' in <nested>\" is printed; a plain cleanAll on the same fixture cleans the root outputs only and leaves the nested output in place",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": true,
+        "Status": "rebuild-green",
+        "Description": "D12 applied to clean; the same All-vs-WithSubprojects split as build."
+      },
+      {
+        "TestCaseId": "describe-downstream",
+        "Suite": "e2e-project",
+        "PrimaryOption": "describe",
+        "Title": "describe shows the subtree from cwd downstream",
+        "Given": "project with steps at / , /sub and /sub/deeper ; cwd=<root>/sub",
+        "When": "effortless describe ; effortless -describe ; effortless list",
+        "Then": "the /sub and /sub/deeper steps are listed and the / step is not; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D12: describe's documented scope is downstream, matching build. proj-describe-subtree already proves the two-level case; this adds the deeper descendant that distinguishes downstream from describeLocal."
+      },
+      {
+        "TestCaseId": "describe-local",
+        "Suite": "e2e-project",
+        "PrimaryOption": "describeLocal",
+        "Title": "describeLocal shows only the exact cwd",
+        "Given": "project with steps at / , /sub and /sub/deeper ; cwd=<root>/sub",
+        "When": "effortless describeLocal ; effortless -describeLocal ; effortless -dl",
+        "Then": "only the /sub step is listed; neither the / step nor the /sub/deeper step appears; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D12: carries v1's exact-folder describe forward under its own name."
+      },
+      {
+        "TestCaseId": "describe-with-subprojects",
+        "Suite": "e2e-project",
+        "PrimaryOption": "describeWithSubprojects",
+        "Title": "describeWithSubprojects includes nested projects",
+        "Given": "root project with steps at / and /sub plus nested/effortless.json carrying its own step; cwd=<root>/sub",
+        "When": "effortless describeWithSubprojects ; effortless -dws",
+        "Then": "every root step is listed regardless of cwd and the nested project is described too (its own header block and step); describeAll on the same fixture lists the root steps only",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D12 applied to describe; the fourth scope."
+      },
+      {
+        "TestCaseId": "pin-version",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "pin",
+        "Title": "pin fixes a step to a catalog version",
+        "Given": "project with an unpinned to-uppercase step installed at /",
+        "When": "effortless to-uppercase -pin v0 ; effortless pin to-uppercase v0",
+        "Then": "\"Pinned to-uppercase to v0\" is printed, effortless.json's step gains PinnedVersion=v0, and the tool is not run; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D17: -pin is the explicit way to fix this project's step; both the flag form and the bareword form target the step by tool name in cwd."
+      },
+      {
+        "TestCaseId": "pin-url",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "pin",
+        "Title": "pin accepts a literal URL",
+        "Given": "project with an unpinned to-uppercase step installed at /",
+        "When": "effortless to-uppercase -pin http://localhost:PORT/tool",
+        "Then": "\"Pinned to-uppercase to http://localhost:PORT/tool\" is printed and PinnedVersion holds the URL verbatim; a version key and a URL are stored the same way; exit 0",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D17: a pin is either a catalog version key or a specific URL; the CLI does not distinguish at pin time."
+      },
+      {
+        "TestCaseId": "pin-then-build-uses-pin",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "pin",
+        "Title": "a pinned step builds against the pin, not HEAD",
+        "Given": "catalog with to-uppercase v0 and HEAD v1; project step pinned to v0 via effortless to-uppercase -pin v0",
+        "When": "effortless build",
+        "Then": "the POST goes to v0's URL and the version label reports v0; the automatic freshness gate does not silently advance the step to HEAD while the pin is present; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Proves the pin survives ProjectToolFreshness and drives resolution, which is the whole point of D17."
+      },
+      {
+        "TestCaseId": "latest-flag-rejected",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "help",
+        "Title": "-latest is no longer an option",
+        "Given": "project with a to-uppercase step",
+        "When": "effortless to-uppercase -i in.txt -latest",
+        "Then": "Plossum reports the unknown option and the tool is not run; error text printed; exit -1 (255)",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D17: -latest is drop-legacy and is absent from CliOptions.g.cs, so it fails exactly like any other unrecognized flag (see meta-unknown-option). PrimaryOption is help because the removed option has no retained row."
+      },
+      {
+        "TestCaseId": "enable-step",
+        "Suite": "e2e-install",
+        "PrimaryOption": "enable",
+        "Title": "enable clears IsDisabled on a step",
+        "Given": "project with a disabled to-uppercase step at / ",
+        "When": "effortless enable to-uppercase ; effortless to-uppercase -enable",
+        "Then": "\"Enabled to-uppercase\" is printed, IsDisabled becomes false in effortless.json, and a following build runs the step; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D22: targeted the same way uninstall is - tool name in the current folder, optional -transpilerGroup."
+      },
+      {
+        "TestCaseId": "disable-step",
+        "Suite": "e2e-install",
+        "PrimaryOption": "disable",
+        "Title": "disable sets IsDisabled on a step",
+        "Given": "project with an enabled to-uppercase step at / ",
+        "When": "effortless disable to-uppercase ; effortless disable nosuchtool",
+        "Then": "first: \"Disabled to-uppercase\" and IsDisabled=true in effortless.json; second: \"No tools matching tool name 'nosuchtool' in path '/'\" and nothing changes; exit 0 in both cases",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D22: the inverse of enable, with uninstall's no-match message shape."
+      },
+      {
+        "TestCaseId": "acct-tool-falls-back-to-account",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "account",
+        "Title": "acct/tool falls back to tool with -account acct",
+        "Given": "catalog containing to-uppercase but no acme/to-uppercase entry",
+        "When": "effortless acme/to-uppercase -i in.txt",
+        "Then": "the request resolves to to-uppercase's catalog URL and carries cliAccount=acme, exactly as effortless to-uppercase -i in.txt -account acme would; no tool-not-found error; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D20 / ToolResolutionRules R6-R7: resolution never fails on the compound form alone."
+      },
+      {
+        "TestCaseId": "acct-tool-unresolved-tool-fails",
+        "Suite": "e2e-resolution",
+        "PrimaryOption": "account",
+        "Title": "acct/tool still fails when the tool itself is unknown",
+        "Given": "catalog containing neither acme/nonexistent nor nonexistent",
+        "When": "effortless acme/nonexistent -i in.txt",
+        "Then": "the normal tool-not-found block is printed (\"ERROR: Tool 'acme/nonexistent' does not exist.\" plus the listTools / setToolUrl hints); exit -1",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D20: the fallback is not a licence to succeed silently; failing only when the bare tool also fails is the contract."
+      },
+      {
+        "TestCaseId": "tool-url-verbs-canonical",
+        "Suite": "e2e-tool-urls",
+        "PrimaryOption": "setToolUrl",
+        "Title": "the canonical ToolUrl verbs work",
+        "Given": "sandbox with no tool_urls.json",
+        "When": "effortless -setToolUrl a=http://x ; effortless -listToolUrls ; effortless -viewToolUrl a ; effortless -removeToolUrl a",
+        "Then": "set writes the entry and prints \"Tool 'a' URL set to: http://x\"; list shows it; view reports \"Tool 'a' is configured with URL: http://x\"; remove deletes it; exit 0 throughout",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D16: *ToolUrl is canonical after the rename."
+      },
+      {
+        "TestCaseId": "tool-url-verbs-legacy-aliases",
+        "Suite": "e2e-tool-urls",
+        "PrimaryOption": "setToolUrl",
+        "Title": "the old *Url flags still work as hidden aliases",
+        "Given": "sandbox with no tool_urls.json",
+        "When": "effortless -setUrl a=http://x ; effortless -listUrls ; effortless -viewUrl a ; effortless -removeUrl a",
+        "Then": "each behaves identically to its *ToolUrl counterpart; the rename does not break an existing user's scripts; exit 0 throughout",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "D16: the *Url forms were a mistake but stay as aliases; this is the regression guard for the rename."
       }
     ]
   },
@@ -11416,8 +12298,8 @@
         "InstructionsPath": "docs/refactor-plan/step-09-option-taxonomy.md",
         "DoneCriteria": "No kept CliOptions row lacks Tier/Rationale/HelpSummary; modifiers name ParentOption; build/clean/describe families complete (buildWithSubprojects, cleanWithSubprojects, describeLocal, describeWithSubprojects); pin/enable/disable/*ToolUrl rows exist; latest and dryRun are drop-legacy with their tests removed; -help grouped and filterable; README command block generated; typos and reserved-word quirks fixed; drift check and dotnet test green.",
         "Owner": "opus",
-        "Status": "ready",
-        "Description": "Owner Q&A answered 2026-09-04 (README D12-D27). Next actionable step after step-07."
+        "Status": "done",
+        "Description": "Owner Q&A answered 2026-09-04 (README D12-D27); implemented 2026-09-05. 23 new TestCases rows added; 5 of the plan's 28 were already covered (upgrade-removes-pin by res-upgrade-tool, upgrade-all-removes-pins by res-upgrade-all, describe-all by proj-describe-all, and build-skips-disabled/build-include-disabled by the existing build-skips-disabled). New generated artifact CliOptionMetadata.g.cs carries Tier/Category/ParentOption/HelpDetail/Example so the rewritten -help can group and filter at runtime; README.md gained a generated cli-commands marker block; the manifest generator now filters Status=deleted rows. Three plan-vs-code corrections, all resolved in favor of the code and written up in step-09-option-taxonomy.md: describe was ALREADY downstream (only describeLocal was new behavior), buildAll/cleanAll ALREADY entered nested projects (so All was narrowed and the traversal moved to *WithSubprojects, re-recording build-all and clean-all), and HelpSummary's real budget is 51 chars not 72 (the -help render prefix is 29 columns). D17 required reconciling -pin with step-03A's currentness gate, which cleared every pin on every build: ProjectToolUpgradePlan.Apply now takes clearPins, the automatic gate passes false and honors a pin the catalog can still resolve, a stale pin is still cleared, and only upgrade/upgradeAll unpin unconditionally. That re-recorded build-pinned-url, build-version-label, build-sync-commandline-version and res-freshness-stale-upgrades. D20 implemented in ToolResolver: an unresolved acct/tool retries the bare tool against tool_urls then the catalog and applies acct as the account, failing only when the bare tool also fails."
       },
       {
         "RefactorStepId": "step-10",
@@ -11506,7 +12388,7 @@
     ]
   },
   "_meta": {
-    "_CMCC_Summary": "Hand-authored (LLM-direct) rulebook describing a software system — the effortless CLI — rather than a business domain. Tables are the nouns of the CLI (options, states, files, endpoints, tests, steps); calculated/lookup/aggregation fields expose coverage and retention facts (IsRetained, IsTested, IsRetainedButUntested, CountOfTestCases) so gaps are queryable.",
+    "_CMCC_Summary": "Hand-authored (LLM-direct) rulebook describing a software system \u2014 the effortless CLI \u2014 rather than a business domain. Tables are the nouns of the CLI (options, states, files, endpoints, tests, steps); calculated/lookup/aggregation fields expose coverage and retention facts (IsRetained, IsTested, IsRetainedButUntested, CountOfTestCases) so gaps are queryable.",
     "_conversion_metadata": {
       "source": "legacy source tree at a8f0f320f4417c58fa931cc4bc8164f79cbbbd97 (SSoTmeCLIHandler.cs, SSoTmeProject.cs, ProjectTranspiler.cs, SSOTMEPayload.cs, SSOTMEExtensions_core.cs, MyEffortlessAPIService.cs, installers, workflows) plus the tool-side CLIClassLibrary (FileSetService/EffortlessHelper) and the live cli-cloud-bridge source",
       "authored_on": "2026-08-30",

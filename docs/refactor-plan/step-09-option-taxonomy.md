@@ -22,7 +22,7 @@ New `CliOptions` fields (every generated artifact reads them):
 | `VerbFamily` | nullable string | `build`, `clean`, `describe` (see §2) |
 | `Scope` | nullable enum `downstream` / `local` / `all` / `withSubprojects` | the family member's scope |
 | `Rationale` | string | the owner's "why this exists", from the Q&A |
-| `HelpSummary` | string | one line, ≤ 72 chars, shown in `-help` |
+| `HelpSummary` | string | one line shown in `-help`, ≤ **51** chars (see the correction below) |
 | `HelpDetail` | string | shown by `-help <option>` and in `cli-reference.md` |
 | `Example` | string | one realistic invocation |
 
@@ -64,7 +64,7 @@ Bareword forms are lowercased so `buildwithsubprojects` also matches.
 | `output` (D21) | It is whatever the tool decides. The CLI passes it to the tool as `OutputFileName`; the tool may write one file or a tree. | Help rewritten; step 12 passes it as `EFFORTLESS_OUTPUT_NAME` |
 | `includeDisabled`, new `enable` / `disable` (D22) | Add `disable` and `enable` verbs that set `IsDisabled` on a step, targeted the same way `uninstall` targets a step (tool name in the current folder, optional `transpilerGroup`). | Add rows; Tier secondary; `includeDisabled` becomes modifier of `build` |
 | `info` / `listSettings` / `describe` (D23) | Confirmed: `info` is user-level state, `listSettings` is project settings, `describe` is steps. `info` also prints the catalog's last-refresh time and age (step 11 implements). | Rationale; help rewritten |
-| `buildOnTrigger` (D24) | Keep, category `build`, tier secondary. It polls a tiny bridge workload with no auth, DB, or storage: something (Airtable) calls `/set?secret=…`, the CLI polls `/get?secret=…`; `true` means build once and the flag resets. Read the actual routes from `BuildCommand` and record them in `HttpEndpoints.airtable-bridge-check` (its `Url` is null today). | Recategorize; Rationale; endpoint row filled |
+| `buildOnTrigger` (D24) | Keep, category `build`, tier secondary. It polls a tiny bridge workload with no auth, DB, or storage. **Verified route** (`TriggerBuildWatcher`): the CLI issues `GET {bridge}/check?baseId={id}` every 3 s and reads JSON `{changed: bool}`, rebuilding after a 10 s quiet period; polling, HTTP and payload failures are fatal rather than treated as unchanged. There is no `/set` or `/get` route in the codebase — earlier drafts of this row were wrong; how the Airtable side flips `changed` is outside this repo. | Recategorize; Rationale; endpoint row filled |
 | `purge` / `preserveZFS` / `skipClean` | Keep, tiers modifier (`clean`) / modifier (`clean`) / modifier (transpile). Help rewritten to say what they do (ledger kept vs deleted; previous output not cleaned before writing). Redefinition of the ledger itself is step 15. | Help; Rationale |
 | `execute` (D26) | Keep. A shell step with no fileset; local tools (step 12) coexist with it. | Tier secondary; Rationale |
 | `dryRun` (D27) | **Removed.** It made no sense: early steps write files that later steps read, so a "run but do not write" build is not a build. Git on a clean tree is the dry run. | `drop-legacy`; tests `inst-dry-run` deleted, `inst-dry-run-bareword-quirk` deleted |
@@ -104,6 +104,39 @@ are equivalent for every reserved word, so the old `dryRun`-style bareword quirk
 - `acct-tool-falls-back-to-account`, `acct-tool-unresolved-tool-fails`.
 - `tool-url-verbs-canonical`, `tool-url-verbs-legacy-aliases`.
 - `dry-run-rejected`.
+
+## Corrections found while implementing (2026-09-05)
+
+Three points where this document's prose did not match the verified code. The
+rulebook carries the corrected version in every case; trust it over the text
+above.
+
+- **`HelpSummary`'s real budget is 51 chars, not 72.** `-help` renders
+  `"  {Flag,-26} {HelpSummary}"`, so 72 would break the 80-column guarantee
+  `meta-help-width` asserts. `help-summary-width` enforces 51 against the
+  rulebook so an over-long summary fails at authoring time.
+- **`buildAll` / `cleanAll` already walked into nested projects.** §2 presents
+  `WithSubprojects` as purely additive, but v1's `buildAll`/`cleanAll` already
+  spawned a child CLI in every nested `effortless.json`. Implementing D6/D12 as
+  written is therefore a *behavior change to `All`*, not just four new rows:
+  `All` now stops at nested project boundaries and the traversal moved to the
+  new `WithSubprojects` scope. `build-all` and `clean-all` were re-recorded, and
+  `build-all-excludes-nested` guards the new boundary.
+- **`describe` was already downstream.** §2 says v1's `describe` meant the local
+  folder only. It did not: `EffortlessProject.Describe(cwd)` called
+  `IsAtPath(relativePath)` with `exactMatch: false`, which is downstream, and
+  `proj-describe-subtree` had been asserting that all along. No runtime change
+  was needed for `describe`; only `describeLocal` (the genuinely new
+  exact-folder filter) had to be built.
+- **`-latest`'s removal collides with step-03A's currentness gate.** The gate
+  cleared `PinnedVersion` on *every* build, which would have made the new `-pin`
+  a no-op. Reconciled by splitting the two intents: a pin the catalog can still
+  resolve is deliberate and is honored by the gate, while a pin that no longer
+  resolves is stale and is still cleared. `-upgrade`/`-upgradeAll` remain the
+  only paths that unpin unconditionally. `build-pinned-url`,
+  `build-version-label`, `build-sync-commandline-version` and
+  `res-freshness-stale-upgrades` were re-recorded for this; `build-pinned-missing`
+  and `res-freshness-upgrade-atomic` were unaffected.
 
 ## Done when
 

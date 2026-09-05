@@ -48,7 +48,6 @@ public sealed class ExecuteCommand
             invocation.Project.Install(
                 payload,
                 invocation.Options.transpilerGroup,
-                invocation.Options.dryRun,
                 invocation.ResolvedVersionKey);
         }
 

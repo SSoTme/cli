@@ -27,7 +27,8 @@ public class BuildRunner
         string transpilerGroup,
         bool isLocalBuild,
         bool debug,
-        bool continueOnError = false)
+        bool continueOnError = false,
+        bool withSubprojects = false)
     {
         Rebuild(
             rootPath,
@@ -36,7 +37,8 @@ public class BuildRunner
             isLocalBuild,
             debug,
             true,
-            continueOnError);
+            continueOnError,
+            withSubprojects);
     }
 
     public void Rebuild(
@@ -46,7 +48,8 @@ public class BuildRunner
         bool isBuildLocal,
         bool debug,
         bool isBuildAll = false,
-        bool continueOnError = false)
+        bool continueOnError = false,
+        bool withSubprojects = false)
     {
         DoRebuild(
             buildPath,
@@ -55,7 +58,8 @@ public class BuildRunner
             isBuildLocal,
             debug,
             isBuildAll,
-            continueOnError);
+            continueOnError,
+            withSubprojects);
     }
 
     internal void DoRebuild(
@@ -65,16 +69,22 @@ public class BuildRunner
         bool isBuildLocal,
         bool debugOption,
         bool isBuildAll = false,
-        bool continueOnError = false)
+        bool continueOnError = false,
+        bool withSubprojects = false)
     {
         if (!isBuildLocal)
         {
             CheckIfParentIsRootSeed();
         }
 
-        if (isBuildAll)
+        // D6/D12: buildAll means "as if run from the project root". Nested
+        // effortless projects are normally excluded; only buildWithSubprojects
+        // walks into them.
+        if (withSubprojects)
         {
-            FindSSoTmeJsonFiles();
+            _projectFiles = NestedProjectFinder.Find(_project.RootPath)
+                .Select(directory => directory.FullName)
+                .ToList();
         }
 
         var currentDirectory = Environment.CurrentDirectory;
@@ -166,7 +176,7 @@ public class BuildRunner
                 }
             }
 
-            if (isBuildAll)
+            if (withSubprojects)
             {
                 BuildSubSSoTmeProjects();
             }
@@ -259,60 +269,11 @@ public class BuildRunner
         }
     }
 
-    private void FindSSoTmeJsonFiles()
-    {
-        _projectFiles = new List<string>();
-        var currentDirectory =
-            new DirectoryInfo(Environment.CurrentDirectory);
-        FindSubSSoTmeJsonFiles(currentDirectory);
-    }
-
-    private void CheckDirectory(DirectoryInfo directory)
-    {
-        var projectFile = directory.GetFiles().FirstOrDefault(
-                              file =>
-                                  file.Name == "effortless.json") ??
-                          directory.GetFiles().FirstOrDefault(
-                              file => file.Name == "ssotme.json");
-        if (projectFile != null)
-        {
-            _projectFiles.Add(projectFile.FullName);
-        }
-    }
-
-    private void FindSubSSoTmeJsonFiles(
-        DirectoryInfo currentDirectory)
-    {
-        foreach (var subDirectoryToCheck in
-                 currentDirectory.GetDirectories())
-        {
-            if (subDirectoryToCheck.IsIgnored())
-            {
-                continue;
-            }
-
-            CheckDirectory(subDirectoryToCheck);
-        }
-
-        foreach (var subDirectoryToCheck in
-                 currentDirectory.GetDirectories())
-        {
-            FindSubSSoTmeJsonFiles(subDirectoryToCheck);
-        }
-    }
-
     private void BuildSubSSoTmeProjects()
     {
-        foreach (var projectFile in _projectFiles)
+        foreach (var projectDirectory in _projectFiles)
         {
-            RebuildProjectFile(projectFile);
+            new DirectoryInfo(projectDirectory).InvokeSSoTmeBuild();
         }
-    }
-
-    private static void RebuildProjectFile(string projectFile)
-    {
-        string directory = Path.GetDirectoryName(projectFile)!;
-        var directoryInfo = new DirectoryInfo(directory);
-        directoryInfo.InvokeSSoTmeBuild();
     }
 }

@@ -16,7 +16,8 @@ public class CleanRunner
     public void CleanAll(
         bool preserveZFS,
         bool purge,
-        bool debugOption)
+        bool debugOption,
+        bool withSubprojects = false)
     {
         var rootPathDirectory =
             new DirectoryInfo(_project.RootPath);
@@ -25,7 +26,8 @@ public class CleanRunner
             preserveZFS,
             purge,
             debugOption,
-            true);
+            true,
+            withSubprojects: withSubprojects);
         new EmptyFolderPruner(_project)
             .RemoveEmptyFolders(rootPathDirectory.FullName);
     }
@@ -48,7 +50,8 @@ public class CleanRunner
         bool purge,
         bool debugOption,
         bool cleanAll = false,
-        bool cleanLocal = false)
+        bool cleanLocal = false,
+        bool withSubprojects = false)
     {
         string currentDirectory;
         try
@@ -60,9 +63,13 @@ public class CleanRunner
             currentDirectory = pathFullName;
         }
 
-        if (cleanAll)
+        // D6/D12: cleanAll stops at nested project boundaries; only
+        // cleanWithSubprojects walks into them.
+        if (withSubprojects)
         {
-            FindSSoTmeJsonFiles();
+            _projectFiles = NestedProjectFinder.Find(_project.RootPath)
+                .Select(directory => directory.FullName)
+                .ToList();
         }
 
         try
@@ -99,7 +106,7 @@ public class CleanRunner
                 }
             }
 
-            if (cleanAll)
+            if (withSubprojects)
             {
                 CleanSubSSoTmeProjects();
             }
@@ -537,61 +544,12 @@ public class CleanRunner
         }
     }
 
-    private void FindSSoTmeJsonFiles()
-    {
-        _projectFiles = new List<string>();
-        var currentDirectory =
-            new DirectoryInfo(Environment.CurrentDirectory);
-        FindSubSSoTmeJsonFiles(currentDirectory);
-    }
-
-    private void CheckDirectory(DirectoryInfo directory)
-    {
-        var projectFile = directory.GetFiles().FirstOrDefault(
-                              file =>
-                                  file.Name == "effortless.json") ??
-                          directory.GetFiles().FirstOrDefault(
-                              file => file.Name == "ssotme.json");
-        if (projectFile != null)
-        {
-            _projectFiles.Add(projectFile.FullName);
-        }
-    }
-
-    private void FindSubSSoTmeJsonFiles(
-        DirectoryInfo currentDirectory)
-    {
-        foreach (var subDirectoryToCheck in
-                 currentDirectory.GetDirectories())
-        {
-            if (subDirectoryToCheck.IsIgnored())
-            {
-                continue;
-            }
-
-            CheckDirectory(subDirectoryToCheck);
-        }
-
-        foreach (var subDirectoryToCheck in
-                 currentDirectory.GetDirectories())
-        {
-            FindSubSSoTmeJsonFiles(subDirectoryToCheck);
-        }
-    }
-
     private void CleanSubSSoTmeProjects()
     {
-        foreach (var projectFile in _projectFiles)
+        foreach (var projectDirectory in _projectFiles)
         {
-            CleanProjectFile(projectFile);
+            new DirectoryInfo(projectDirectory).InvokeSSoTmeClean();
         }
-    }
-
-    private static void CleanProjectFile(string projectFile)
-    {
-        string directory = Path.GetDirectoryName(projectFile);
-        var directoryInfo = new DirectoryInfo(directory);
-        directoryInfo.InvokeSSoTmeClean();
     }
 
     private static bool IsRemoteUrlCommandLine(

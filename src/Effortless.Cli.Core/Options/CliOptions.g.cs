@@ -22,16 +22,16 @@ public class CliOptions
         waitTimeout = 180000;
     }
 
-    [CommandLineOption(Description = "Show help about how to use the SSoT.me CLI", MinOccurs = 0, Aliases = "h")]
+    [CommandLineOption(Description = "Show help about how to use the Effortless CLI", MinOccurs = 0, Aliases = "h")]
     public bool help { get; set; }
 
-    [CommandLineOption(Description = "Initialize the current folder as the root of an SSoT.me project. An Optional parameter of force will create a sub-project.", MinOccurs = 0, Aliases = "")]
+    [CommandLineOption(Description = "Initialize the current folder as the root of an Effortless project. An Optional parameter of force will create a sub-project.", MinOccurs = 0, Aliases = "")]
     public bool init { get; set; }
 
-    [CommandLineOption(Description = "Saves the current command into the SSoT.me Project file", MinOccurs = 0, Aliases = "")]
+    [CommandLineOption(Description = "Saves the current command into the Effortless Project file", MinOccurs = 0, Aliases = "")]
     public bool install { get; set; }
 
-    [CommandLineOption(Description = "Removes the current command from the SSoT.me Project file", MinOccurs = 0, Aliases = "")]
+    [CommandLineOption(Description = "Removes the current command from the Effortless Project file", MinOccurs = 0, Aliases = "")]
     public bool uninstall { get; set; }
 
     [CommandLineOption(Description = "Build any transpilers in the current folder (or children).", MinOccurs = 0, Aliases = "b,replay,rebuild,pull")]
@@ -49,7 +49,7 @@ public class CliOptions
     [CommandLineOption(Description = "Show debug output", MinOccurs = 0, Aliases = "")]
     public bool debug { get; set; }
 
-    [CommandLineOption(Description = "Describes the current SSoT.me Project (and all transpilers)", MinOccurs = 0, Aliases = "d")]
+    [CommandLineOption(Description = "Describe the transpilers in the current folder and its children", MinOccurs = 0, Aliases = "d")]
     public bool describe { get; set; }
 
     [CommandLineOption(Description = "Describe all of the transpiler in the project", MinOccurs = 0, Aliases = "da")]
@@ -91,10 +91,10 @@ public class CliOptions
     [CommandLineOption(Description = "List of project settings", MinOccurs = 0, Aliases = "ls")]
     public bool listSettings { get; set; }
 
-    [CommandLineOption(Description = "Adds a setting to the SSoT.me Project", MinOccurs = 0, Aliases = "as")]
+    [CommandLineOption(Description = "Adds a setting to the Effortless Project", MinOccurs = 0, Aliases = "as")]
     public List<string> addSetting { get; set; }
 
-    [CommandLineOption(Description = "Removes a setting from the SSoT.me Project", MinOccurs = 0, Aliases = "rs")]
+    [CommandLineOption(Description = "Removes a setting from the Effortless Project", MinOccurs = 0, Aliases = "rs")]
     public List<string> removeSetting { get; set; }
 
     [CommandLineOption(Description = "The amount of time to wait for the command to continue", MinOccurs = 0, Aliases = "w")]
@@ -118,11 +118,11 @@ public class CliOptions
     [CommandLineOption(Description = "Name of a group to put a transpiler in within a specific folder", MinOccurs = 0, Aliases = "tg")]
     public string transpilerGroup { get; set; }
 
-    [CommandLineOption(Description = "Add an account api key", MinOccurs = 0, Aliases = "api")]
+    [CommandLineOption(Description = "Add an account api key", MinOccurs = 0, Aliases = "api,setAccountKey")]
     public string setAccountAPIKey { get; set; }
 
-    [CommandLineOption(Description = "Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).", MinOccurs = 0, Aliases = "auth,login")]
-    public bool authenticate { get; set; }
+    [CommandLineOption(Description = "Authenticate with EffortlessAPI using a magic link (currently unavailable; reserved for future service enablement).", MinOccurs = 0, Aliases = "auth,authenticate")]
+    public bool login { get; set; }
 
     [CommandLineOption(Description = "Authenticate this project with EffortlessAPI (currently unavailable; reserved for future service enablement).", MinOccurs = 0, Aliases = "projectAuth")]
     public bool projectLogin { get; set; }
@@ -136,23 +136,20 @@ public class CliOptions
     [CommandLineOption(Description = "Show CLI version", MinOccurs = 0, Aliases = "v")]
     public bool version { get; set; }
 
-    [CommandLineOption(Description = "Dry run of a buid", MinOccurs = 0, Aliases = "dr")]
-    public bool dryRun { get; set; }
-
-    [CommandLineOption(Description = "TargetUrl of the tool bing invoked", MinOccurs = 0, Aliases = "g")]
+    [CommandLineOption(Description = "TargetUrl of the tool being invoked", MinOccurs = 0, Aliases = "g")]
     public string targetUrl { get; set; }
 
-    [CommandLineOption(Description = "List all custom tool urls defined for this user", MinOccurs = 0, Aliases = "lu")]
-    public bool listUrls { get; set; }
+    [CommandLineOption(Description = "List all custom tool urls defined for this user", MinOccurs = 0, Aliases = "lu,listUrls")]
+    public bool listToolUrls { get; set; }
 
-    [CommandLineOption(Description = "View the url for the specified tool", MinOccurs = 0, Aliases = "vu,vt")]
-    public string viewUrl { get; set; }
+    [CommandLineOption(Description = "View the url for the specified tool", MinOccurs = 0, Aliases = "vu,vt,viewUrl")]
+    public string viewToolUrl { get; set; }
 
-    [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this user", MinOccurs = 0, Aliases = "su,setToolUrl")]
-    public string setUrl { get; set; }
+    [CommandLineOption(Description = "Set a tool's URL to a custom endpoint for this user", MinOccurs = 0, Aliases = "su,setUrl")]
+    public string setToolUrl { get; set; }
 
-    [CommandLineOption(Description = "Remove a custom tool URL from this user's config, setting it back to the default value.", MinOccurs = 0, Aliases = "ru,removeToolUrl")]
-    public string removeUrl { get; set; }
+    [CommandLineOption(Description = "Remove a custom tool URL from this user's config, setting it back to the default value.", MinOccurs = 0, Aliases = "ru,removeUrl")]
+    public string removeToolUrl { get; set; }
 
     [CommandLineOption(Description = "Don't let one failing step stop the build: run every remaining transpiler, write the full exception detail of anything that failed to errors.json in the project root, and still exit 0. Defaults to off.", MinOccurs = 0, Aliases = "coe,ignoreErrors,ignoreError")]
     public bool continueOnError { get; set; }
@@ -172,15 +169,33 @@ public class CliOptions
     [CommandLineOption(Description = "Update the pinned version of this tool to the current head version (does not run the tool)", MinOccurs = 0, Aliases = "up")]
     public bool upgrade { get; set; }
 
-    [CommandLineOption(Description = "Run this tool using the current head version and update its pinned version for this project", MinOccurs = 0, Aliases = "lat")]
-    public bool latest { get; set; }
-
-    [CommandLineOption(Description = "View the authenticated EffortlessAPI subscription plan (currently unavailable).", MinOccurs = 0, Aliases = "plan")]
-    public bool subscription { get; set; }
+    [CommandLineOption(Description = "View the authenticated EffortlessAPI subscription plan (currently unavailable).", MinOccurs = 0, Aliases = "subscription")]
+    public bool plan { get; set; }
 
     [CommandLineOption(Description = "Upgrade the effortless CLI to the latest version", MinOccurs = 0, Aliases = "uc,update")]
     public bool upgradeCli { get; set; }
 
     [CommandLineOption(Description = "Upgrade all transpilers in the project to the latest version", MinOccurs = 0, Aliases = "ua")]
     public bool upgradeAll { get; set; }
+
+    [CommandLineOption(Description = "Build the whole project, including nested effortless projects normally excluded", MinOccurs = 0, Aliases = "bws")]
+    public bool buildWithSubprojects { get; set; }
+
+    [CommandLineOption(Description = "Clean the whole project, including nested effortless projects normally excluded", MinOccurs = 0, Aliases = "cws")]
+    public bool cleanWithSubprojects { get; set; }
+
+    [CommandLineOption(Description = "Describe only the transpilers installed in the current folder", MinOccurs = 0, Aliases = "dl")]
+    public bool describeLocal { get; set; }
+
+    [CommandLineOption(Description = "Describe the whole project, including nested effortless projects normally excluded", MinOccurs = 0, Aliases = "dws")]
+    public bool describeWithSubprojects { get; set; }
+
+    [CommandLineOption(Description = "Pin this project's step to a specific catalog version or URL", MinOccurs = 0, Aliases = "")]
+    public string pin { get; set; }
+
+    [CommandLineOption(Description = "Marks the current command's step as disabled in the effortless.json Project file", MinOccurs = 0, Aliases = "")]
+    public bool disable { get; set; }
+
+    [CommandLineOption(Description = "Marks the current command's step as enabled in the effortless.json Project file", MinOccurs = 0, Aliases = "")]
+    public bool enable { get; set; }
 }

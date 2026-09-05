@@ -61,9 +61,9 @@ public sealed class VersionCommands
         {
             Console.WriteLine();
             Console.WriteLine(
-                $"  * globally overridden via effortless -setUrl {toolName}={overrideUrl}");
+                $"  * globally overridden via effortless -setToolUrl {toolName}={overrideUrl}");
             Console.WriteLine(
-                $"    run 'effortless -removeUrl {toolName}' to reset");
+                $"    run 'effortless -removeToolUrl {toolName}' to reset");
         }
 
         Console.WriteLine();
@@ -136,6 +136,58 @@ public sealed class VersionCommands
         return 0;
     }
 
+    /// <summary>
+    /// D17: pins this project's step to a catalog version key or a literal
+    /// URL. Both are stored the same way in <c>PinnedVersion</c>; the CLI does
+    /// not distinguish at pin time. <c>-upgrade</c> (alias unpin) clears it.
+    /// </summary>
+    public int Pin(CliInvocation invocation, string pinnedValue)
+    {
+        var project = invocation.Project
+                      ?? ProjectLocator.TryToLoad(
+                          new DirectoryInfo(
+                              invocation.CurrentDirectory));
+        if (project is null)
+        {
+            WriteError(
+                "No effortless.json project found in this directory.");
+            return -1;
+        }
+
+        var toolName = invocation.RawTranspilerArg
+                       ?? invocation.Transpiler;
+        if (string.IsNullOrWhiteSpace(toolName))
+        {
+            WriteError(
+                "Please specify a transpiler name to pin.");
+            return -1;
+        }
+
+        var matches = project.ProjectTranspilers
+            .Where(step => EffortlessProject.ToolNameMatches(
+                EffortlessProject.GetToolName(step.CommandLine),
+                toolName))
+            .ToList();
+        var matched = MatchCurrentDirectory(
+            matches,
+            project,
+            invocation.CurrentDirectory);
+        if (matched is null)
+        {
+            WriteError(
+                $"{toolName} is not installed in this project — nothing to pin.");
+            return -1;
+        }
+
+        matched.PinnedVersion = pinnedValue;
+        project.Save();
+        Console.WriteLine(
+            $"Pinned {toolName} to {pinnedValue}");
+        Console.WriteLine(
+            $"Run 'effortless upgrade {toolName}' to remove the pin and track HEAD again.");
+        return 0;
+    }
+
     public int ListTools(string search = null)
     {
         var tools = _index.ListTools(search);
@@ -193,7 +245,7 @@ public sealed class VersionCommands
                 $"  UP   {entry.ToolName}: {entry.PreviousVersion} → HEAD ({entry.HeadVersion}, unpinned)");
         }
 
-        plan.Apply(project);
+        plan.Apply(project, clearPins: true);
         Console.WriteLine(
             $"\nUpgraded {changedCount} tool(s)"
             + (missingCount > 0

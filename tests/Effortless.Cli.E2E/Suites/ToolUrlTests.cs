@@ -213,6 +213,76 @@ public sealed class ToolUrlTests
             urls["cli-cloud-bridge"]?.GetValue<string>());
     }
 
+    [Fact(DisplayName = "tool-url-verbs-canonical: the canonical ToolUrl verbs work")]
+    public async Task CanonicalToolUrlVerbsSetListViewAndRemove()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        var set = await cli.Run(
+            ["-setToolUrl", "a=http://x"],
+            sandbox.ProjectPath,
+            sandbox);
+        var list = await cli.Run(["-listToolUrls"], sandbox.ProjectPath, sandbox);
+        var view = await cli.Run(["-viewToolUrl", "a"], sandbox.ProjectPath, sandbox);
+        var remove = await cli.Run(
+            ["-removeToolUrl", "a"],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, set.ExitCode);
+        Assert.Equal(0, list.ExitCode);
+        Assert.Equal(0, view.ExitCode);
+        Assert.Equal(0, remove.ExitCode);
+        Assert.Contains(
+            "Tool 'a' URL set to: http://x",
+            set.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains("  a: http://x", list.Stdout, StringComparison.Ordinal);
+        Assert.Contains(
+            "Tool 'a' is configured with URL: http://x",
+            view.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Tool 'a' URL has been removed from your user configuration.",
+            remove.Stdout,
+            StringComparison.Ordinal);
+        Assert.Null(ToolUrlTestSupport.ReadToolUrls(sandbox)["a"]);
+    }
+
+    [Fact(DisplayName = "tool-url-verbs-legacy-aliases: the old *Url flags still work")]
+    public async Task LegacyUrlFlagsStillWorkAfterTheRename()
+    {
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+
+        // D16: *ToolUrl is canonical, but the old *Url spellings are kept as
+        // hidden aliases so the rename does not break existing scripts.
+        var set = await cli.Run(["-setUrl", "a=http://x"], sandbox.ProjectPath, sandbox);
+        var list = await cli.Run(["-listUrls"], sandbox.ProjectPath, sandbox);
+        var view = await cli.Run(["-viewUrl", "a"], sandbox.ProjectPath, sandbox);
+        var remove = await cli.Run(["-removeUrl", "a"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, set.ExitCode);
+        Assert.Equal(0, list.ExitCode);
+        Assert.Equal(0, view.ExitCode);
+        Assert.Equal(0, remove.ExitCode);
+        Assert.Contains(
+            "Tool 'a' URL set to: http://x",
+            set.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains("  a: http://x", list.Stdout, StringComparison.Ordinal);
+        Assert.Contains(
+            "Tool 'a' is configured with URL: http://x",
+            view.Stdout,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "Tool 'a' URL has been removed from your user configuration.",
+            remove.Stdout,
+            StringComparison.Ordinal);
+        Assert.Null(ToolUrlTestSupport.ReadToolUrls(sandbox)["a"]);
+    }
+
     [Fact(DisplayName = "urls-bareword-rt-quirk: bareword rt removes a URL instead of refreshing")]
     public async Task BarewordRtRemovesUrlInsteadOfRefreshing()
     {

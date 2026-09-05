@@ -58,10 +58,42 @@ public sealed class ProjectToolFreshness
             }
 
             entries.Add(
-                ProjectToolUpgradeEntry.Resolved(step, tool, head));
+                ProjectToolUpgradeEntry.Resolved(
+                    step,
+                    tool,
+                    head,
+                    pinResolves: PinResolves(tool, step.PinnedVersion)));
         }
 
         return ProjectToolUpgradePlan.Succeeded(entries);
+    }
+
+    /// <summary>
+    /// D17: a pin is honored by the automatic gate only while it still names
+    /// something the catalog can resolve. A pin that has fallen out of the
+    /// catalog is stale, not deliberate, and step-03A's currentness gate still
+    /// clears it so the build does not break silently.
+    /// </summary>
+    private bool PinResolves(string tool, string pinnedVersion)
+    {
+        if (string.IsNullOrWhiteSpace(pinnedVersion))
+        {
+            return false;
+        }
+
+        // A pin may be a literal URL rather than a catalog version key.
+        if (Uri.TryCreate(pinnedVersion, UriKind.Absolute, out var uri)
+            && uri.Scheme is "http" or "https")
+        {
+            return true;
+        }
+
+        var versions = _index.ListVersions(tool);
+        return versions is not null
+            && versions.Versions.Any(version => string.Equals(
+                version.VersionKey,
+                pinnedVersion,
+                StringComparison.Ordinal));
     }
 
     private bool HasCustomUrl(string tool)
@@ -116,7 +148,19 @@ public sealed class ProjectToolUpgradePlan
     public int MissingCount =>
         Entries.Count(entry => entry.IsMissing);
 
-    public bool Apply(EffortlessProject project)
+    public int PinnedCount =>
+        Entries.Count(entry => entry.IsPinned);
+
+    /// <summary>
+    /// Advances every step that needs it to catalog HEAD. D17: with
+    /// <paramref name="clearPins"/> false — the automatic build-time gate — a
+    /// step carrying a deliberate <c>PinnedVersion</c> is left completely
+    /// alone, so <c>-pin</c> survives a build. The explicit upgrade verbs pass
+    /// true and unpin.
+    /// </summary>
+    public bool Apply(
+        EffortlessProject project,
+        bool clearPins = true)
     {
         ArgumentNullException.ThrowIfNull(project);
         if (!IsSuccessful)
@@ -127,6 +171,11 @@ public sealed class ProjectToolUpgradePlan
         var changed = false;
         foreach (var entry in Entries.Where(entry => entry.NeedsChange))
         {
+            if (entry.HasHonoredPin && !clearPins)
+            {
+                continue;
+            }
+
             entry.Step.ClearCommandLineVersion();
             entry.Step.PinnedVersion = null;
             entry.Step.LastVersionUsed = entry.HeadVersion;
@@ -157,12 +206,14 @@ public sealed class ProjectToolUpgradeEntry
         ProjectTranspiler step,
         string toolName,
         string headVersion,
-        bool isMissing)
+        bool isMissing,
+        bool pinResolves = false)
     {
         Step = step;
         ToolName = toolName;
         HeadVersion = headVersion;
         IsMissing = isMissing;
+        PinResolves = pinResolves;
     }
 
     public ProjectTranspiler Step { get; }
@@ -173,10 +224,26 @@ public sealed class ProjectToolUpgradeEntry
 
     public bool IsMissing { get; }
 
+    /// <summary>
+    /// D17: a deliberate <c>-pin</c> is respected by the automatic build-time
+    /// gate; only an explicit <c>-upgrade</c>/<c>-upgradeAll</c> clears it.
+    /// </summary>
+    public bool IsPinned =>
+        !string.IsNullOrWhiteSpace(Step.PinnedVersion);
+
+    /// <summary>
+    /// True when this step carries a pin the catalog can still satisfy, so the
+    /// automatic gate must leave it alone (D17). A pin that no longer resolves
+    /// is stale and is still cleared by the gate.
+    /// </summary>
+    public bool HasHonoredPin => IsPinned && PinResolves;
+
+    public bool PinResolves { get; }
+
     public bool NeedsChange =>
         !IsMissing
         && (Step.HasCommandLineVersion()
-            || !string.IsNullOrWhiteSpace(Step.PinnedVersion)
+            || IsPinned
             || !string.Equals(
                 Step.LastVersionUsed,
                 HeadVersion,
@@ -195,6 +262,7 @@ public sealed class ProjectToolUpgradeEntry
     internal static ProjectToolUpgradeEntry Resolved(
         ProjectTranspiler step,
         string toolName,
-        RemoteToolResolution head) =>
-        new(step, toolName, head.VersionKey, false);
+        RemoteToolResolution head,
+        bool pinResolves = false) =>
+        new(step, toolName, head.VersionKey, false, pinResolves);
 }

@@ -74,6 +74,46 @@ Remove files recorded in the generated-file ledgers:
 effortless clean
 ```
 
+## Commands
+
+The command summary below is generated from
+`effortless-rulebook/effortless-rulebook.json`, the same source as `-help` and
+[docs/cli-reference.md](docs/cli-reference.md), so the three cannot drift.
+
+<!-- cli-commands:start -->
+
+### CLI meta
+
+- `-help` — Show usage and available commands
+- `-info` — Show CLI/user configuration and login status
+- `-version` — Print the CLI version
+
+### Project file
+
+- `-init` — Create effortless.json and an empty rulebook here
+- `-describe` — Describe steps in this folder and its children
+
+### Install / uninstall tools
+
+- `-install` — Register a transpiler step in effortless.json
+- `-uninstall` — Remove a registered step from effortless.json
+
+### Build
+
+- `-build` — Build steps in this folder and its children
+- `-buildAll` — Build the whole project from its root
+- `-buildLocal` — Build only steps registered exactly here
+
+### Clean
+
+- `-clean` — Delete generated output here and below
+- `-cleanAll` — Clean the whole project from its root
+- `-cleanLocal` — Clean only steps registered exactly here
+
+Run `effortless -help <category|option>` for one topic, or
+`effortless -help all` for every option.
+<!-- cli-commands:end -->
+
 ## Seeds
 
 An Effortless seed is a public GitHub repository with `effortless.json` at its
