@@ -106,8 +106,12 @@ jobs:
         with:
           node-version: 20
 
+      - name: Build
+        run: dotnet build Effortless.Cli.sln --configuration Release
+
       - name: Run slow tests
         run: >-
           dotnet test Effortless.Cli.sln
           --configuration Release
+          --no-build
           --filter "Slow=true"

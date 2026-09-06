@@ -2,7 +2,7 @@
   "schema": "effortless-build-errors/v1",
   "generatedAt": "<TIME>",
   "startedAt": "<TIME>",
-  "projectRoot": "/private<ROOT>",
+  "projectRoot": "<ROOT>",
   "buildCommand": "build",
   "continueOnError": true,
   "totalSteps": 3,

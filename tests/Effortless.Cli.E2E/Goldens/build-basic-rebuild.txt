@@ -5,10 +5,10 @@
  **** : Root ****
 CommandLine:> effortless to-uppercase
 cli:> effortless/common/to-uppercase v2026.01.01.0001 [latest]
-[cli] Creating /private<ROOT>/root.txt
+[cli] Creating <ROOT>/root.txt
 
 
  **** /sub: Sub ****
 CommandLine:> effortless echo
 cli:> effortless/common/echo v2026.01.01.0001 [latest]
-[cli] Creating /private<ROOT>/sub/sub.txt
+[cli] Creating <ROOT>/sub/sub.txt

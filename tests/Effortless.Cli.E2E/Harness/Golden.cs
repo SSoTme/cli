@@ -8,6 +8,9 @@ internal static partial class Golden
     {
         var normalized = text
             .Replace("\r\n", "\n", StringComparison.Ordinal)
+            // macOS resolves the temp root under /private; normalize that spelling first.
+            .Replace("/private" + sandbox.ProjectPath, "<ROOT>", StringComparison.Ordinal)
+            .Replace("/private" + sandbox.HomePath, "<HOME>", StringComparison.Ordinal)
             .Replace(sandbox.ProjectPath, "<ROOT>", StringComparison.Ordinal)
             .Replace(sandbox.HomePath, "<HOME>", StringComparison.Ordinal)
             .Replace(CliUnderTest.PackageVersion, "<VER>", StringComparison.Ordinal);
