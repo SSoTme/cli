@@ -13,4 +13,6 @@ mkdir -p "$(dirname "$out")"
   first=$(cd "$EFFORTLESS_INPUT_DIR" && find . -type f | sort | head -n 1)
   if [ -n "$first" ]; then sed 's/^/  /' "$EFFORTLESS_INPUT_DIR/$first"; fi
 } > "$out"
+# Regenerated output: declare it, exactly as a cloud tool sets AlwaysOverwrite.
+printf '{ "%s": "Always" }\n' "${EFFORTLESS_OUTPUT_NAME:-echo.txt}" > "$EFFORTLESS_OUTPUT_DIR/effortless-overwrite-modes.json"
 echo "echo-params wrote $(basename "$out")"

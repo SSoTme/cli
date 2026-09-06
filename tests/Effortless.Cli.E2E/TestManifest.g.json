@@ -2134,5 +2134,13 @@
     "status": "rebuild-green",
     "slow": false,
     "interactive": false
+  },
+  {
+    "id": "local-tool-script-overwrite-modes",
+    "suite": "e2e-local-tools",
+    "priority": "P0",
+    "status": "rebuild-green",
+    "slow": false,
+    "interactive": false
   }
 ]

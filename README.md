@@ -148,6 +148,10 @@ overrides the inference above.
   output fileset, and `EFFORTLESS_OUTPUT_NAME`, `EFFORTLESS_PARAMS` (JSON array
   of the `name=value` params) and `EFFORTLESS_TOOL_NAME` carry the rest. A
   non-zero exit fails the step with the script's output as the tool log.
+  Overwrite behaviour is the protocol's: write `effortless-overwrite-modes.json`
+  into the output directory (`{ "sql/*b-customize-*.sql": "Never", "sql/**": "Always" }`)
+  to set each file's `OverwriteMode`; an undeclared file is written once and
+  never overwritten, exactly as for every other tool.
 - **node** tools are started with `PORT` set and answer `POST /`. The CLI passes
   the path of its zero-dependency handler in `EFFORTLESS_FILESET_HANDLER`:
   `const { serveTool } = await import(process.env.EFFORTLESS_FILESET_HANDLER);`

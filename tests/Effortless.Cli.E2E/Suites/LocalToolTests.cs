@@ -152,6 +152,34 @@ public sealed class LocalToolTests
         Assert.Contains("inputs:\n  README.md", output.Replace("\r\n", "\n"), StringComparison.Ordinal);
     }
 
+    [Fact(DisplayName = "local-tool-script-overwrite-modes: a script's files obey the protocol's overwrite rules exactly")]
+    public async Task ScriptFilesObeyOverwriteModes()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = SeedProject(cli, server);
+        string Read(string path) => sandbox.ReadFile(path).Replace("\r\n", "\n");
+
+        var first = await cli.Run(["overwrite-modes", "-input", "README.md", "-p", "stamp=one"], sandbox.ProjectPath, sandbox);
+        Assert.Equal(0, first.ExitCode);
+        Assert.Equal("always one\n", Read("always.txt"));
+        Assert.Equal("never one\n", Read("never.txt"));
+        Assert.Equal("plain one\n", Read("plain.txt"));
+        Assert.Equal("gen one\n", Read("sql/01-tables.sql"));
+        Assert.Equal("seam one\n", Read("sql/01b-customize-schema.sql"));
+        Assert.False(File.Exists(Path.Combine(sandbox.ProjectPath, "effortless-overwrite-modes.json")), "the declaration is not an output file");
+
+        var second = await cli.Run(["overwrite-modes", "-input", "README.md", "-p", "stamp=two"], sandbox.ProjectPath, sandbox);
+
+        Assert.Equal(0, second.ExitCode);
+        Assert.Equal("always two\n", Read("always.txt"));
+        Assert.Equal("never one\n", Read("never.txt"));
+        // Undeclared = no OverwriteMode node = the protocol default: written once, never touched again.
+        Assert.Equal("plain one\n", Read("plain.txt"));
+        Assert.Equal("gen two\n", Read("sql/01-tables.sql"));
+        Assert.Equal("seam one\n", Read("sql/01b-customize-schema.sql"));
+    }
+
     [Fact(DisplayName = "local-tool-nonzero-exit-fails-step: a script that exits non-zero fails the step with its log")]
     public async Task NonZeroExitFailsTheStep()
     {
@@ -183,7 +211,7 @@ public sealed class LocalToolTests
             "ERROR: 'bogus' under effortless-tools/ is not a valid local tool: runtime 'cobol' is not one of dotnet, node, script",
             serve.Stdout,
             StringComparison.Ordinal);
-        Assert.Contains("(4 tool(s))", serve.Stdout, StringComparison.Ordinal);
+        Assert.Contains("(5 tool(s))", serve.Stdout, StringComparison.Ordinal);
         // An invalid folder is not a tool, so the name falls through to the catalog and is not found there.
         Assert.True(direct.Failed);
         Assert.Contains("Tool 'bogus' does not exist.", direct.Stdout, StringComparison.Ordinal);
@@ -276,7 +304,7 @@ public sealed class LocalToolTests
             new Dictionary<string, string> { ["EFFORTLESS_SERVE_EXIT_AFTER_MS"] = "20000" });
         await serve.WaitUntilAsync(() => serve.Stdout.Contains("Press Ctrl+C to stop.", StringComparison.Ordinal));
 
-        Assert.Contains($"[cli] Local tool host listening on http://127.0.0.1:{port}/ (4 tool(s))", serve.Stdout, StringComparison.Ordinal);
+        Assert.Contains($"[cli] Local tool host listening on http://127.0.0.1:{port}/ (5 tool(s))", serve.Stdout, StringComparison.Ordinal);
         Assert.Contains($"  echo-params  http://127.0.0.1:{port}/echo-params  (script)", serve.Stdout, StringComparison.Ordinal);
         Assert.Contains($"  to-upper-node  http://127.0.0.1:{port}/to-upper-node  (node)", serve.Stdout, StringComparison.Ordinal);
         Assert.Contains($"  to-upper-dotnet  http://127.0.0.1:{port}/to-upper-dotnet  (dotnet)", serve.Stdout, StringComparison.Ordinal);
@@ -285,7 +313,7 @@ public sealed class LocalToolTests
         using var http = new HttpClient();
         var listing = await http.GetFromJsonAsync<JsonObject>($"http://127.0.0.1:{port}/");
         var names = listing!["tools"]!.AsArray().Select(tool => tool!["name"]!.GetValue<string>()).ToArray();
-        Assert.Equal(["echo-params", "fail-tool", "to-upper-dotnet", "to-upper-node"], names);
+        Assert.Equal(["echo-params", "fail-tool", "overwrite-modes", "to-upper-dotnet", "to-upper-node"], names);
         var health = await http.GetFromJsonAsync<JsonObject>($"http://127.0.0.1:{port}/echo-params");
         Assert.Equal("healthy", health!["status"]!.GetValue<string>());
 

@@ -5892,6 +5892,19 @@
         "UnixMode": "",
         "Disposition": "keep-modified",
         "Description": "Step 14. Absent file = the defaults [ssotme, effortlessapi]. EFFORTLESS_SEED_GITHUB_ACCOUNT is prepended for one invocation without being written."
+      },
+      {
+        "ConfigFileId": "local-tool-overwrite-modes",
+        "Path": "$EFFORTLESS_OUTPUT_DIR/effortless-overwrite-modes.json",
+        "Scope": "temp",
+        "Format": "json",
+        "Purpose": "A script-shape local tool's per-file overwrite declaration: { \"<relative path or glob>\": \"Always\" | \"Never\", ... } using exactly the FileSet OverwriteMode values; first matching key wins; the file itself is never shipped.",
+        "ReadBy": "LocalFileSets.ReadOutputDirectory (LocalToolHost, script runtime)",
+        "WrittenBy": "the script tool during its run",
+        "IsSecret": false,
+        "UnixMode": "",
+        "Disposition": "keep-modified",
+        "Description": "Step 12. This is how a script says what a cloud tool says with fileSet.AddFile(name, contents, \"Always\"|\"Never\"). Any other value is a tool error; the CLI never guesses an overwrite mode. Node and dotnet shapes declare per file in their own response."
       }
     ]
   },
@@ -7618,7 +7631,7 @@
       {
         "EnvVariableId": "EFFORTLESS_OUTPUT_DIR",
         "Source": "child-env (set by LocalToolHost for script tools)",
-        "Purpose": "Empty directory the script tool writes its outputs into; after exit every file under it (relative path, AlwaysOverwrite=true) becomes the output fileset.",
+        "Purpose": "Empty directory the script tool writes its outputs into; after exit every file under it becomes a FileSet entry at its relative path. Overwrite semantics are the protocol's, untouched: a file carries an OverwriteMode element only when the script declared one in effortless-overwrite-modes.json at the root of this directory; an undeclared file carries no node and is therefore written once and never overwritten, exactly like any other tool's file.",
         "Disposition": "keep-modified",
         "Description": "Step 12 script-runtime contract. The entry runs with the tool folder as cwd via its interpreter (.sh=sh, .py=python3, .js/.mjs=node, .ps1=pwsh, .rb=ruby, else directly); stdout lines become message-level tool log entries and stderr lines error-level (warning-level on exit 0); a non-zero exit code fails the step; the run is bounded by cliWaitTimeout."
       },
@@ -8674,7 +8687,7 @@
         "ApproxLines": 150,
         "Disposition": "keep-modified",
         "NewPath": "src/Effortless.Cli.Core/LocalTools/LocalFileSets.cs",
-        "Notes": "Input FileSet XML -> directory; output directory -> FileSet XML (FileContents for XML-safe text, ZippedBinaryFileContents otherwise; AlwaysOverwrite).",
+        "Notes": "Input FileSet XML -> directory; output directory -> FileSet XML (FileContents for XML-safe text, ZippedBinaryFileContents otherwise). OverwriteMode per file comes only from the script's effortless-overwrite-modes.json declaration; undeclared files carry no node (protocol default: write once).",
         "Description": "Step 12 local transpiler host."
       },
       {
@@ -13861,6 +13874,20 @@
         "Slow": false,
         "Status": "rebuild-green",
         "Description": "Step 14 unit half."
+      },
+      {
+        "TestCaseId": "local-tool-script-overwrite-modes",
+        "Suite": "e2e-local-tools",
+        "PrimaryOption": "serve",
+        "Title": "a script's files obey the protocol's overwrite rules exactly",
+        "Given": "effortless-tools/overwrite-modes/transpiler.sh writes always.txt, never.txt, plain.txt, sql/01-tables.sql, sql/01b-customize-schema.sql stamped with -p stamp=<v>, plus effortless-overwrite-modes.json { sql/*b-customize-*.sql: Never, sql/**: Always, always.txt: Always, never.txt: Never }",
+        "When": "effortless overwrite-modes -input README.md -p stamp=one ; then again with stamp=two",
+        "Then": "after the second run always.txt and sql/01-tables.sql say two; never.txt and sql/01b-customize-schema.sql say one; plain.txt (undeclared, no node) says one; effortless-overwrite-modes.json is never written into the project",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "rebuild-green",
+        "Description": "Step 12. The FileSet overwrite invariant (CLAUDE.md): every tool shape must be able to say Always or Never per file, and the CLI must apply it identically."
       }
     ]
   },
@@ -14102,7 +14129,7 @@
         "DoneCriteria": "effortless serve hosts ./effortless-tools/* over the exact TranspilePayload/FileSet contract cloud tools use; a bare <tool-name> resolves to the local host via a new ToolResolutionRule ahead of the catalog; effortless build auto-starts an ephemeral host when needed; .zfs ledgers and clean behave identically to remote tools; e2e fixture tool green; the legacy-runner ssotme-proxy pattern (lsof cwd sniffing) is documented as superseded.",
         "Owner": "opus",
         "Status": "done",
-        "Description": "Owner decided D30: native .NET host in the CLI; dotnet tools are the same shape as published cloud tools; a node fileset handler ships in the npm package (zero-dependency, mountable in express); script tools get the env-dir contract. Supersedes the legacy-runner ssotme-proxy. Implemented 2026-09-05 on HttpListener (no ASP.NET shared-framework requirement); ledger key local-<name>; script outputs are AlwaysOverwrite (per-file overwrite modes need the node/dotnet shape)."
+        "Description": "Owner decided D30: native .NET host in the CLI; dotnet tools are the same shape as published cloud tools; a node fileset handler ships in the npm package (zero-dependency, mountable in express); script tools get the env-dir contract. Supersedes the legacy-runner ssotme-proxy. Implemented 2026-09-05 on HttpListener (no ASP.NET shared-framework requirement); ledger key local-<name>; script outputs carry OverwriteMode only when declared in effortless-overwrite-modes.json and otherwise the protocol default, identical to every other tool."
       },
       {
         "RefactorStepId": "step-13",

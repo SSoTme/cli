@@ -117,9 +117,12 @@ Everything above shipped with these concrete decisions, each recorded in the rul
   the Core assembly and extracted to `<root>/.effortless/local-tools/`, handed to the tool as
   `EFFORTLESS_FILESET_HANDLER`. It exposes `createRequestListener` (a plain `(req, res)` handler, so it
   mounts in express) and `serveTool`. No `npm install` in the tool folder is required.
-- **Script outputs** are `AlwaysOverwrite`; text that XML can carry verbatim goes as `FileContents`,
-  anything else as `ZippedBinaryFileContents`. Per-file `Never` overwrite modes need the node/dotnet
-  shape (open question for a follow-up: a sidecar convention for scripts).
+- **Script outputs** obey the protocol's overwrite rules untouched. A script declares per-file modes in
+  `effortless-overwrite-modes.json` at the root of `EFFORTLESS_OUTPUT_DIR` (`{ "<path or glob>": "Always"
+  | "Never" }`, the exact `OverwriteMode` values; never shipped); an undeclared file carries no node and is
+  written once, exactly like any other tool's undeclared file. Text XML can carry verbatim goes as
+  `FileContents`, anything else as `ZippedBinaryFileContents`. (An earlier draft stamped every script file
+  `AlwaysOverwrite`; that was a defect against the FileSet overwrite invariant and was removed the same day.)
 - **Ephemeral host** lives in `LocalToolResolver` on the dispatcher, one per project root per CLI
   invocation, disposed in `CommandDispatcher.Run`'s `finally`. It never writes `serve.json`.
 - **Resident host** (`serve`) reloads discovery on `effortless-tools/` changes (500 ms debounce),

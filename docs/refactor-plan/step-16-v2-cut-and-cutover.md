@@ -114,11 +114,9 @@ already fixed in step-09.
 `legacy/main` still builds and releases the old line; `git revert` of the squash commit restores the tree.
 Because the version scheme is date-based there is no version conflict either way.
 
-## Pre-cut fix required (found 2026-09-06)
+## Pre-cut fix (found and fixed 2026-09-06)
 
-**Script-shape local tools cannot declare per-file overwrite modes.** Step 12 packs every file a script
-writes into `EFFORTLESS_OUTPUT_DIR` as `AlwaysOverwrite=true`. The CLI's writer is untouched and applies
-`AlwaysOverwrite` / `OverwriteMode` identically for every tool, but a script author has no way to emit a
-write-once file (the `*b-customize-*.sql` pattern). The node and dotnet shapes already have per-file
-control. Fix before the cut: give the script contract an explicit per-file declaration (owner to confirm
-the mechanism and the default for undeclared files). Tracked as `local-tool-script-overwrite-modes`.
+Script-shape local tools stamped every output `AlwaysOverwrite=true`, so a script could not emit a
+write-once file. Fixed in step 12's code the same day: scripts declare per-file modes in
+`effortless-overwrite-modes.json`, undeclared files carry no node (protocol default). Covered by
+`local-tool-script-overwrite-modes`. The invariant is now in `CLAUDE.md`.
