@@ -120,8 +120,7 @@ public sealed class ToolUrlTests
             missingTool.Stdout,
             StringComparison.Ordinal);
 
-        // The flag form is the only safe missing-name path in legacy. The bareword
-        // form falls through into the removed RabbitMQ/default-transpiler path.
+        // Both forms must fail clearly when the tool name is missing.
         Assert.True(missingName.Failed);
         Assert.Contains("viewUrl", missingName.Combined, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(server.Requests);
@@ -145,9 +144,7 @@ public sealed class ToolUrlTests
             missing.Stdout,
             StringComparison.Ordinal);
 
-        var aliases = Behavior.IsLegacy
-            ? new[] { "-listUrls", "listurls", "-lu", "-lt" }
-            : new[] { "-listUrls", "listurls", "-lu" };
+        var aliases = new[] { "-listUrls", "listurls", "-lu" };
         foreach (var alias in aliases)
         {
             using var sandbox = Sandbox.Create(cli);

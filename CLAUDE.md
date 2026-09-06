@@ -8,8 +8,8 @@ unrelated software and must never be installed as this CLI.
 ## Source of truth
 
 `effortless-rulebook/effortless-rulebook.json` is the single source of truth for
-CLI options, dispatch behavior, wire contracts, messages, files, tests, and the
-refactor plan. Query it with `jq`; do not read the whole file.
+CLI options, dispatch behavior, wire contracts, messages, files, and tests.
+Query it with `jq`; do not read the whole file.
 
 When changing generated options, bareword verbs, the CLI reference, or the test
 manifest:
@@ -56,8 +56,7 @@ Two traps worth knowing before you touch a `CliOptions` row:
 - `tests/Effortless.Cli.E2E/` — black-box CLI tests and mock HTTP servers.
 - `tests/fixtures/` — project, catalog, wire, shim, and golden fixtures.
 - `installers/windows/` and `installers/macos/` — MSI and PKG sources.
-- `scripts/` — generation, parity, legacy-test, CI, and release scripts.
-- `docs/refactor-plan/` — the staged rebuild plan and historical record.
+- `scripts/` — generation, CI, and release scripts.
 
 ## Build and test
 
@@ -66,8 +65,7 @@ dotnet build Effortless.Cli.sln --configuration Release
 dotnet test Effortless.Cli.sln --configuration Release
 ```
 
-Run `dotnet test` before every commit. The E2E harness uses the rebuilt DLL by
-default after the legacy tree is removed.
+Run `dotnet test` before every commit.
 
 For npm-shim testing:
 
@@ -92,8 +90,8 @@ effortless tool-name -debug
 effortless -removeToolUrl tool-name
 ```
 
-Do not add a stale-catalog, alternate-transport, or RabbitMQ fallback. A catalog
-refresh failure is a hard failure.
+Do not add a stale-catalog or alternate-transport fallback. A catalog refresh
+failure is a hard failure.
 
 ## Retained seed and trigger features
 
@@ -160,10 +158,3 @@ scripts/release.sh
 
 The release script owns version stamping, pushing, and release creation. Do not
 hand-edit release versions or invent a publish procedure.
-
-## Branch safety
-
-The final RabbitMQ-era source is commit
-`a8f0f320f4417c58fa931cc4bc8164f79cbbbd97` (`legacy-final`,
-`legacy/main`). Do not modify `main` or `legacy/main` while completing the
-REST-only rebuild branch.

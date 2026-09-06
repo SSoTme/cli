@@ -3,7 +3,7 @@
     "id": "meta-version-flag",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -11,7 +11,7 @@
     "id": "meta-help",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -19,7 +19,7 @@
     "id": "meta-help-width",
     "suite": "e2e-meta",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -27,7 +27,7 @@
     "id": "meta-unknown-option",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -35,7 +35,7 @@
     "id": "meta-no-args-in-project",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -43,7 +43,7 @@
     "id": "meta-no-args-outside-project",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -51,7 +51,7 @@
     "id": "meta-debug-banner",
     "suite": "e2e-meta",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -59,7 +59,7 @@
     "id": "meta-info-not-logged-in",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -67,7 +67,7 @@
     "id": "meta-info-with-keys",
     "suite": "e2e-meta",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -75,7 +75,7 @@
     "id": "meta-info-project-jwt",
     "suite": "e2e-meta",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -83,7 +83,7 @@
     "id": "meta-info-global-jwt",
     "suite": "e2e-meta",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -91,7 +91,7 @@
     "id": "meta-info-no-project",
     "suite": "e2e-meta",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -99,7 +99,7 @@
     "id": "proj-init-empty",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -107,7 +107,7 @@
     "id": "proj-init-name",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -115,7 +115,7 @@
     "id": "proj-init-bareword",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -123,7 +123,7 @@
     "id": "proj-init-twice",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -131,7 +131,7 @@
     "id": "proj-init-rename",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -139,7 +139,7 @@
     "id": "proj-init-force-subproject",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -147,7 +147,7 @@
     "id": "proj-init-gitignore-append",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -155,7 +155,7 @@
     "id": "proj-init-implies-build",
     "suite": "e2e-project",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -163,7 +163,7 @@
     "id": "proj-walk-up",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -171,7 +171,7 @@
     "id": "proj-migrate-ssotme-json",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -179,7 +179,7 @@
     "id": "proj-legacy-names",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -187,7 +187,7 @@
     "id": "proj-invalid-candidate",
     "suite": "e2e-project",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -195,7 +195,7 @@
     "id": "proj-generate-id",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -203,7 +203,7 @@
     "id": "proj-describe",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -211,7 +211,7 @@
     "id": "proj-describe-subtree",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -219,7 +219,7 @@
     "id": "proj-describe-all",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -227,7 +227,7 @@
     "id": "proj-no-project-silent",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -235,7 +235,7 @@
     "id": "proj-list-settings",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -243,7 +243,7 @@
     "id": "proj-add-setting",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -251,7 +251,7 @@
     "id": "proj-add-setting-bad",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -259,7 +259,7 @@
     "id": "proj-add-setting-project-name",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -267,7 +267,7 @@
     "id": "proj-remove-setting",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -275,7 +275,7 @@
     "id": "proj-save-preserves-custom",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -283,7 +283,7 @@
     "id": "proj-save-no-resurrect",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -291,7 +291,7 @@
     "id": "proj-save-format",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -299,7 +299,7 @@
     "id": "proj-save-order",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -307,7 +307,7 @@
     "id": "inst-basic",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -315,7 +315,7 @@
     "id": "inst-bareword",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -323,7 +323,7 @@
     "id": "inst-prefix-strip-aliases",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -331,7 +331,7 @@
     "id": "inst-subdir",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -339,7 +339,7 @@
     "id": "inst-replace",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -347,7 +347,7 @@
     "id": "inst-group",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -355,7 +355,7 @@
     "id": "inst-url",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -363,7 +363,7 @@
     "id": "inst-target-url",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -371,7 +371,7 @@
     "id": "inst-execute",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -379,7 +379,7 @@
     "id": "inst-execute-missing",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -387,7 +387,7 @@
     "id": "inst-execute-timeout",
     "suite": "e2e-install",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -395,7 +395,7 @@
     "id": "inst-auto-build",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -403,7 +403,7 @@
     "id": "inst-account-prefix",
     "suite": "e2e-install",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -411,7 +411,7 @@
     "id": "uninst-basic",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -419,7 +419,7 @@
     "id": "uninst-prompt-no",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": true
   },
@@ -427,7 +427,7 @@
     "id": "uninst-prompt-yes",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": true
   },
@@ -435,7 +435,7 @@
     "id": "uninst-qualified",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -443,7 +443,7 @@
     "id": "uninst-missing-name",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -451,7 +451,7 @@
     "id": "uninst-none",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -459,7 +459,7 @@
     "id": "uninst-ambiguous",
     "suite": "e2e-install",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -467,7 +467,7 @@
     "id": "build-basic",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -475,7 +475,7 @@
     "id": "build-cwd-per-step",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -483,7 +483,7 @@
     "id": "build-skips-disabled",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -491,7 +491,7 @@
     "id": "build-group",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -499,7 +499,7 @@
     "id": "build-subtree",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -507,7 +507,7 @@
     "id": "build-local",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -515,7 +515,7 @@
     "id": "build-all",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -523,7 +523,7 @@
     "id": "build-fail-stops",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -531,7 +531,7 @@
     "id": "build-coe-continues",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -539,7 +539,7 @@
     "id": "build-coe-throwing-step",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -547,7 +547,7 @@
     "id": "build-errors-json-cleared",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -555,7 +555,7 @@
     "id": "build-errors-json-schema",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -563,7 +563,7 @@
     "id": "build-version-label",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -571,7 +571,7 @@
     "id": "build-pinned-url",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -579,7 +579,7 @@
     "id": "build-pinned-missing",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -587,7 +587,7 @@
     "id": "build-sync-commandline-version",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -595,7 +595,7 @@
     "id": "build-soft-pin-updates",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -603,7 +603,7 @@
     "id": "build-debug",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -611,7 +611,7 @@
     "id": "build-empty-folder-cleanup",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -619,7 +619,7 @@
     "id": "build-nested-parent-root",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -627,7 +627,7 @@
     "id": "build-no-steps",
     "suite": "e2e-build",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -635,7 +635,7 @@
     "id": "build-project-required",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -643,7 +643,7 @@
     "id": "clean-basic",
     "suite": "e2e-clean",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -651,7 +651,7 @@
     "id": "clean-preserve-zfs",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -659,7 +659,7 @@
     "id": "clean-local",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -667,7 +667,7 @@
     "id": "clean-subtree",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -675,7 +675,7 @@
     "id": "clean-all",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -683,7 +683,7 @@
     "id": "clean-purge",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -691,7 +691,7 @@
     "id": "clean-zfs-key-lasturl",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -699,7 +699,7 @@
     "id": "clean-zfs-fallback-single",
     "suite": "e2e-clean",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -707,7 +707,7 @@
     "id": "clean-zfs-input",
     "suite": "e2e-clean",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -715,7 +715,7 @@
     "id": "clean-tool-flag",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -723,7 +723,7 @@
     "id": "clean-deleted-cwd",
     "suite": "e2e-clean",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -731,7 +731,7 @@
     "id": "clean-project-null",
     "suite": "e2e-clean",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -739,7 +739,7 @@
     "id": "tx-request-shape",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -747,7 +747,7 @@
     "id": "tx-request-order-params",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -755,7 +755,7 @@
     "id": "tx-input-rename",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -763,7 +763,7 @@
     "id": "tx-input-list-glob",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -771,7 +771,7 @@
     "id": "tx-input-optional",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -779,7 +779,7 @@
     "id": "tx-input-outside-project",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -787,7 +787,7 @@
     "id": "tx-input-parent-project",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -795,7 +795,7 @@
     "id": "tx-input-binary",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -803,7 +803,7 @@
     "id": "tx-output-rules",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -811,7 +811,7 @@
     "id": "tx-output-newuuid-cdata",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -819,7 +819,7 @@
     "id": "tx-output-no-content",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -827,7 +827,7 @@
     "id": "tx-zfs-written",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -835,7 +835,7 @@
     "id": "tx-zfs-self-source",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -843,7 +843,7 @@
     "id": "tx-skip-clean",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -851,7 +851,7 @@
     "id": "tx-prior-clean",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -859,7 +859,7 @@
     "id": "tx-logs-display",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -867,7 +867,7 @@
     "id": "tx-logs-error-promoted",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -875,7 +875,7 @@
     "id": "tx-exception",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -883,7 +883,7 @@
     "id": "tx-exception-ssl-hint",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -891,7 +891,7 @@
     "id": "tx-non-json",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -899,7 +899,7 @@
     "id": "tx-status-message",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -907,7 +907,7 @@
     "id": "tx-http-500",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -915,7 +915,7 @@
     "id": "tx-retry-503",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -923,7 +923,7 @@
     "id": "tx-retry-400-ssl",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -931,7 +931,7 @@
     "id": "tx-retry-host-not-found",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -939,7 +939,7 @@
     "id": "tx-connection-refused",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -947,7 +947,7 @@
     "id": "tx-timeout",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -955,7 +955,7 @@
     "id": "tx-boot-spinner",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -963,7 +963,7 @@
     "id": "tx-async-completed",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -971,7 +971,7 @@
     "id": "tx-async-failed",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -979,7 +979,7 @@
     "id": "tx-async-404",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -987,7 +987,7 @@
     "id": "tx-async-timeout",
     "suite": "e2e-transpile",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -995,7 +995,7 @@
     "id": "tx-label-direct",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1003,7 +1003,7 @@
     "id": "tx-bare-url",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1011,7 +1011,7 @@
     "id": "tx-account-env",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1019,7 +1019,7 @@
     "id": "tx-account-keyfile",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1027,7 +1027,7 @@
     "id": "tx-account-json-key",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1035,7 +1035,7 @@
     "id": "tx-account-runas",
     "suite": "e2e-transpile",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1043,7 +1043,7 @@
     "id": "tx-jwt-project-first",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1051,7 +1051,7 @@
     "id": "tx-outside-project",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1059,7 +1059,7 @@
     "id": "tx-tool-not-found",
     "suite": "e2e-transpile",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -1067,7 +1067,7 @@
     "id": "res-head-latest",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1075,7 +1075,7 @@
     "id": "res-explicit-version",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1083,7 +1083,7 @@
     "id": "res-explicit-missing",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1091,7 +1091,7 @@
     "id": "res-pinned-labels",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1099,7 +1099,7 @@
     "id": "res-no-head",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1107,7 +1107,7 @@
     "id": "res-ambiguous",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1115,7 +1115,7 @@
     "id": "res-qualified",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1123,7 +1123,7 @@
     "id": "res-refresh-on-miss",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1131,7 +1131,7 @@
     "id": "res-refresh-empty-index",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1139,7 +1139,7 @@
     "id": "res-bootstrap-first-run",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1147,7 +1147,7 @@
     "id": "res-no-refresh-on-version-change",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1155,7 +1155,7 @@
     "id": "res-refresh-tools",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1163,7 +1163,7 @@
     "id": "res-bridge-self-update",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1171,7 +1171,7 @@
     "id": "res-bridge-list-transpilers-removed",
     "suite": "e2e-resolution",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1179,7 +1179,7 @@
     "id": "res-update-available-file",
     "suite": "e2e-resolution",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1195,7 +1195,7 @@
     "id": "res-bridge-payload",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1203,7 +1203,7 @@
     "id": "res-list-versions",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1211,7 +1211,7 @@
     "id": "res-list-versions-missing",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1219,7 +1219,7 @@
     "id": "res-list-tools",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1227,7 +1227,7 @@
     "id": "res-search-tools",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1235,7 +1235,7 @@
     "id": "res-search-tools-empty",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1243,7 +1243,7 @@
     "id": "res-freshness-current",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1251,7 +1251,7 @@
     "id": "res-freshness-stale-upgrades",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1259,7 +1259,7 @@
     "id": "res-freshness-invalid-time",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1267,7 +1267,7 @@
     "id": "res-freshness-refresh-fails",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1275,7 +1275,7 @@
     "id": "res-freshness-upgrade-atomic",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1283,7 +1283,7 @@
     "id": "res-freshness-offline-meta",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1291,7 +1291,7 @@
     "id": "res-upgrade-tool",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1299,7 +1299,7 @@
     "id": "res-upgrade-not-installed",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1307,7 +1307,7 @@
     "id": "res-upgrade-no-project",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1315,7 +1315,7 @@
     "id": "res-upgrade-all",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1323,7 +1323,7 @@
     "id": "res-upgrade-cwd-disambiguation",
     "suite": "e2e-resolution",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1331,7 +1331,7 @@
     "id": "res-user-set-override",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1339,7 +1339,7 @@
     "id": "res-user-set-unknown-tool",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1347,7 +1347,7 @@
     "id": "urls-set",
     "suite": "e2e-tool-urls",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1355,7 +1355,7 @@
     "id": "urls-set-invalid",
     "suite": "e2e-tool-urls",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1363,7 +1363,7 @@
     "id": "urls-set-bridge-warning",
     "suite": "e2e-tool-urls",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1371,7 +1371,7 @@
     "id": "urls-view",
     "suite": "e2e-tool-urls",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1379,7 +1379,7 @@
     "id": "urls-list",
     "suite": "e2e-tool-urls",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1387,7 +1387,7 @@
     "id": "urls-remove",
     "suite": "e2e-tool-urls",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1395,7 +1395,7 @@
     "id": "urls-bareword-rt-quirk",
     "suite": "e2e-tool-urls",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1403,7 +1403,7 @@
     "id": "auth-login-flow",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": true
   },
@@ -1411,7 +1411,7 @@
     "id": "auth-login-already",
     "suite": "e2e-auth",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": true
   },
@@ -1419,7 +1419,7 @@
     "id": "auth-project-login",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": true
   },
@@ -1427,7 +1427,7 @@
     "id": "auth-logout",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": true
   },
@@ -1435,7 +1435,7 @@
     "id": "auth-subscription-no-token",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1443,7 +1443,7 @@
     "id": "auth-subscription",
     "suite": "e2e-auth",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1451,7 +1451,7 @@
     "id": "auth-set-api-key",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1459,7 +1459,7 @@
     "id": "auth-set-api-key-runas",
     "suite": "e2e-auth",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1467,7 +1467,7 @@
     "id": "auth-key-permissions",
     "suite": "e2e-auth",
     "priority": "P2",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1475,7 +1475,7 @@
     "id": "shim-argv-passthrough",
     "suite": "e2e-shim",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1483,7 +1483,7 @@
     "id": "shim-exit-code",
     "suite": "e2e-shim",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1491,7 +1491,7 @@
     "id": "shim-version-sync",
     "suite": "e2e-shim",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -1499,7 +1499,7 @@
     "id": "shim-package-identity",
     "suite": "e2e-shim",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1507,7 +1507,7 @@
     "id": "shim-aliases",
     "suite": "e2e-shim",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1539,7 +1539,7 @@
     "id": "help-default-is-primary-only",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1547,7 +1547,7 @@
     "id": "help-category-filter",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1555,7 +1555,7 @@
     "id": "help-option-detail",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1563,7 +1563,7 @@
     "id": "help-unknown-topic",
     "suite": "e2e-meta",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1571,7 +1571,7 @@
     "id": "help-all-flat",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1579,7 +1579,7 @@
     "id": "build-with-subprojects-includes-nested",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -1587,7 +1587,7 @@
     "id": "build-all-excludes-nested",
     "suite": "e2e-build",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1595,7 +1595,7 @@
     "id": "clean-with-subprojects",
     "suite": "e2e-clean",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -1603,7 +1603,7 @@
     "id": "describe-downstream",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1611,7 +1611,7 @@
     "id": "describe-local",
     "suite": "e2e-project",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1619,7 +1619,7 @@
     "id": "describe-with-subprojects",
     "suite": "e2e-project",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1627,7 +1627,7 @@
     "id": "pin-version",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1635,7 +1635,7 @@
     "id": "pin-url",
     "suite": "e2e-resolution",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1643,7 +1643,7 @@
     "id": "pin-then-build-uses-pin",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1651,7 +1651,7 @@
     "id": "latest-flag-rejected",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1659,7 +1659,7 @@
     "id": "enable-step",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1667,7 +1667,7 @@
     "id": "disable-step",
     "suite": "e2e-install",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1675,7 +1675,7 @@
     "id": "acct-tool-falls-back-to-account",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1683,7 +1683,7 @@
     "id": "acct-tool-unresolved-tool-fails",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1691,7 +1691,7 @@
     "id": "tool-url-verbs-canonical",
     "suite": "e2e-tool-urls",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1699,7 +1699,7 @@
     "id": "tool-url-verbs-legacy-aliases",
     "suite": "e2e-tool-urls",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1707,7 +1707,7 @@
     "id": "home-migrates-legacy-dir",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1715,7 +1715,7 @@
     "id": "home-migration-renames-key-files",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1723,7 +1723,7 @@
     "id": "home-migration-leaves-legacy-untouched-and-marks-it",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1731,7 +1731,7 @@
     "id": "home-both-present-uses-effortless-only",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1739,7 +1739,7 @@
     "id": "home-runas-key-mapping",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1747,7 +1747,7 @@
     "id": "home-migration-failure-is-fatal",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1755,7 +1755,7 @@
     "id": "project-ledger-dir-rename",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1763,7 +1763,7 @@
     "id": "child-env-var-renamed",
     "suite": "e2e-home",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1771,7 +1771,7 @@
     "id": "home-legacy-catalog-migrated-offline-build",
     "suite": "e2e-home",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1779,7 +1779,7 @@
     "id": "catalog-search-text",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1787,7 +1787,7 @@
     "id": "catalog-search-multi-term",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1795,7 +1795,7 @@
     "id": "catalog-filter-category",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1803,7 +1803,7 @@
     "id": "catalog-filter-updated-since",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1811,7 +1811,7 @@
     "id": "catalog-sort-popular",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1819,7 +1819,7 @@
     "id": "catalog-json",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1827,7 +1827,7 @@
     "id": "catalog-info-shows-age",
     "suite": "e2e-meta",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1835,7 +1835,7 @@
     "id": "timeout-forces-one-refresh",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1843,7 +1843,7 @@
     "id": "timeout-retries-once-on-moved-url",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1851,7 +1851,7 @@
     "id": "timeout-does-not-refresh-for-target-url",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1859,7 +1859,7 @@
     "id": "timeout-second-step-does-not-refresh-again",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1867,7 +1867,7 @@
     "id": "catalog-filter-head-only",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1875,7 +1875,7 @@
     "id": "catalog-filter-requires-key",
     "suite": "e2e-resolution",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1883,7 +1883,7 @@
     "id": "auth-login-calls-tool-and-stores-token",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1891,7 +1891,7 @@
     "id": "auth-project-login-writes-env",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1899,7 +1899,7 @@
     "id": "auth-plan-prints-preview",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1907,7 +1907,7 @@
     "id": "auth-logout-clears-then-calls",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1915,7 +1915,7 @@
     "id": "auth-tool-missing-from-catalog-is-clear-error",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1923,7 +1923,7 @@
     "id": "auth-tool-5xx-is-clear-error",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1931,7 +1931,7 @@
     "id": "tools-still-run-without-login",
     "suite": "e2e-auth",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1939,7 +1939,7 @@
     "id": "auth-local-override-used-for-dev",
     "suite": "e2e-auth",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1947,7 +1947,7 @@
     "id": "local-tool-resolves-before-catalog",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1955,7 +1955,7 @@
     "id": "local-tool-build-writes-output",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1963,7 +1963,7 @@
     "id": "local-tool-ledger-and-clean",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1971,7 +1971,7 @@
     "id": "local-tool-ephemeral-host-lifecycle",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1979,7 +1979,7 @@
     "id": "local-tool-resident-serve-reuse",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -1987,7 +1987,7 @@
     "id": "local-tool-params-passthrough",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -1995,7 +1995,7 @@
     "id": "local-tool-nonzero-exit-fails-step",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2003,7 +2003,7 @@
     "id": "local-tool-missing-runtime",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2011,7 +2011,7 @@
     "id": "local-tool-node-handler-roundtrip",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -2019,7 +2019,7 @@
     "id": "local-tool-dotnet-same-shape-as-cloud",
     "suite": "e2e-local-tools",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -2027,7 +2027,7 @@
     "id": "local-tool-seturl-override-wins",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2035,7 +2035,7 @@
     "id": "serve-lists-tools",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2043,7 +2043,7 @@
     "id": "local-tool-not-inherited-by-child-project",
     "suite": "e2e-local-tools",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2051,7 +2051,7 @@
     "id": "serve-no-tools",
     "suite": "e2e-local-tools",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2059,7 +2059,7 @@
     "id": "serve-port-fixed",
     "suite": "e2e-local-tools",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": true,
     "interactive": false
   },
@@ -2067,7 +2067,7 @@
     "id": "seed-sources-default-list",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2075,7 +2075,7 @@
     "id": "seed-source-add",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2083,7 +2083,7 @@
     "id": "seed-source-remove-default",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2091,7 +2091,7 @@
     "id": "list-seeds-across-sources",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2099,7 +2099,7 @@
     "id": "clone-seed-qualified",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2107,7 +2107,7 @@
     "id": "clone-seed-bare-first-match",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2115,7 +2115,7 @@
     "id": "clone-seed-bare-ambiguous",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2123,7 +2123,7 @@
     "id": "clone-seed-preserves-git-and-runs-nothing",
     "suite": "e2e-seeds",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2131,7 +2131,7 @@
     "id": "seed-replacements-effortless-seed-json",
     "suite": "e2e-seeds",
     "priority": "P1",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   },
@@ -2139,7 +2139,7 @@
     "id": "local-tool-script-overwrite-modes",
     "suite": "e2e-local-tools",
     "priority": "P0",
-    "status": "rebuild-green",
+    "status": "green",
     "slow": false,
     "interactive": false
   }

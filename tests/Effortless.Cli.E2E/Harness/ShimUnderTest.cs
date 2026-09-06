@@ -72,52 +72,21 @@ internal sealed class ShimUnderTest
         CopyRootFile("package.json", root);
         string outputDestination;
         string expectedDll;
-        if (Behavior.IsLegacy)
-        {
-            var legacyRoot = LegacyRepositoryRoot(cli);
-            CopyRepositoryFileFrom(
-                legacyRoot,
-                Path.Combine(
-                    "Windows",
-                    "CLI",
-                    "SSoTme.OST.CLI.csproj"),
-                root);
-            CopyRepositoryFileFrom(
-                legacyRoot,
-                Path.Combine(
-                    "Windows",
-                    "Lib",
-                    "CLIOptions",
-                    "SSoTmeCLIHandler.cs"),
-                root);
-            outputDestination = Path.Combine(
-                root,
-                "Windows",
-                "CLI",
-                "bin",
-                "Release",
-                "net8.0");
-            expectedDll = Path.Combine(
-                outputDestination,
-                "SSoTme.OST.CLI.dll");
-        }
-        else
-        {
-            CopyDirectory(
-                Path.Combine(CliUnderTest.Root, "src"),
-                Path.Combine(root, "src"),
-                excludeBuildArtifacts: true);
-            outputDestination = Path.Combine(
-                root,
-                "src",
-                "Effortless.Cli",
-                "bin",
-                "Release",
-                "net8.0");
-            expectedDll = Path.Combine(
-                outputDestination,
-                "Effortless.Cli.dll");
-        }
+        CopyDirectory(
+            Path.Combine(CliUnderTest.Root, "src"),
+            Path.Combine(root, "src"),
+            excludeBuildArtifacts: true);
+        outputDestination = Path.Combine(
+            root,
+            "src",
+            "Effortless.Cli",
+            "bin",
+            "Release",
+            "net8.0");
+        expectedDll = Path.Combine(
+            outputDestination,
+            "Effortless.Cli.dll");
+        
 
         var outputSource = Path.GetDirectoryName(cli.DllPath)
             ?? throw new InvalidOperationException(
@@ -140,36 +109,22 @@ internal sealed class ShimUnderTest
         Directory.CreateDirectory(root);
         CopyShim(root);
         CopyRootFile("package.json", root);
-        if (Behavior.IsLegacy)
-        {
-            var legacyRoot = LegacyRepositoryRoot(cli);
-            CopyRepositoryFileFrom(
-                legacyRoot,
-                "SSoTme-OST-CLI.sln",
-                root);
-            CopyDirectory(
-                Path.Combine(legacyRoot, "Windows"),
-                Path.Combine(root, "Windows"),
-                excludeBuildArtifacts: true);
-        }
-        else
-        {
-            CopyRootFile("Effortless.Cli.sln", root);
-            CopyDirectory(
-                Path.Combine(CliUnderTest.Root, "src"),
-                Path.Combine(root, "src"),
-                excludeBuildArtifacts: true);
-            // The npm package ships lib/ next to src/; Core embeds
-            // lib/fileset-handler.mjs, so a source tree without it does not build.
-            CopyDirectory(
-                Path.Combine(CliUnderTest.Root, "lib"),
-                Path.Combine(root, "lib"),
-                excludeBuildArtifacts: true);
-            CopyDirectory(
-                Path.Combine(CliUnderTest.Root, "tests"),
-                Path.Combine(root, "tests"),
-                excludeBuildArtifacts: true);
-        }
+        CopyRootFile("Effortless.Cli.sln", root);
+        CopyDirectory(
+            Path.Combine(CliUnderTest.Root, "src"),
+            Path.Combine(root, "src"),
+            excludeBuildArtifacts: true);
+        // The npm package ships lib/ next to src/; Core embeds
+        // lib/fileset-handler.mjs, so a source tree without it does not build.
+        CopyDirectory(
+            Path.Combine(CliUnderTest.Root, "lib"),
+            Path.Combine(root, "lib"),
+            excludeBuildArtifacts: true);
+        CopyDirectory(
+            Path.Combine(CliUnderTest.Root, "tests"),
+            Path.Combine(root, "tests"),
+            excludeBuildArtifacts: true);
+        
         return new ShimUnderTest(root, cli, sandbox);
     }
 
@@ -426,14 +381,7 @@ internal sealed class ShimUnderTest
 
     private static void CopyShim(string destinationRoot)
     {
-        var source = Behavior.IsLegacy
-            ? Path.Combine(
-                CliUnderTest.Root,
-                "tests",
-                "fixtures",
-                "shim",
-                "legacy-cli.js")
-            : Path.Combine(CliUnderTest.Root, "cli.js");
+        var source = Path.Combine(CliUnderTest.Root, "cli.js");
         var destination = Path.Combine(destinationRoot, "cli.js");
         File.Copy(
             source,
@@ -479,23 +427,6 @@ internal sealed class ShimUnderTest
         var destination = Path.Combine(destinationRoot, relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         File.Copy(source, destination);
-    }
-
-    private static string LegacyRepositoryRoot(
-        CliUnderTest cli)
-    {
-        var directory = new DirectoryInfo(
-            Path.GetDirectoryName(cli.DllPath)
-            ?? throw new InvalidOperationException(
-                "The legacy CLI DLL has no containing directory."));
-        for (var index = 0; index < 5; index++)
-        {
-            directory = directory.Parent
-                ?? throw new DirectoryNotFoundException(
-                    "Could not locate the legacy worktree from the CLI DLL.");
-        }
-
-        return directory.FullName;
     }
 
     private static void CopyDirectory(

@@ -37,7 +37,7 @@ public sealed class WireContractTests
         {
             // RFC 1952 byte 9 identifies the compressor OS but does not affect
             // the payload. Normalize it in the snapshot only; production gzip
-            // bytes retain the legacy runtime behavior.
+            // bytes retain the runtime behavior tools depend on.
             zippedInput[9] = byte.MaxValue;
         }
 
@@ -61,7 +61,7 @@ public sealed class WireContractTests
     }
 
     [Fact(DisplayName = "wire-response-variants")]
-    public async Task ResponseVariantsMatchTheLegacyWireContract()
+    public async Task ResponseVariantsMatchTheWireContract()
     {
         var zippedOutput = Convert.ToBase64String(OutputXml().Zip());
 
@@ -128,23 +128,6 @@ public sealed class WireContractTests
         Assert.Equal(
             "https://tools.invalid/run/task/task-wire",
             pendingHandler.RequestUris.Last().ToString());
-    }
-
-    [Fact(DisplayName = "wire-legacy-request-compat")]
-    public void LegacyRabbitRequestIgnoresUnknownFields()
-    {
-        var payload = JsonConvert.DeserializeObject<TranspilePayload>(
-            Fixture("legacy-request.json"));
-
-        Assert.NotNull(payload);
-        Assert.Equal("legacy-payload", payload.PayloadId);
-        Assert.Equal("legacy-sender", payload.SenderId);
-        Assert.Equal("legacy-tool", payload.CLITranspiler);
-        Assert.Equal("in.txt", Assert.Single(payload.CLIInput));
-        Assert.Equal(InputXml, payload.CLIInputFileSetXml);
-        Assert.Equal(
-            InputXml,
-            payload.TranspileRequest.ZippedInputFileSet.UnzipToString());
     }
 
     private static async Task<string> CaptureRequestAsync()

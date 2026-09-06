@@ -257,7 +257,6 @@ public sealed class DevopsGenerationTests
         Assert.Contains("node scripts/generate-from-rulebook.mjs --check", workflow, StringComparison.Ordinal);
         Assert.Contains("node scripts/validate-rulebook.mjs", workflow, StringComparison.Ordinal);
         Assert.Contains("npm run test:package", workflow, StringComparison.Ordinal);
-        Assert.Contains("legacy-parity:", workflow, StringComparison.Ordinal);
     }
 
     private static JsonDocument LoadRulebook()

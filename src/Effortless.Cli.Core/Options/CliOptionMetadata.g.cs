@@ -69,25 +69,9 @@ public static class CliOptionMetadata
                     "Seeds (start a project from a public repository)",
                     "An Effortless seed is a public GitHub repository with effortless.json at its root. listSeeds finds them across an ordered list of GitHub accounts (the seed sources: ssotme and effortlessapi by default, managed with listSeedSources/addSeedSource/removeSeedSource); cloneSeed clones one, keeps its .git history, and never executes downloaded code."),
                 new(
-                    "legacy-rabbit",
-                    "Legacy RabbitMQ",
-                    "Options that only make sense with the RabbitMQ coordinator."),
-                new(
                     "local-tools",
                     "Local tools (effortless-tools/, serve)",
                     "Tools that live inside the project at effortless-tools/<name>/ and are hosted by the CLI itself over the same REST contract published tools speak. A build that names a local tool starts an ephemeral host for the duration of the build; serve keeps one running so repeated builds reuse it."),
-                new(
-                    "legacy-dspxml",
-                    "Legacy DSPXml docs",
-                    "The DSPXml self-documentation pipeline."),
-                new(
-                    "legacy-other",
-                    "Other legacy",
-                    "Bridges and agents that pre-date the rulebook/REST model."),
-                new(
-                    "dead",
-                    "Dead options",
-                    "Declared in the Plossum options class but never read by any code path."),
                 new(
                     "project-pipeline",
                     "Project pipeline (build / clean / install / describe)",
@@ -95,7 +79,7 @@ public static class CliOptionMetadata
                 new(
                     "tools",
                     "Tools (resolution, URL overrides, local host)",
-                    "How a tool name becomes a URL and version: catalog resolution, pins, per-user tool URL overrides, and (step 12) the local transpiler host."),
+                    "How a tool name becomes a URL and version: catalog resolution, pins, per-user tool URL overrides, and the local transpiler host."),
                 new(
                     "account",
                     "Account (authentication, keys)",
@@ -325,7 +309,7 @@ public static class CliOptionMetadata
                     "",
                     "",
                     "Also delete ledgers for steps no longer registered",
-                    "When passed with clean, any .zfs ledger under .ssotme that no longer corresponds to a currently-registered step is cleaned (its recorded output files are deleted) and then the ledger file itself is removed, along with its debug XML. Has no effect when -preserveZFS is also set.",
+                    "When passed with clean, any .zfs ledger under .effortless that no longer corresponds to a currently-registered step is cleaned (its recorded output files are deleted) and then the ledger file itself is removed, along with its debug XML. Has no effect when -preserveZFS is also set.",
                     "effortless clean -purge"),
                 new(
                     "skipClean",

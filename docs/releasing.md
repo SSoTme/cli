@@ -22,7 +22,6 @@ Protect `main` with squash merges, linear history, and required checks from
 - Slow tests
 - Generated files and rulebook
 - Public npm package
-- Legacy parity (until Step 16 removes it)
 
 Require CODEOWNER review and prevent direct pushes except for the guarded
 release script.
@@ -62,7 +61,7 @@ It never publishes from a dirty tree or a non-`main` branch.
 
 Publishing or prereleasing a GitHub release starts the native
 `.github/workflows/build-mac.yml` and `.github/workflows/build-windows.yml`
-workflows, producing (names as of Step 10; before it they are `SSoTme-Installer*`):
+workflows, producing:
 
 - `Effortless-Installer_win-x64.msi`
 - `Effortless-Installer_win-arm64.msi`

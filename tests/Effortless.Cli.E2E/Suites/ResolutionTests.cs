@@ -809,7 +809,7 @@ public sealed class ResolutionTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains(
-            "No versions for 'nope' were found in the remote tools index. It may still exist in our legacy system.",
+            "No versions for 'nope' were found in the remote tools index.",
             result.Stdout,
             StringComparison.Ordinal);
     }
@@ -1106,11 +1106,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-list-tools: listTools projects sorted catalog HEADs")]
     public async Task ListToolsAliasesProjectSortedHeadsAndNoHead()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         foreach (var alias in new[] { "listTools", "-listTools", "-lt" })
         {
             var cli = new CliUnderTest();
@@ -1158,11 +1153,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-search-tools: searchTools matches canonical and short names")]
     public async Task SearchToolsMatchesCanonicalAndShortNames()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         var cli = new CliUnderTest();
         await using var toolServer = new MockToolServer();
         await using var bridge = new ResolutionBridgeServer();
@@ -1202,11 +1192,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-search-tools-empty: searchTools reports no matches explicitly")]
     public async Task SearchToolsReportsNoMatchesExplicitly()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         var cli = new CliUnderTest();
         await using var toolServer = new MockToolServer();
         await using var bridge = new ResolutionBridgeServer();
@@ -1232,11 +1217,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-freshness-current: a 23:59:59 catalog is reused")]
     public async Task FreshCatalogAndCurrentProjectAvoidRefreshAndSave()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         var cli = new CliUnderTest();
         await using var toolServer = new MockToolServer();
         await using var bridge = new ResolutionBridgeServer();
@@ -1289,11 +1269,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-freshness-stale-upgrades: stale refresh upgrades before build")]
     public async Task StaleCatalogRefreshesAndUpgradesBeforeBuild()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         var cli = new CliUnderTest();
         await using var toolServer = new MockToolServer();
         await using var bridge = new ResolutionBridgeServer();
@@ -1343,11 +1318,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-freshness-invalid-time: unprovable timestamps refresh")]
     public async Task MissingMalformedAndFutureTimestampsRefresh()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         foreach (var timestamp in new[]
                  {
                      (string?)null,
@@ -1382,11 +1352,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-freshness-refresh-fails: mandatory refresh never falls back")]
     public async Task FailedMandatoryRefreshPreservesBytesAndDoesNotBuild()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         var cli = new CliUnderTest();
         await using var toolServer = new MockToolServer();
         await using var bridge = new ResolutionBridgeServer
@@ -1440,11 +1405,6 @@ public sealed class ResolutionTests
     [Fact(DisplayName = "res-freshness-upgrade-atomic: project upgrades are all-or-nothing")]
     public async Task AutomaticUpgradeFailureDoesNotPartiallyMutateProject()
     {
-        if (Behavior.IsLegacy)
-        {
-            return;
-        }
-
         var cli = new CliUnderTest();
         await using var toolServer = new MockToolServer();
         await using var bridge = new ResolutionBridgeServer();

@@ -231,8 +231,6 @@ public sealed class ProjectCommands
                     "/**/bin/**/*",
                     "/**/.effortless/**/*",
                     "/**/.ssotme/**/*",
-                    "/**/DSPXml/**/*",
-                    "/SSoT/__patch.json",
                     "/**/.vs/**/*",
                     "/**/node_modules/**/*",
                     "/**/.vscode/**/*",

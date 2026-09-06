@@ -196,7 +196,7 @@ effortless build                           # nothing runs until you do this
 
 `EFFORTLESS_SEED_GITHUB_ACCOUNT` adds one more account, searched first, for a
 single invocation. Cloning preserves `.git` and never executes downloaded
-code. A seed that ships `effortless-seed.json` (the legacy `ssotme-seed.json`
+code. A seed that ships `effortless-seed.json` (an older `ssotme-seed.json`
 is also read) declares `$key$` replacements; on the first project load each
 key is filled from `seed-config-values.json`, `seed-secret-values.json`, a
 parent folder's `seed-config-values.json`, the key's `default`, or a prompt,
@@ -281,9 +281,13 @@ Create a branch, open a pull request, and keep `dotnet test Effortless.Cli.sln`
 green. Changes are squash-merged. Maintainers release through
 `scripts/release.sh`; do not hand-roll version or publishing steps.
 
-## Legacy
+## Upgrading from the SSoT.me CLI
 
-The last commit of the original SSoTme/RabbitMQ-era CLI is a8f0f320f4417c58fa931cc4bc8164f79cbbbd97 (tag legacy-final, branch legacy/main).
+Existing installs and projects keep working: `~/.ssotme` is copied to
+`~/.effortless` on first run, `ssotme.json` becomes `effortless.json` when a
+project is loaded, and the `ssotme`, `aicapture`, and `aic` commands stay as
+aliases. Everything that changed, and what replaced each removed option, is in
+[docs/upgrading-from-ssotme.md](docs/upgrading-from-ssotme.md).
 
 ## License
 

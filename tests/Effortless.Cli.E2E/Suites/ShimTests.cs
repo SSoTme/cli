@@ -41,17 +41,9 @@ public sealed class ShimTests
             CliUnderTest.PackageVersion + Environment.NewLine,
             version.Stdout);
         Assert.Equal(0, transpile.ExitCode);
-        if (Behavior.IsLegacy)
-        {
-            Assert.Contains("a=b", request.CliParams);
-            Assert.Contains("param1=c", request.CliParams);
-            Assert.DoesNotContain("a=b c", request.CliParams);
-        }
-        else
-        {
-            Assert.Contains("a=b c", request.CliParams);
-            Assert.DoesNotContain("param1=c", request.CliParams);
-        }
+        Assert.Contains("a=b c", request.CliParams);
+        Assert.DoesNotContain("param1=c", request.CliParams);
+        
 
         Assert.Equal(csprojBefore, File.ReadAllText(shim.CsprojPath));
         Assert.Equal(
@@ -73,14 +65,8 @@ public sealed class ShimTests
             "ERROR: No project found in this directory or any parent directory.",
             result.Combined,
             StringComparison.Ordinal);
-        if (Behavior.IsLegacy)
-        {
-            Assert.Equal(0, result.ExitCode);
-        }
-        else
-        {
-            Assert.True(result.Failed);
-        }
+        Assert.True(result.Failed);
+        
     }
 
     [Fact(DisplayName = "shim-version-sync: cli.js syncs the version")]
@@ -109,9 +95,7 @@ public sealed class ShimTests
             File.ReadAllText(shim.CsprojPath),
             StringComparison.Ordinal);
         Assert.Contains(
-            Behavior.IsLegacy
-                ? $"public string CLI_VERSION = \"{testVersion}\";"
-                : $"public const string Value = \"{testVersion}\";",
+            $"public const string Value = \"{testVersion}\";",
             File.ReadAllText(shim.VersionConstantPath),
             StringComparison.Ordinal);
         foreach (var path in sourcePaths)
@@ -178,57 +162,21 @@ public sealed class ShimTests
             Path.Combine(CliUnderTest.Root, "package.json"),
             Path.Combine(CliUnderTest.Root, "cli.js"),
         };
-        if (Behavior.IsLegacy)
-        {
-            var legacyRoot = LegacyRepositoryRoot(cli);
-            paths.Add(
-                Path.Combine(
-                    legacyRoot,
-                    "Windows",
-                    "CLI",
-                    "SSoTme.OST.CLI.csproj"));
-            paths.Add(
-                Path.Combine(
-                    legacyRoot,
-                    "Windows",
-                    "Lib",
-                    "CLIOptions",
-                    "SSoTmeCLIHandler.cs"));
-        }
-        else
-        {
-            paths.Add(
-                Path.Combine(
-                    CliUnderTest.Root,
-                    "src",
-                    "Effortless.Cli",
-                    "Effortless.Cli.csproj"));
-            paths.Add(
-                Path.Combine(
-                    CliUnderTest.Root,
-                    "src",
-                    "Effortless.Cli.Core",
-                    "CliVersion.cs"));
-        }
+        paths.Add(
+            Path.Combine(
+                CliUnderTest.Root,
+                "src",
+                "Effortless.Cli",
+                "Effortless.Cli.csproj"));
+        paths.Add(
+            Path.Combine(
+                CliUnderTest.Root,
+                "src",
+                "Effortless.Cli.Core",
+                "CliVersion.cs"));
+        
 
         return paths;
-    }
-
-    private static string LegacyRepositoryRoot(
-        CliUnderTest cli)
-    {
-        var directory = new DirectoryInfo(
-            Path.GetDirectoryName(cli.DllPath)
-            ?? throw new InvalidOperationException(
-                "The legacy CLI DLL has no containing directory."));
-        for (var index = 0; index < 5; index++)
-        {
-            directory = directory.Parent
-                ?? throw new DirectoryNotFoundException(
-                    "Could not locate the legacy worktree from the CLI DLL.");
-        }
-
-        return directory.FullName;
     }
 
     private static string HashFile(string path) =>

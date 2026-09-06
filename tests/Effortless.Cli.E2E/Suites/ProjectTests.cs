@@ -731,8 +731,6 @@ public sealed class ProjectTests
         /**/bin/**/*
         /**/.effortless/**/*
         /**/.ssotme/**/*
-        /**/DSPXml/**/*
-        /SSoT/__patch.json
         /**/.vs/**/*
         /**/node_modules/**/*
         /**/.vscode/**/*

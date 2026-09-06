@@ -488,15 +488,6 @@ function generateCliReference(
     );
   }
 
-  lines.push("", "## Removed in the rebuild", "");
-  for (const option of rulebook.CliOptions.data.filter(
-    (row) => dispositions.get(row.Disposition)?.IsRetained !== true,
-  )) {
-    lines.push(
-      `- \`${option.Flag}\` — ${option.DispositionReason || "Removed by its rulebook disposition."}`,
-    );
-  }
-
   lines.push("");
   return lines.join("\n");
 }

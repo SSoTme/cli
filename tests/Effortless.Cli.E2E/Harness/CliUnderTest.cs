@@ -29,7 +29,7 @@ internal sealed class CliUnderTest
         if (!File.Exists(DllPath))
         {
             throw new FileNotFoundException(
-                "The CLI under test does not exist. Build the legacy solution or set EFFORTLESS_CLI_UNDER_TEST.",
+                "The CLI under test does not exist. Build the solution or set EFFORTLESS_CLI_UNDER_TEST.",
                 DllPath);
         }
     }
@@ -38,11 +38,6 @@ internal sealed class CliUnderTest
 
     public static string Root => RepositoryRoot.Value;
 
-    public static bool IsLegacy =>
-        string.Equals(
-            Environment.GetEnvironmentVariable("EFFORTLESS_CLI_MODE"),
-            "legacy",
-            StringComparison.OrdinalIgnoreCase);
 
     public static string PackageVersion
     {

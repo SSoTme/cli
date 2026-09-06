@@ -28,7 +28,7 @@ public sealed class ManifestCoverageTests
             .Where(row =>
                 row.GetProperty("Priority").GetString() is "P0" or "P1"
                 && row.GetProperty("Status").GetString()
-                    is not "planned-step-03a" and not "deleted")
+                    is not "deleted")
             .Select(row => row.GetProperty("TestCaseId").GetString()!)
             .ToHashSet(StringComparer.Ordinal);
 

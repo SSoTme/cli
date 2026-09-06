@@ -21,7 +21,6 @@
     "build": "dotnet build Effortless.Cli.sln --configuration Release",
     "test": "dotnet test Effortless.Cli.sln --configuration Release",
     "test:package": "node scripts/test-npm-package.mjs",
-    "test:legacy": "bash scripts/test-legacy.sh",
     "generate": "node scripts/generate-from-rulebook.mjs",
     "validate:rulebook": "node scripts/validate-rulebook.mjs",
     "build:docs": "effortless build",

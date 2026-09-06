@@ -41,7 +41,7 @@ public sealed class VersionCommands
         if (versions is null)
         {
             Console.WriteLine(
-                $"No versions for '{toolName}' were found in the remote tools index. It may still exist in our legacy system.");
+                $"No versions for '{toolName}' were found in the remote tools index.");
             return 0;
         }
 
