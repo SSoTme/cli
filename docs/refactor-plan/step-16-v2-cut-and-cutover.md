@@ -25,17 +25,19 @@ Run it on macOS and Windows (the installers' platforms). Fix or document every u
 Owner decision (2026-09-04): v2 must not carry v1's explanations. A reader of the shipping tree should
 learn how v2 works, not how v1 used to. The migration story lives in exactly one page.
 
-### 2a. Rulebook split
+### 2a. Rulebook cut (owner decision 2026-09-06: delete, do not archive)
 
-- Move every `drop-*` row (`CliOptions`, `SourceModules`, `HttpEndpoints`, `EntryPoints`, `DevopsPipelines`),
-  the `legacy-*` and `dead` `OptionCategories`, the `drop-*` `Dispositions`, and every `Description`/`Notes`
-  sentence that explains RabbitMQ-era behavior into `effortless-rulebook/archive/v1-migration-rulebook.json`.
-  The shipping `effortless-rulebook.json` describes v2 only.
-- `RefactorSteps` and `docs/refactor-plan/` move with the archive (they are history once v2 ships). Keep a
-  one-paragraph pointer in `README.md`.
-- `ToolResolutionRules` R7/R10 lose their "the RabbitMQ fallback is removed" wording; state the v2 rule only.
-- `ConfigFiles` rows lose "RabbitMQ-era" annotations; `ssotme.key` fields that are unused are removed from the
-  v2 key-file format (step-10 already renames the file).
+- **Delete** every `drop-*` row (`CliOptions`, `SourceModules`, `HttpEndpoints`, `EntryPoints`,
+  `DevopsPipelines`), the `legacy-*` and `dead` `OptionCategories`, the `drop-*` and `review-*`
+  `Dispositions`, and every `Description`/`Notes`/`HandlerNotes`/`DispositionReason` sentence that explains
+  RabbitMQ-, DSPXML- or ODXML-era behaviour. There is no `archive/` copy: git history is the archive.
+  The shipping `effortless-rulebook.json` describes v2 only, and the `Disposition` column itself goes
+  (every remaining row is v2 by definition).
+- `RefactorSteps` and `docs/refactor-plan/` are **deleted** in the cutover commit (they are recoverable
+  from git). `README.md` keeps one sentence pointing at the migration page and the legacy commit.
+- `ToolResolutionRules`, `ConfigFiles`, `LifecycleStates`, `UserMessages`, `WirePayloadFields`: state the
+  v2 rule only; no "was", "formerly", "legacy", "RabbitMQ", "DSPXML", "ODXML".
+- Unused legacy `effortless.key` fields are removed from the v2 key-file format.
 
 ### 2b. Generated docs
 
@@ -48,13 +50,17 @@ learn how v2 works, not how v1 used to. The migration story lives in exactly one
 
 - Delete `wire-legacy-request-compat` and `tests/fixtures/wire/legacy-request.json`.
 - Delete `tests/fixtures/shim/legacy-cli.js`, `scripts/test-legacy.sh`, `scripts/test-legacy.ps1`, the
-  `legacy-parity` CI job, and `docs/releasing.md`'s legacy-parity line. `parity-check.sh` stays until the
-  release is out, then goes too.
+  `legacy-parity` CI job, `docs/releasing.md`'s legacy-parity line, and every `Behavior.IsLegacy` /
+  `EFFORTLESS_CLI_MODE=legacy` branch in the E2E harness once the parity run is recorded. Nothing legacy
+  survives in `tests/`. `parity-check.sh` stays until the release is out, then goes too.
 
 ### 2d. Text sweep (must pass before the squash)
 
-Owner rule (2026-09-04): the `ssotme` name is removed from everything except the `ssotme://` protocol
-and the binary alias, plus one mention that this was formerly the SSoT.me CLI.
+Owner rule (2026-09-04, sharpened 2026-09-06): the `ssotme` name is removed from everything except the
+`ssotme://` protocol and the binary alias, plus one mention that this was formerly the SSoT.me CLI.
+RabbitMQ, AMQP, DSPXML and **ODXML** get zero hits anywhere in the shipping tree (rulebook included);
+at most one line in the migration page / changelog may say the transport used to be RabbitMQ. ODXML is
+no longer a formal part of the model.
 
 ```bash
 grep -rniE "rabbit|amqp|ssot\.me|ssotme|dspxml|odxml" src tests scripts docs installers cli.js package.json README.md CLAUDE.md .github
@@ -68,9 +74,10 @@ Allowed hits, and only these:
 - the step-10 migration module's legacy path constants (`~/.ssotme`, `.ssotme/`, `ssotme.json`,
   `ssotme.key`, `ssotme-seed.json`, `ssotme.env`) and their tests;
 - the default seed source account `ssotme` (it is a GitHub organization name, step 14);
-- the migration page (§2b) and the legacy-commit line.
+- the migration page (§2b) and the legacy-commit line, which may contain the single RabbitMQ mention.
 
-Everything else is a defect. Help-text typos (`bing`, `buid`) and the reserved-word parsing quirks are
+Everything else is a defect, including any `rabbit`, `amqp`, `dspxml` or `odxml` hit in
+`effortless-rulebook/effortless-rulebook.json`. Help-text typos (`bing`, `buid`) and the reserved-word parsing quirks are
 already fixed in step-09.
 
 ## 3. Pre-cutover checklist
@@ -106,3 +113,12 @@ already fixed in step-09.
 
 `legacy/main` still builds and releases the old line; `git revert` of the squash commit restores the tree.
 Because the version scheme is date-based there is no version conflict either way.
+
+## Pre-cut fix required (found 2026-09-06)
+
+**Script-shape local tools cannot declare per-file overwrite modes.** Step 12 packs every file a script
+writes into `EFFORTLESS_OUTPUT_DIR` as `AlwaysOverwrite=true`. The CLI's writer is untouched and applies
+`AlwaysOverwrite` / `OverwriteMode` identically for every tool, but a script author has no way to emit a
+write-once file (the `*b-customize-*.sql` pattern). The node and dotnet shapes already have per-file
+control. Fix before the cut: give the script contract an explicit per-file declaration (owner to confirm
+the mechanism and the default for undeclared files). Tracked as `local-tool-script-overwrite-modes`.

@@ -121,6 +121,16 @@ best-effort without ever triggering a catalog refresh. Normal tool execution and
 `buildOnTrigger` never call the auth tool. The tool's source lives in
 `api.effortlessapi.com/Versioned-Stable-SSoTme-Tools/tools/effortless/effortless-auth/`.
 
+## FileSet overwrite invariant
+
+Every tool, cloud or local, controls overwriting **per file** through the FileSet
+entry it returns: `AlwaysOverwrite` / `OverwriteMode=Always` rewrites the file on
+every build; `OverwriteMode=Never` (or no node at all) writes it once and never
+touches it again. `FileSetWriter` is the only place that interprets these, and
+it must treat every transpiler identically. Never special-case a tool, a shape,
+or a path here, and never let a tool shape lose the ability to declare a mode:
+a local-tool runtime that cannot express `Never` per file is a defect.
+
 ## Project save and upgrade invariants
 
 - `EffortlessProject.Save()` merges unknown custom transpiler properties from the
