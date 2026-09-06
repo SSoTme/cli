@@ -1,0 +1,123 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+	xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
+	xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+	<Package Name="Effortless CLI" Language="1033" Version="225.1.2.1456" Manufacturer="EffortlessAPI" UpgradeCode="EB59dEFF-B979-464F-B36A-57F272E872A1" Scope="perMachine">
+
+		<SummaryInformation Description="Effortless Command Line Interface" Comments="Installs the Effortless CLI" />
+
+		<Launch Condition="Privileged" Message="Administrator privileges are required." />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate EmbedCab="yes" />
+
+		<Feature Id="ProductFeature" Title="Effortless CLI" Level="1">
+			<ComponentGroupRef Id="CLIComponents" />
+			<ComponentRef Id="RegistryEntries" />
+			<ComponentRef Id="HomeEffortlessScript" />
+			<ComponentRef Id="RemoveInstallFolder" />
+			<ComponentRef Id="ApplicationShortcut" />
+		</Feature>
+
+		<!-- UI Configuration -->
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+		<ui:WixUI Id="WixUI_InstallDir" />
+		<WixVariable Id="WixUILicenseRtf" Value="Assets\LICENSE.rtf" />
+
+		<StandardDirectory Id="ProgramFiles64Folder">
+			<Directory Id="INSTALLFOLDER" Name="Effortless">
+				<Directory Id="BinFolder" Name="bin" />
+			</Directory>
+		</StandardDirectory>
+
+		<StandardDirectory Id="ProgramMenuFolder">
+			<Directory Id="ApplicationProgramsFolder" Name="Effortless" />
+		</StandardDirectory>
+
+		<!-- CLI Components -->
+		<ComponentGroup Id="CLIComponents" Directory="BinFolder">
+			<Component Id="SsotmeAliasCLI" Guid="{B1C2D3E4-F5A6-47B8-9C0D-1E2F3A4B5C6D}">
+				<File Id="SSoTmeExe" Name="ssotme.exe" Source="Resources\ssotme.exe" KeyPath="yes" />
+
+				<!-- Add to PATH -->
+				<Environment Id="PATH" Name="PATH" Value="[BinFolder]" Permanent="no" Part="last" Action="set" System="yes" />
+			</Component>
+
+			<Component Id="AicCLI" Guid="{C2D3E4F5-A6B7-48C9-0D1E-2F3A4B5C6D7E}">
+				<File Id="AicExe" Name="aic.exe" Source="Resources\aic.exe" KeyPath="yes" />
+			</Component>
+
+			<Component Id="AiCaptureCLI" Guid="{D3E4F5A6-B7C8-49D0-1E2F-3A4B5C6D7E8F}">
+				<File Id="AiCaptureExe" Name="aicapture.exe" Source="Resources\aicapture.exe" KeyPath="yes" />
+			</Component>
+
+			<Component Id="EffortlessCLI" Guid="{E3F4A5B6-C7D8-50E1-2F3A-4B5C6D7E8F0A}">
+				<File Id="EffortlessExe" Name="effortless.exe" Source="Resources\effortless.exe" KeyPath="yes" />
+			</Component>
+
+			<Component Id="CLIReadme" Guid="{E4F5A6B7-C8D9-40E1-2F3A-4B5C6D7E8F9A}">
+				<File Id="ReadmeFile" Name="README.md" Source="Resources\README.md" KeyPath="yes" />
+			</Component>
+
+			<Component Id="CLILicense" Guid="{F5A6B7C8-D9E0-41F2-3A4B-5C6D7E8F9A0B}">
+				<File Id="LicenseTxtFile" Name="LICENSE.txt" Source="Resources\LICENSE.txt" KeyPath="yes" />
+			</Component>
+		</ComponentGroup>
+
+		<!-- Registry Entries -->
+		<Component Id="RegistryEntries" Directory="INSTALLFOLDER" Guid="{C8D9E0F1-A2B3-44C5-6D7E-8F9A0B1C2D3E}">
+			<RegistryKey Root="HKLM" Key="Software\Effortless\CLI">
+				<RegistryValue Type="string" Name="InstallPath" Value="[INSTALLFOLDER]" KeyPath="yes" />
+				<RegistryValue Type="string" Name="Version" Value="225.1.2.1456" />
+			</RegistryKey>
+		</Component>
+
+		<!-- Home Directory Script Component -->
+		<Component Id="HomeEffortlessScript" Directory="INSTALLFOLDER" Guid="{B7C8D9E0-F1A2-43B4-5C6D-7E8F9A0B1C2D}">
+			<File Id="CopyToHomeScript" Source="Scripts\CreateEffortlessHomedir.ps1" KeyPath="yes" />
+
+			<RemoveFile Id="RemoveHomeScript" Name="CreateEffortlessHomedir.ps1" On="uninstall" />
+		</Component>
+
+		<!-- Custom Actions for Home Directory Script -->
+		<CustomAction Id="SetHomeEffortlessScriptData" Property="HomeEffortlessScript" Value="&quot;[SystemFolder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]CreateEffortlessHomedir.ps1&quot;" Execute="immediate" />
+
+		<CustomAction Id="HomeEffortlessScript" DllEntry="WixQuietExec" BinaryRef="Wix4UtilCA_X64" Execute="deferred" Return="check" Impersonate="no" />
+
+		<!-- Cleanup Component -->
+		<Component Id="RemoveInstallFolder" Directory="INSTALLFOLDER" Guid="{D7A7B3C1-5E8F-4F2A-9B1D-8C3E4F5A6B7C}">
+
+			<!-- Removes all files in INSTALLFOLDER on uninstall -->
+			<RemoveFile Id="RemoveInstallFolderContents" Name="*" On="uninstall" />
+
+			<!-- Remove the directories -->
+			<RemoveFolder Id="RemoveInstallFolderDir" On="uninstall" />
+			<RemoveFolder Id="RemoveBinFolderDir" Directory="BinFolder" On="uninstall" />
+
+			<!-- Registry anchor for KeyPath -->
+			<RegistryValue Root="HKLM" Key="Software\Effortless\Cleanup" Name="Anchor" Type="string" Value="true" KeyPath="yes" />
+
+			<!-- Clean up registry entries -->
+			<RegistryKey Root="HKLM" Key="Software\Effortless\CLI" ForceDeleteOnUninstall="yes" />
+			<RegistryKey Root="HKLM" Key="Software\Effortless\Cleanup" ForceDeleteOnUninstall="yes" />
+		</Component>
+
+		<Component Id="ApplicationShortcut" Directory="ApplicationProgramsFolder" Guid="{A1B2C3D4-E5F6-47A8-9B0C-1D2E3F4A5B6C}">
+			<Shortcut Id="EffortlessShortcut" Name="Effortless CLI" Description="Effortless Command Line Interface" Target="[BinFolder]effortless.exe" WorkingDirectory="BinFolder" />
+			<Shortcut Id="UninstallShortcut" Name="Uninstall Effortless CLI" Description="Uninstalls Effortless CLI" Target="[SystemFolder]msiexec.exe" Arguments="/x [ProductCode]" />
+
+			<!-- Registry entry for KeyPath -->
+			<RegistryValue Root="HKCU" Key="Software\Effortless\StartMenu" Name="Installed" Type="integer" Value="1" KeyPath="yes" />
+
+			<!-- Remove the Start Menu folder on uninstall -->
+			<RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+		</Component>
+
+		<!-- Install Sequence -->
+		<InstallExecuteSequence>
+			<Custom Action="SetHomeEffortlessScriptData" Before="InstallFinalize" Condition="NOT Installed" />
+			<Custom Action="HomeEffortlessScript" After="SetHomeEffortlessScriptData" Condition="NOT Installed" />
+		</InstallExecuteSequence>
+
+	</Package>
+</Wix>

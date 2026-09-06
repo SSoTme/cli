@@ -1,0 +1,11 @@
+{
+  "Name": "Basic Project",
+  "SSoTmeProjectId": "64653f4e-a60c-4b28-8316-4771b5792028",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Basic Project"
+    }
+  ],
+  "ProjectTranspilers": []
+}

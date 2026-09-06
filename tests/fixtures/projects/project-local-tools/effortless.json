@@ -1,0 +1,11 @@
+{
+  "Name": "Local Tools Project",
+  "SSoTmeProjectId": "3b7f1a2c-5d4e-4f60-9a8b-1c2d3e4f5a6b",
+  "ProjectSettings": [
+    {
+      "Name": "project-name",
+      "Value": "Local Tools Project"
+    }
+  ],
+  "ProjectTranspilers": []
+}

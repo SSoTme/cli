@@ -1,0 +1,25 @@
+{
+  "transpilerVersions": {
+    "effortless/common/to-uppercase": {
+      "v2026.01.01.0001": {
+        "metaData": {
+          "isHeadVersion": false
+        },
+        "urls": {
+          "post": "http://127.0.0.1:{port}/tools/to-uppercase/v2026.01.01.0001/"
+        }
+      },
+      "v2025.12.31.2359": {
+        "metaData": {
+          "isHeadVersion": false
+        },
+        "urls": {
+          "post": "http://127.0.0.1:{port}/tools/to-uppercase/v2025.12.31.2359/"
+        }
+      }
+    }
+  },
+  "cliUpdateAvailable": false,
+  "latestBridgeVersion": null,
+  "latestCliVersion": "2026-06-09.06.13"
+}

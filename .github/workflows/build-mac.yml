@@ -5,8 +5,37 @@ on:
     types: [ prereleased, released ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  verify:
+    name: Verify release commit
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Validate generated files
+      run: |
+        node scripts/validate-rulebook.mjs
+        node scripts/generate-from-rulebook.mjs --check
+
+    - name: Build and run non-slow tests
+      run: |
+        dotnet build Effortless.Cli.sln --configuration Release
+        dotnet test Effortless.Cli.sln --configuration Release --no-build --filter "Slow!=true"
+
   build-intel:
+    needs: verify
     runs-on: macos-15  # Cross-compile to Intel (x86_64) from Apple Silicon
     
     steps:
@@ -78,15 +107,15 @@ jobs:
       if: steps.early_check.outputs.pkg_count < '2'
       run: |
         ARCHITECTURE="x86_64"
-        INSTALLER_NAME="SSoTme-Installer-$ARCHITECTURE.pkg"
-        /bin/bash macOS/Installer/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
+        INSTALLER_NAME="Effortless-Installer-$ARCHITECTURE.pkg"
+        /bin/bash installers/macos/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
     
     - name: Upload Intel Installer
       if: steps.early_check.outputs.pkg_count < '2'
       uses: actions/upload-artifact@v4
       with:
-        name: SSoTme-Installer-x86_64
-        path: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
+        name: Effortless-Installer-x86_64
+        path: installers/macos/bin/signed/Effortless-Installer-x86_64.pkg
 
     - name: Get release tag from package.json
       id: get_tag
@@ -117,11 +146,12 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag_name }}
-        files: macOS/Installer/bin/signed/SSoTme-Installer-x86_64.pkg
+        files: installers/macos/bin/signed/Effortless-Installer-x86_64.pkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-arm:
+    needs: verify
     runs-on: macos-15  # Apple Silicon architecture
     
     steps:
@@ -193,15 +223,15 @@ jobs:
       if: steps.early_check_arm.outputs.pkg_count < '2'
       run: |
         ARCHITECTURE="arm64"
-        INSTALLER_NAME="SSoTme-Installer-$ARCHITECTURE.pkg"
-        /bin/bash macOS/Installer/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
+        INSTALLER_NAME="Effortless-Installer-$ARCHITECTURE.pkg"
+        /bin/bash installers/macos/Scripts/build.sh --no-update --arch "$ARCHITECTURE" "$INSTALLER_NAME" "${{ secrets.DEV_INS_KEYCHAIN_ID }}" "${{ secrets.DEV_APP_KEYCHAIN_ID }}" "${{ secrets.APPLEID }}" "${{ secrets.NOTARY_PASSWORD }}"
     
     - name: Upload ARM Installer
       if: steps.early_check_arm.outputs.pkg_count < '2'
       uses: actions/upload-artifact@v4
       with:
-        name: SSoTme-Installer-arm64
-        path: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
+        name: Effortless-Installer-arm64
+        path: installers/macos/bin/signed/Effortless-Installer-arm64.pkg
 
     - name: Get release tag from package.json
       id: get_tag_arm
@@ -232,6 +262,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
-        files: macOS/Installer/bin/signed/SSoTme-Installer-arm64.pkg
+        files: installers/macos/bin/signed/Effortless-Installer-arm64.pkg
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

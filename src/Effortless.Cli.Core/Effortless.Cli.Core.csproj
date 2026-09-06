@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <RootNamespace>Effortless.Cli.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Plossum.CommandLine.Core" Version="0.3.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Step 12: the node fileset handler ships inside the CLI and is extracted for node local tools. -->
+    <EmbeddedResource Include="../../lib/fileset-handler.mjs" LogicalName="Effortless.Cli.Core.lib.fileset-handler.mjs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Effortless.Cli.Tests" />
+    <InternalsVisibleTo Include="Effortless.Cli.E2E" />
+  </ItemGroup>
+
+</Project>

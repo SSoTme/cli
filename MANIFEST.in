@@ -1,2 +1,0 @@
-recursive-include ssotme/lib/Windows *
-recursive-include ssotme/lib/Windows/CLI/bin/Release *

@@ -1,126 +1,222 @@
-# SSoTme CLI OST
+# Effortless CLI
 
-### [View Latest Release](https://github.com/ssotme/cli/releases/latest)
+`effortless` is the command-line client for EffortlessAPI transpilers. It reads an
+`effortless.json` project, resolves tools from the REST catalog, sends file sets to
+those tools over HTTP, and writes or cleans the generated outputs.
 
-[SSoTme Platform](https://explore.ssot.me/app/#!/publicTranspilers)
-The Single Source of Truth Toolbox!
+The same CLI is installed under four compatible command names: `effortless`,
+`ssotme`, `aicapture`, and `aic`. It was formerly the SSoT.me CLI.
 
-## About A Single Source of Truth
+User state lives in `~/.effortless`. The first run after upgrading from a
+`ssotme`-era install copies an existing `~/.ssotme` there (key files and the
+tool catalog are renamed on the way) and leaves `~/.ssotme` in place with a
+`MIGRATED-TO-EFFORTLESS` marker, so an older `ssotme` binary keeps working. A
+project's `.ssotme` build-state directory is renamed to `.effortless` the first
+time the project is loaded.
 
-The **SSoTme CLI** is similar to command line package managers like NPM, Bower, Nuget, etc - however, the packages
-delivered are dynamic in nature. If 100 projects install a bower package, they all get the same bytes.
+## Install
 
-SSoTme packages differ from normal packages (NPM/Bower/etc packages) in that they must be supplied with a
-Single Source of Truth, a set of foundational rules, which describes the project's core functionality.
-Based on your project's SSoT, you can install any SSoTme package - each one representing a specific language or
-framework - and it will output your SSoT, implemented in that environment.
+### npm
 
-So, by contrast to your usual package, if 100 projects each install the same SSoTme package, they will all get
-different bytes - because they will each provide a different single source of truth
-which describes their project. Since each project will start with a different SSoT -
-they will each get an implementation which works with their project. It will be the same KIND of
-content that each package provides, but will differ in ways specific to each project.
+.NET 8 and Node.js are required:
 
-Similarly - if one project installs 100 different SSoTme packages, their functionality will all match each other,
-because they are all derived from the same SSoT - the same foundational rules.  And any time that SSoT changes,
-all 100 packages will also update themselves to match the new "truth".
-
-Overall, software built on SSoT avoids duplicating important decisions across the codebase.
-Instead of scattering business rules or structural definitions throughout the source code, SSoT development
-places them in one authoritative location - a central definition that drives behavior across the system.
-
-## Open Source Tools
-These tools are open source.  Eventually, the SSoT.me Website, Coordinator as well as the Codee42
-and Odxml42 toolsets will also be offered as open source tools as well.  It's just a matter of
-getting them cleaned up a little bit first.
-
-## SSoT.me Architecture
-SSoT.me is really a directory of Dynamic Packages (Transpilers).  The distinction between
-static package managers like NPM and Bower is that each SSoT.me tool always requires INPUT.
-That input is then turned into something else.  By Connecting these tools together end-to-end
-a "Transpiler Pipeline" can be created which, in a very dynamic, responsive and flexible way
-turns A into B.  The transaction always follows this basic script though:
-
-1. The CLI gathers together the requeseted "input" (files, parameters, options, etc)
-2. The CLI packages everything into a "Zipped Json" *Transpile Request*
-3. The *Transpile Request* is sent to the SSoT.me coordinator
-4. The SSoT.me Coordinator determins which tool is being requested
-5. (down the road - The Coordinator Validates subscription and/or charges consumer)
-6. The Coordinator forwards the request to a *Transpiler Host* for the requested tool
-7. The Transpiler host processes the *Transpile Request*
-8. The Transpiler sends the Output directly back to the requesting CLI (the Coordinator is not 
-        involved in the response).
-
-
-## Installation
-
-You can install the SSoTme CLI by downloading the appropriate installer from the [release page](https://github.com/ssotme/cli/releases/latest).
-
-Installing the **SSoTme Command Line Interface** tool will download the compatible .NET SDK version, and automatically
-update the system path to include the CLI, allowing you to use it through the `ssotme/aicapture/aic` commands.
-
-### Authentication
-
-Use `ssotme -auth` or `-authenticate` to provide the CLI access to your ssot.me account.
-
-If for some reason the authenticate command doesn't work, you can edit the configuration manually:
-
-When you register for an account with [SSoT.me](https://aicapture.io) - you will be emailed a secret key file
-that should be put in this location:
-
-*Key File:* `%USERPROFILE%/.ssotme/ssotme.key`
-```
-{
-   "EmailAddress": "you@domain.com",
-   "Secret": "your-secret-key-here-123abc"
-}
+```bash
+npm install -g @effortlessapi/cli
+effortless -version
 ```
 
-If you have multiple accounts, the key file should have this format: `ssotme.{account-name}.key`
+The official npm package is `@effortlessapi/cli`. The unscoped npm package
+named `effortless` is unrelated software and must not be used.
 
-For example: `ssotme.codee42.key`
+The npm shim builds the `Effortless.Cli` project in Release mode when the
+compiled CLI is missing or the package version changed.
 
-### External Auth
+### Development checkout
 
-SSoTme must communicate with external APIs, for example Airtable, to execute some commands. To set up your CLI
-with the right personal access tokens for these situations, you can run `ssotme -api provider=private_key` or
-`ssotme -setAccountApiKey provider/private_key`.
+```bash
+git clone https://github.com/EffortlessAPI/cli.git
+cd cli
+npm install -g .
+effortless -version
+```
 
-## Pip Install
+### Windows MSI and macOS PKG
 
-You can also install this tool using pip:
+Download the appropriate MSI or PKG from the repository's GitHub Releases page.
+Both installers place all four command aliases on `PATH`.
 
-`pip install -U git+https://github.com/ssotme/cli`
+To upgrade an existing installation from the command line:
 
-**Note:** a pip +git installation will clone the repo and run a dotnet build on the product, so you'll need both `dotnet>=8.0` and `python>=3.7`
+```bash
+npm install -g @effortlessapi/cli@latest
+```
 
-After installation, the commands `ssotme`, `aicapture`, `aic`, & `effortless` will be usable in your terminal, and you can continue
-following the setup listed above in the **Auth** section.
+`effortless -upgradeCli` also checks GitHub Releases and prints both supported
+upgrade locations.
 
-### Troubleshooting the PIP install
+## Quick start
 
-- To install the ssotme CLI via PIP, you must have dotnet & Python installed on your system. To make things as consistent as possible it's recommended to download & install Python directly from https://python.org instead of using an external package manager. **Make sure to check off the box that says "Add Python to your PATH"**
-- For Linux and MacOS, in some versions of pip you may need to use `pip install git+https://github.com/ssotme/cli --break-system-packages`
-- After the installer finishes, it may give a warning:
-        ```WARNING: The scripts aic, aicapture and ssotme are installed in '<home directory>' which is not on PATH.```
-  - To fix this, you can run the following command depending on your system:
-  - **MacOS** `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc`
-  - **Linux** `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`
-  - This behavior shouldn't occur on Windows, but if Python ever changes this in the future, you can resolve it by simply adding your Python installation to your system PATH.
+Initialize a project in the current directory:
 
-## Uninstalling the CLI
+```bash
+effortless -init
+```
 
-### Uninstall with PIP
+Install a transpiler invocation into `effortless.json`:
 
-If you've installed through pip, you can uninstall by simply running: `pip uninstall ssotme -y`.
+```bash
+effortless rulebook-to-rulespeak -install \
+  -i effortless-rulebook/effortless-rulebook.json
+```
 
-### MacOS Uninstaller
+Run all enabled project steps:
 
-To uninstall a Mac .pkg installation, run the uninstall script by entering `/Applications/ssotme/uninstall` in the terminal.
+```bash
+effortless build
+```
 
-### Windows Uninstaller
+Remove files recorded in the generated-file ledgers:
 
-For windows, uninstall ssotme by re-running the Windows installer executable, and select 'Uninstall'.
+```bash
+effortless clean
+```
+
+## Commands
+
+The command summary below is generated from
+`effortless-rulebook/effortless-rulebook.json`, the same source as `-help` and
+[docs/cli-reference.md](docs/cli-reference.md), so the three cannot drift.
+
+<!-- cli-commands:start -->
+
+### CLI meta
+
+- `-help` — Show usage and available commands
+- `-info` — Show CLI/user configuration and login status
+- `-version` — Print the CLI version
+
+### Project file
+
+- `-init` — Create effortless.json and an empty rulebook here
+- `-describe` — Describe steps in this folder and its children
+
+### Install / uninstall tools
+
+- `-install` — Register a transpiler step in effortless.json
+- `-uninstall` — Remove a registered step from effortless.json
+
+### Build
+
+- `-build` — Build steps in this folder and its children
+- `-buildAll` — Build the whole project from its root
+- `-buildLocal` — Build only steps registered exactly here
+
+### Clean
+
+- `-clean` — Delete generated output here and below
+- `-cleanAll` — Clean the whole project from its root
+- `-cleanLocal` — Clean only steps registered exactly here
+
+### Local tools (effortless-tools/, serve)
+
+- `-serve` — Host this project's local tools over HTTP
+
+Run `effortless -help <category|option>` for one topic, or
+`effortless -help all` for every option.
+<!-- cli-commands:end -->
+
+## Local tools
+
+A project can carry its own transpilers next to the rulebook and reference
+them in `effortless.json` exactly like catalog tools. The CLI hosts them over
+the same REST contract published tools speak, so the ledger, `clean`, `-debug`,
+and `-continueOnError` behave identically.
+
+```
+effortless-tools/
+  echo-params/transpiler.sh        # script: any executable or interpreted file
+  to-upper-node/package.json       # node:   a small HTTP tool on the shipped fileset handler
+  to-upper-dotnet/ToUpper.csproj   # dotnet: the same shape as a published cloud tool
+```
+
+The folder name is the tool name (lower-hyphen). An optional `tool.json`
+(`{ "name", "runtime": "dotnet" | "node" | "script", "entry", "description", "tags" }`)
+overrides the inference above.
+
+- **script** tools get directories, not HTTP: `EFFORTLESS_INPUT_DIR` holds the
+  input fileset, everything written under `EFFORTLESS_OUTPUT_DIR` becomes the
+  output fileset, and `EFFORTLESS_OUTPUT_NAME`, `EFFORTLESS_PARAMS` (JSON array
+  of the `name=value` params) and `EFFORTLESS_TOOL_NAME` carry the rest. A
+  non-zero exit fails the step with the script's output as the tool log.
+  Overwrite behaviour is the protocol's: write `effortless-overwrite-modes.json`
+  into the output directory (`{ "sql/*b-customize-*.sql": "Never", "sql/**": "Always" }`)
+  to set each file's `OverwriteMode`; an undeclared file is written once and
+  never overwritten, exactly as for every other tool.
+- **node** tools are started with `PORT` set and answer `POST /`. The CLI passes
+  the path of its zero-dependency handler in `EFFORTLESS_FILESET_HANDLER`:
+  `const { serveTool } = await import(process.env.EFFORTLESS_FILESET_HANDLER);`
+  then `serveTool({ transpile: ({ inputFiles, outputName }) => [{ relativePath, contents, alwaysOverwrite: true }] })`.
+  The handler is also `lib/fileset-handler.mjs` in the npm package and exposes a
+  plain `(req, res)` listener for express.
+- **dotnet** tools are started with `dotnet run --project` and `PORT` set, which
+  is exactly what `CLIClassLibrary.StartToolListener` reads, so a local tool
+  folder can later be published unchanged.
+
+```bash
+effortless echo-params -input README.md -output echo.txt   # ephemeral host, started and stopped for this run
+effortless build                                           # same: one ephemeral host for the whole build
+effortless serve -port 4242                                # resident host; builds reuse it via .effortless/serve.json
+```
+
+A `-setToolUrl` mapping still wins over a same-named local tool, so a local
+tool can be pointed elsewhere for debugging. Local tools are not
+catalog-versioned (no pin, no `[latest]`; the label is `<name> [local]`) and a
+nested project does not inherit its parent's `effortless-tools/`.
+
+## Seeds
+
+An Effortless seed is a public GitHub repository with `effortless.json` at its
+root: a whole starter project, root or child, that you clone and build. Seeds
+are discovered across an ordered list of GitHub accounts, the **seed sources**.
+The defaults are `ssotme` and `effortlessapi`; the list lives in
+`~/.effortless/seed_sources.json` once you change it.
+
+```bash
+effortless listSeedSources                 # ssotme (default), effortlessapi (default)
+effortless addSeedSource my-org            # search my-org too (appended, persisted)
+effortless removeSeedSource ssotme         # defaults can be removed
+
+effortless listSeeds                       # every seed, grouped by account, with descriptions
+effortless listSeeds my-org                # one account only
+effortless cloneSeed my-org/my-seed        # exactly that repository
+effortless cloneSeed my-seed [dir]         # searched across the sources; must match in exactly one
+cd my-seed
+effortless build                           # nothing runs until you do this
+```
+
+`EFFORTLESS_SEED_GITHUB_ACCOUNT` adds one more account, searched first, for a
+single invocation. Cloning preserves `.git` and never executes downloaded
+code. A seed that ships `effortless-seed.json` (an older `ssotme-seed.json`
+is also read) declares `$key$` replacements; on the first project load each
+key is filled from `seed-config-values.json`, `seed-secret-values.json`, a
+parent folder's `seed-config-values.json`, the key's `default`, or a prompt,
+and the tokens are replaced in file contents and file names.
+
+## Build on a cloud trigger
+
+Watch the live Airtable trigger bridge and rebuild after changes have been quiet
+for ten seconds:
+
+```bash
+effortless build -buildOnTrigger <baseId>
+```
+
+The watcher polls every three seconds. Transport, HTTP, or malformed-payload
+failures stop the command instead of being treated as an unchanged base.
+
+Use `effortless -help` for command-line help. The generated command reference is
+at [docs/cli-reference.md](docs/cli-reference.md), and the REST-only rebuild
+history is under [docs/refactor-plan/](docs/refactor-plan/).
 
 ## Surviving a broken transpiler: `-continueOnError`
 
@@ -179,60 +275,20 @@ the message that reaches the console.
 A summary is also printed at the end of the build naming each failed step, its
 command line, and the path to `errors.json`.
 
-## Syntax: `ssotme -help`
-This command will show the following help.
+## Contributing
 
-```
-Syntax: ssotme [account/]transpiler [Options]
+Create a branch, open a pull request, and keep `dotnet test Effortless.Cli.sln`
+green. Changes are squash-merged. Maintainers release through
+`scripts/release.sh`; do not hand-roll version or publishing steps.
 
-Options:
-   -account, -a           The account which the transpiler belongs to
-   -addSetting, -as       Adds a setting to the SSoT.me Project
-   -addTranspiler         Add a transpiler to for the given account
-   -authenticate, -auth   Launch the SSoT.me website in order to authenticate (and/or register), and then to link that  user to your ssotme CLI.
-   -betaRepo              Use the beta repository for this seed?
-   -build, -b,
-   -replay, -rebuild      Build any transpilers in the current folder (or children).
-   -buildAll, -ba,
-   -replayall,
-   -rebuildAll            Builds all transpilers in the project
-   -buildLocal, -bl,
-   -replaylocal,
-   -rebuildLocal          Builds only the root level transpilers, not the sub-directories.
-   -checkResults, -cr     Checks the result of a build linking up input and output files of the transpiles.  Creates a SPXML file in the DSPXml folder of the project.
-   -clean, -c             Don't output the final results - instead, clean
-   -cleanAll, -ca         Don't output the final results - instead, clean
-   -cloneSeed,
-   -cs, -clone            Clones a specified seed
-   -createDocs, -cd       Creates documentation based on a DSPXml file created with the -checkResults flag.
-   -deleteTranspiler      Delete the transpiler with the given name
-   -describeAll, -da      Describe all of the transpiler in the project
-   -describe, -d          Describes the current SSoT.me Project (and all transpilers)
-   -discuss, -ai          Discuss the project with an AI
-   -execute, -exec        Executes the given command as a ProcessInfo.Start
-   -help, -h              Show help about how to use the SSoT.me CLI
-   -includeDisabled,
-   -id                    Include disabled tools in the build
-   -info                  View your SSoTme CLI global settings
-   -init                  Initialize the current folder as the root of an SSoT.me project. An Optional parameter of force will create a sub-project.
-   -input, -i             Input filename or comma separated list of file names
-   -install               Saves the current command into the SSoT.me Project file
-   -keyFile, -f           The keyfile to use.  By default it looks for ~/.ssotme/ssotme.key. (or ~/.ssotme/ssotme.{username}.key)
-   -listSeeds, -lsd       Lists seeds available to be clones
-   -listSettings, -ls     List of project settings
-   -output, -o            Output filename
-   -parameters, -p        A list of parameters
-   -preserveZFS, -rz      Determines if the input should be preserved.
-   -projectName, -name    Name of the project (optional parameter to the init command)
-   -removeSetting, -rs    REmoves a setting from the SSoT.me Project
-   -repoUrl               Override the default URL specified by the seed repository
-   -runAs, -ra            Run as this user (look for this user's key file)
-   -setAccountAPIKey,
-   -api                   Add an account api key
-   -skipBuild             Skips the build part of cloning a Seed repository
-   -skipClean, -sc        Don't clean the output before cooking
-   -transpilerGroup,
-   -tg                    Name of a group to put a transpiler in within a specific folder
-   -uninstall             Removes the current command from the SSoT.me Project file
-   -waitTimeout, -w       The amount of time to wait for the command to continue
-```
+## Upgrading from the SSoT.me CLI
+
+Existing installs and projects keep working: `~/.ssotme` is copied to
+`~/.effortless` on first run, `ssotme.json` becomes `effortless.json` when a
+project is loaded, and the `ssotme`, `aicapture`, and `aic` commands stay as
+aliases. Everything that changed, and what replaced each removed option, is in
+[docs/upgrading-from-ssotme.md](docs/upgrading-from-ssotme.md).
+
+## License
+
+See [LICENSE](LICENSE).

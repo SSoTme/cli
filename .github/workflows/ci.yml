@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - effortless-cli
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build
+        run: dotnet build Effortless.Cli.sln --configuration Release
+
+      - name: Run non-slow tests
+        run: >-
+          dotnet test Effortless.Cli.sln
+          --configuration Release
+          --no-build
+          --filter "Slow!=true"
+          --logger trx
+          --results-directory TestResults
+
+      - name: Upload failed test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults/**
+          if-no-files-found: ignore
+
+  generate-check:
+    name: Generated files and rulebook
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate rulebook
+        run: node scripts/validate-rulebook.mjs
+
+      - name: Check generated files
+        run: node scripts/generate-from-rulebook.mjs --check
+
+  npm-package:
+    name: Public npm package
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Verify publish metadata
+        run: npm publish --dry-run --access public
+
+      - name: Pack, install, and run every alias
+        run: npm run test:package
+
+  slow:
+    name: Slow tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run slow tests
+        run: >-
+          dotnet test Effortless.Cli.sln
+          --configuration Release
+          --filter "Slow=true"

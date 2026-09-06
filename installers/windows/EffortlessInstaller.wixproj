@@ -1,0 +1,39 @@
+<Project Sdk="WixToolset.Sdk/6.0.0">
+
+	<PropertyGroup>
+		<OutputName>Effortless-Installer_win-x64</OutputName>
+		<OutputType>Package</OutputType>
+		<Platform>x64</Platform>
+		<EffortlessVersion>225.1.2.1456</EffortlessVersion>
+		<EnableDefaultItems>false</EnableDefaultItems>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+		<OutputPath>bin\Debug\</OutputPath>
+		<IntermediateOutputPath>obj\Debug\</IntermediateOutputPath>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+		<OutputPath>bin\Release\</OutputPath>
+		<IntermediateOutputPath>obj\Release\</IntermediateOutputPath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Include="Product.wxs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Include="Assets\LICENSE.rtf" />
+		<Content Include="Assets\Icon.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Scripts\CreateEffortlessHomedir.ps1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="WixToolset.UI.wixext" Version="6.0.0" />
+		<PackageReference Include="WixToolset.Util.wixext" Version="6.0.0" />
+	</ItemGroup>
+
+</Project>

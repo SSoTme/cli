@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+    <title>Effortless CLI</title>
+    <organization>EffortlessAPI</organization>
+    <domains enable_localSystem="true"/>
+    <options customize="never" require-scripts="true" />
+    <license file="license.rtf"/>
+    <pkg-ref id="com.effortlessapi.effortlesscli"
+             version="2024.08.23"
+             auth="root">Effortless-CLI.pkg</pkg-ref>
+    <choices-outline>
+        <line choice="default">
+            <line choice="com.effortlessapi.effortlesscli"/>
+        </line>
+    </choices-outline>
+    <choice id="default"/>
+    <choice id="com.effortlessapi.effortlesscli" visible="false">
+        <pkg-ref id="com.effortlessapi.effortlesscli"/>
+    </choice>
+</installer-gui-script>

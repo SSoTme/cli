@@ -1,0 +1,7 @@
+{
+  "name": "to-upper-node",
+  "private": true,
+  "type": "module",
+  "main": "index.mjs",
+  "description": "Node-shape local tool built on the CLI's fileset handler."
+}

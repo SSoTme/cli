@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "DotNetStandardCLI": {
-      "commandName": "Project",
-      "commandLineArgs": "-t http://localhost:8080/OdxmlToGoStructs -i ODXML/DataSchema.odxml",
-      "workingDirectory": "C:\\Users\\rodri\\DEV\\GoSSoTme"
-    }
-  }
-}

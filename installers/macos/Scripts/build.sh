@@ -1,0 +1,242 @@
+#!/bin/bash
+# Build script for the Effortless CLI macOS Installer
+#
+# Generates:
+#           - installers/macos/bin/Effortless-Installer-<arch>.pkg
+
+
+# Parse command line arguments
+NO_UPDATE=false
+TARGET_ARCH=""
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --no-update)
+            NO_UPDATE=true
+            shift
+            ;;
+        --arch)
+            TARGET_ARCH="$2"
+            shift 2
+            ;;
+        *)
+            ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Set positional parameters from remaining arguments
+THE_INSTALLER_FILENAME=${ARGS[0]}
+DEV_INSTALLER_KEYCHAIN_ID=${ARGS[1]}
+DEV_EXECUTABLE_KEYCHAIN_ID=${ARGS[2]}
+APPLE_EMAIL=${ARGS[3]}
+NOTARYPASS=${ARGS[4]}
+
+INSTALLER_DIR="$( dirname "$( dirname "${BASH_SOURCE[0]}" )")"
+
+echo "my dir: $INSTALLER_DIR"
+
+set -e  # exit on failure
+
+SCRIPT_DIR="$INSTALLER_DIR/Scripts"
+
+ROOT_DIR="$(dirname "$(dirname "$INSTALLER_DIR")")"
+
+echo "Root dir: $ROOT_DIR"
+
+cd "$ROOT_DIR"
+
+# Update package.json with current timestamp version (unless --no-update is specified)
+if [ "$NO_UPDATE" = false ]; then
+    YEAR=$(date -u +"%Y")
+    MONTH=$(date -u +"%m")
+    DAY=$(date -u +"%d")
+    HOUR=$(date -u +"%H")
+    MINUTE=$(date -u +"%M")
+    TIMESTAMP="${YEAR}.$((10#$MONTH * 100 + 10#$DAY)).$((10#$HOUR * 100 + 10#$MINUTE))"
+    PACKAGE_JSON_PATH="$ROOT_DIR/package.json"
+    if [ -f "$PACKAGE_JSON_PATH" ]; then
+        OLD_VERSION=$(grep -o '"version": "[^"]*"' "$PACKAGE_JSON_PATH" | cut -d'"' -f4)
+        # Use a temp file to preserve formatting
+        jq --arg ver "$TIMESTAMP" '.version = $ver' "$PACKAGE_JSON_PATH" > "$PACKAGE_JSON_PATH.tmp" && mv "$PACKAGE_JSON_PATH.tmp" "$PACKAGE_JSON_PATH"
+        echo "Updated package.json version from $OLD_VERSION to $TIMESTAMP"
+    else
+        echo "ERROR: package.json not found at: $PACKAGE_JSON_PATH"
+        exit 1
+    fi
+else
+    echo "Skipping automatic version update (--no-update specified)"
+fi
+
+SOURCE_DIR="$ROOT_DIR/src/Effortless.Cli"
+RESOURCES_DIR="$INSTALLER_DIR/Resources"
+ASSETS_DIR="$INSTALLER_DIR/Assets"
+BUILD_DIR="$INSTALLER_DIR/build"
+DIST_DIR="$ROOT_DIR/dist"
+BIN_DIR="$INSTALLER_DIR/bin"
+CLI_VERSION=$(grep -o '"version": "[^"]*"' "$ROOT_DIR/package.json" | cut -d'"' -f4)
+echo "Using version: $CLI_VERSION from package.json"
+
+# Update the version in the .csproj file
+CSPROJ_FILE="$SOURCE_DIR/Effortless.Cli.csproj"
+CLIVERSION_FILE="$ROOT_DIR/src/Effortless.Cli.Core/CliVersion.cs"
+
+# Convert npm-safe YYYY.MDD.HHMM to numeric YYYY.M.D.HHMM for .NET.
+# e.g. "2026.404.1917" -> "2026.4.4.1917"
+if [[ "$CLI_VERSION" =~ ^([0-9]{4})\.([0-9]{3,4})\.([0-9]{1,4})$ ]]; then
+    CSPROJ_YEAR="${BASH_REMATCH[1]}"
+    MONTH_DAY=$((10#${BASH_REMATCH[2]}))
+    CSPROJ_MONTH=$((MONTH_DAY / 100))
+    CSPROJ_DAY=$((MONTH_DAY % 100))
+    CSPROJ_HHMM=$((10#${BASH_REMATCH[3]}))
+    CSPROJ_HOUR=$((CSPROJ_HHMM / 100))
+    CSPROJ_MINUTE=$((CSPROJ_HHMM % 100))
+    if (( CSPROJ_MONTH < 1 || CSPROJ_MONTH > 12 || CSPROJ_DAY < 1 || CSPROJ_DAY > 31 ||
+          CSPROJ_HOUR > 23 || CSPROJ_MINUTE > 59 )); then
+        echo "ERROR: package.json version contains an invalid UTC date/time: '$CLI_VERSION'"
+        exit 1
+    fi
+    NEW_CSPROJ_VERSION="${CSPROJ_YEAR}.${CSPROJ_MONTH}.${CSPROJ_DAY}.${CSPROJ_HHMM}"
+else
+    echo "ERROR: package.json version must use npm-safe YYYY.MDD.HHMM format; got '$CLI_VERSION'"
+    exit 1
+fi
+echo "Using csproj version: $NEW_CSPROJ_VERSION (from $CLI_VERSION)"
+
+if [ ! -f "$CSPROJ_FILE" ]; then
+    echo "WARNING: $CSPROJ_FILE not found"
+fi
+
+echo "Updating version in $CSPROJ_FILE to $NEW_CSPROJ_VERSION"
+sed -i '' "s/<Version>[^<]*<\/Version>/<Version>$NEW_CSPROJ_VERSION<\/Version>/g" "$CSPROJ_FILE"
+
+echo "Updating CLI version in $CLIVERSION_FILE to $CLI_VERSION"
+sed -i '' "s/public const string Value = \".*\";/public const string Value = \"$CLI_VERSION\";/g" "$CLIVERSION_FILE"
+
+# Clean previous builds
+rm -rf "$DIST_DIR"
+rm -rf "$BUILD_DIR"
+rm -rf "$BIN_DIR"
+rm -rf "$RESOURCES_DIR"
+rm -rf "$ROOT_DIR/build"
+
+echo "Creating necessary directories..."
+mkdir -p "$RESOURCES_DIR" "$BUILD_DIR" "$ASSETS_DIR" "$BIN_DIR" "$BIN_DIR/signed" "$BIN_DIR/unsigned"
+
+# Copy README into Resources
+README_SRC="$ROOT_DIR/README.md"
+README_DEST="$RESOURCES_DIR/README.md"
+if [ -f "$README_SRC" ]; then
+    cp "$README_SRC" "$README_DEST"
+else
+    echo "WARNING: README.md not found at root."
+fi
+
+# copy the postinstall script to the build
+mkdir -p "$BUILD_DIR/scripts"
+if [ -f "$SCRIPT_DIR/postinstall.sh" ]; then
+    cp "$SCRIPT_DIR/postinstall.sh" "$BUILD_DIR/scripts/postinstall"
+else
+    echo "FATAL: $SCRIPT_DIR/postinstall.sh does not exist!"
+    exit 1
+fi
+chmod +x "$BUILD_DIR/scripts/postinstall"
+
+# we need to make sure that the target mac's cpu type matches the type we're building for
+# If not explicitly set via --arch, detect from the current system
+if [ -z "$TARGET_ARCH" ]; then
+    TARGET_ARCH=$(uname -m)
+fi
+echo "#!/bin/bash
+      TARGET_ARCH=\"$TARGET_ARCH\" 
+      if [ \$(uname -m) != \"\$TARGET_ARCH\" ]; then 
+        echo \"[ERROR] CPU mismatch: expected \$TARGET_ARCH, got \$(uname -m)\" >&2 
+        exit 64  # error code other than 1 
+      fi
+" > "$BUILD_DIR/scripts/preinstall"
+chmod +x "$BUILD_DIR/scripts/preinstall"
+
+if [ -f "$SCRIPT_DIR/uninstall.sh" ]; then
+    cp "$SCRIPT_DIR/uninstall.sh" "$RESOURCES_DIR/uninstall"
+    chmod +x "$RESOURCES_DIR/uninstall"
+else
+    echo "No such file: $SCRIPT_DIR/uninstall.sh"
+fi
+
+if [ "$TARGET_ARCH" = "x86_64" ]; then
+    PUB_ARCH="x64"
+elif [ "$TARGET_ARCH" = "arm64" ]; then
+    PUB_ARCH="arm64"
+else
+    echo "ERROR: unsupported macOS architecture '$TARGET_ARCH'"
+    exit 1
+fi
+
+dotnet publish "$CSPROJ_FILE" -r "osx-$PUB_ARCH" -c Release /p:PublishSingleFile=true \
+  --self-contained true -o "$RESOURCES_DIR"
+mv "$RESOURCES_DIR/Effortless.Cli" "$RESOURCES_DIR/effortless"
+
+# copy into the ssotme, aic & aicapture aliases
+cp "$RESOURCES_DIR/effortless" "$RESOURCES_DIR/ssotme"
+cp "$RESOURCES_DIR/effortless" "$RESOURCES_DIR/aic"
+cp "$RESOURCES_DIR/effortless" "$RESOURCES_DIR/aicapture"
+
+chmod +x "$RESOURCES_DIR/ssotme"
+chmod +x "$RESOURCES_DIR/aic"
+chmod +x "$RESOURCES_DIR/aicapture"
+chmod +x "$RESOURCES_DIR/effortless"
+
+# Sign the executables when a signing identity is supplied. Local verification
+# builds intentionally remain unsigned.
+if [ -n "$DEV_EXECUTABLE_KEYCHAIN_ID" ]; then
+  codesign --force --timestamp --options runtime \
+    --entitlements "$INSTALLER_DIR/entitlements.plist" \
+    --sign "$DEV_EXECUTABLE_KEYCHAIN_ID" "$RESOURCES_DIR/ssotme" --identifier "com.effortlessapi.ssotme"
+  codesign --force --timestamp --options runtime \
+    --entitlements "$INSTALLER_DIR/entitlements.plist" \
+    --sign "$DEV_EXECUTABLE_KEYCHAIN_ID" "$RESOURCES_DIR/aic" --identifier "com.effortlessapi.aic"
+  codesign --force --timestamp --options runtime \
+    --entitlements "$INSTALLER_DIR/entitlements.plist" \
+    --sign "$DEV_EXECUTABLE_KEYCHAIN_ID" "$RESOURCES_DIR/aicapture" --identifier "com.effortlessapi.aicapture"
+  codesign --force --timestamp --options runtime \
+    --entitlements "$INSTALLER_DIR/entitlements.plist" \
+    --sign "$DEV_EXECUTABLE_KEYCHAIN_ID" "$RESOURCES_DIR/effortless" --identifier "com.effortlessapi.effortless"
+else
+  echo "No executable signing identity supplied; building unsigned binaries."
+fi
+
+
+echo "Building package..."
+mkdir -p "$BUILD_DIR/payload/Applications/Effortless"
+cp -r "$RESOURCES_DIR"/* "$BUILD_DIR/payload/Applications/Effortless/"
+
+if [ -n "$DEV_EXECUTABLE_KEYCHAIN_ID" ]; then
+  echo "Verifying code signatures on copied binaries..."
+  codesign -dv --verbose=4 "$RESOURCES_DIR/ssotme"
+  codesign -dv --verbose=4 "$RESOURCES_DIR/aic"
+  codesign -dv --verbose=4 "$RESOURCES_DIR/aicapture"
+  codesign -dv --verbose=4 "$RESOURCES_DIR/effortless"
+fi
+
+# Build a single package directly
+pkgbuild --root "$BUILD_DIR/payload" \
+    --install-location "/" \
+    --scripts "$BUILD_DIR/scripts" \
+    --identifier "com.effortlessapi.effortlesscli" \
+    --version "$CLI_VERSION" \
+    "$BIN_DIR/unsigned/$THE_INSTALLER_FILENAME"
+
+if [ -n "$DEV_INSTALLER_KEYCHAIN_ID" ]; then
+  echo "Signing package $BIN_DIR/unsigned/$THE_INSTALLER_FILENAME -> $BIN_DIR/signed/$THE_INSTALLER_FILENAME"
+  productsign --sign "$DEV_INSTALLER_KEYCHAIN_ID" "$BIN_DIR/unsigned/$THE_INSTALLER_FILENAME" "$BIN_DIR/signed/$THE_INSTALLER_FILENAME"
+  echo "Build completed. Installer is at: $BIN_DIR/signed/$THE_INSTALLER_FILENAME"
+
+  if [ -n "$APPLE_EMAIL" ] && [ -n "$NOTARYPASS" ]; then
+    /bin/bash "$SCRIPT_DIR/notarize.sh" "$BIN_DIR/signed/$THE_INSTALLER_FILENAME" "$APPLE_EMAIL" "$NOTARYPASS"
+  else
+    echo "Notarization credentials were not supplied; skipping notarization."
+  fi
+else
+  echo "No installer signing identity supplied; unsigned installer is at: $BIN_DIR/unsigned/$THE_INSTALLER_FILENAME"
+fi

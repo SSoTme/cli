@@ -5,8 +5,37 @@ on:
     types: [ prereleased, released ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  verify:
+    name: Verify release commit
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Validate generated files
+      run: |
+        node scripts/validate-rulebook.mjs
+        node scripts/generate-from-rulebook.mjs --check
+
+    - name: Build and run non-slow tests
+      run: |
+        dotnet build Effortless.Cli.sln --configuration Release
+        dotnet test Effortless.Cli.sln --configuration Release --no-build --filter "Slow!=true"
+
   build-x64:
+    needs: verify
     runs-on: windows-latest
     
     steps:
@@ -58,15 +87,15 @@ jobs:
     - name: Build Windows Installer (x64)
       if: steps.early_check.outputs.msi_count < '2'
       run: |
-        powershell -ExecutionPolicy Bypass -File Windows/Installer/Scripts/build.ps1 -NoUpdate
+        powershell -ExecutionPolicy Bypass -File installers/windows/Scripts/build.ps1 -NoUpdate -Platform x64
       shell: powershell
     
     - name: Upload x64 Installer
       if: steps.early_check.outputs.msi_count < '2'
       uses: actions/upload-artifact@v4
       with:
-        name: SSoTme-Installer-win-x64
-        path: Windows/Installer/bin/Release/SSoTme-Installer_win-x64.msi
+        name: Effortless-Installer-win-x64
+        path: installers/windows/bin/Release/Effortless-Installer_win-x64.msi
 
     - name: Get release tag from package.json
       id: get_tag
@@ -107,11 +136,12 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag.outputs.tag_name }}
-        files: Windows/Installer/bin/Release/SSoTme-Installer_win-x64.msi
+        files: installers/windows/bin/Release/Effortless-Installer_win-x64.msi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-arm64:
+    needs: verify
     runs-on: windows-latest
     
     steps:
@@ -160,27 +190,18 @@ jobs:
       with:
         dotnet-version: '8.0.x'
     
-    - name: Force ARM64 Architecture
-      if: steps.early_check_arm.outputs.msi_count < '2'
-      run: |
-        # Override architecture detection to build ARM64 version
-        $buildScript = Get-Content "Windows/Installer/Scripts/build.ps1" -Raw
-        $buildScript = $buildScript -replace '\$arch = \(Get-CimInstance Win32_OperatingSystem\)\.OSArchitecture', '$arch = "ARM 64-bit"'
-        Set-Content "Windows/Installer/Scripts/build.ps1" $buildScript -NoNewline
-      shell: powershell
-    
     - name: Build Windows Installer (ARM64)
       if: steps.early_check_arm.outputs.msi_count < '2'
       run: |
-        powershell -ExecutionPolicy Bypass -File Windows/Installer/Scripts/build.ps1 -NoUpdate
+        powershell -ExecutionPolicy Bypass -File installers/windows/Scripts/build.ps1 -NoUpdate -Platform arm64
       shell: powershell
     
     - name: Upload ARM64 Installer
       if: steps.early_check_arm.outputs.msi_count < '2'
       uses: actions/upload-artifact@v4
       with:
-        name: SSoTme-Installer-win-arm64
-        path: Windows/Installer/bin/Release/SSoTme-Installer_win-arm64.msi
+        name: Effortless-Installer-win-arm64
+        path: installers/windows/bin/Release/Effortless-Installer_win-arm64.msi
 
     - name: Get release tag from package.json
       id: get_tag_arm
@@ -221,6 +242,6 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_tag_arm.outputs.tag_name }}
-        files: Windows/Installer/bin/Release/SSoTme-Installer_win-arm64.msi
+        files: installers/windows/bin/Release/Effortless-Installer_win-arm64.msi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

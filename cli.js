@@ -7,31 +7,43 @@ const path = require('path');
 const fs = require('fs');
 
 const appDir = path.dirname(require.main.filename);
-const solutionPath = path.join(appDir, 'SSoTme-OST-CLI.sln');
-const outputPath = path.join(appDir, 'Windows', 'CLI', 'bin', 'Release', 'net8.0', 'SSoTme.OST.CLI.dll');
+const rebuildProjectPath = path.join(appDir, 'src', 'Effortless.Cli', 'Effortless.Cli.csproj');
+const outputPath = path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 'net8.0', 'Effortless.Cli.dll');
 
 // Sync version from package.json into .csproj <Version> and CLI_VERSION constant.
-// Mirrors Windows/Installer/Scripts/build.ps1 so dev builds (npm install -g .) match MSI/PKG.
+// Mirrors installers/windows/Scripts/build.ps1 so dev builds and installers match.
 // Returns true if any source file was modified (caller forces a rebuild).
 function syncVersionFromPackageJson() {
     const pkgVersion = require(path.join(appDir, 'package.json')).version;
-    // "2026-04-24.18.54" -> "2026.4.24.1854"
-    const m = pkgVersion.match(/^(\d{4})-(\d{2})-(\d{2})\.(\d{1,2})\.(\d{1,2})$/);
-    const csprojVersion = m
-        ? `${+m[1]}.${+m[2]}.${+m[3]}.${+m[4]}${m[5].padStart(2, '0')}`
-        : pkgVersion;
+    // npm-safe UTC stamp: "2026.424.1854" -> "2026.4.24.1854"
+    const m = pkgVersion.match(/^(\d{4})\.(\d{3,4})\.(\d{1,4})$/);
+    if (!m) {
+        throw new Error(
+            `Invalid package version '${pkgVersion}'; expected YYYY.MDD.HHMM without zero-padded numeric components.`
+        );
+    }
+    const monthDay = Number(m[2]);
+    const hourMinute = Number(m[3]);
+    const month = Math.floor(monthDay / 100);
+    const day = monthDay % 100;
+    const hour = Math.floor(hourMinute / 100);
+    const minute = hourMinute % 100;
+    if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) {
+        throw new Error(`Invalid UTC date/time in package version '${pkgVersion}'.`);
+    }
+    const csprojVersion = `${Number(m[1])}.${month}.${day}.${hourMinute}`;
 
     let changed = false;
     const updates = [
         {
-            file: path.join(appDir, 'Windows', 'CLI', 'SSoTme.OST.CLI.csproj'),
+            file: rebuildProjectPath,
             pattern: /<Version>.*?<\/Version>/,
             replacement: `<Version>${csprojVersion}</Version>`,
         },
         {
-            file: path.join(appDir, 'Windows', 'Lib', 'CLIOptions', 'SSoTmeCLIHandler.cs'),
-            pattern: /public string CLI_VERSION = ".*?";/,
-            replacement: `public string CLI_VERSION = "${pkgVersion}";`,
+            file: path.join(appDir, 'src', 'Effortless.Cli.Core', 'CliVersion.cs'),
+            pattern: /public const string Value = ".*?";/,
+            replacement: `public const string Value = "${pkgVersion}";`,
         },
     ];
     for (const u of updates) {
@@ -50,9 +62,9 @@ const versionChanged = syncVersionFromPackageJson();
 
 // Check if we need to build
 if (versionChanged || !fs.existsSync(outputPath)) {
-    console.log('Building .NET solution...');
+    console.log('Building Effortless CLI...');
     try {
-        execSync(`dotnet build "${solutionPath}" --configuration Release`, {
+        execSync(`dotnet build "${rebuildProjectPath}" --configuration Release`, {
             stdio: 'inherit',
             cwd: appDir
         });
@@ -64,12 +76,19 @@ if (versionChanged || !fs.existsSync(outputPath)) {
 
 // Run the CLI
 try {
-    spawn('dotnet', [
+    const child = spawn('dotnet', [
         outputPath,
-        process.argv.slice(2).join(' ')
+        ...process.argv.slice(2)
     ], {
         stdio: 'inherit',
         // cwd: appDir
+    });
+    child.on('error', (error) => {
+        console.error('Failed to run CLI:', error);
+        process.exit(1);
+    });
+    child.on('exit', (code, signal) => {
+        process.exit(signal ? 1 : (code ?? 1));
     });
 } catch (error) {
     console.error('Failed to run CLI:', error);
