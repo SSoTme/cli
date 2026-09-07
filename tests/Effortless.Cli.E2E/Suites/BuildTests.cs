@@ -599,7 +599,7 @@ public sealed class BuildTests
         Assert.Equal(WorkflowTestSupport.HeadVersion, Assert.Single(server.Requests).Version);
     }
 
-    [Fact(DisplayName = "build-soft-pin-updates: unpinned builds track moving HEAD without redundant saves")]
+    [Fact(DisplayName = "build-version-history-updates: unpinned builds track moving HEAD without redundant saves")]
     public async Task UnpinnedBuildTracksMovingHead()
     {
         const string movedVersion = "v2026.02.02.0002";

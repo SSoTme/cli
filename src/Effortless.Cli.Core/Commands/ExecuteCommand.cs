@@ -50,7 +50,7 @@ public sealed class ExecuteCommand
             invocation.Project.Install(
                 payload,
                 invocation.Options.transpilerGroup,
-                invocation.ResolvedVersionKey);
+                pinnedVersion: null);
         }
 
         return 0;

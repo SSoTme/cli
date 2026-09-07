@@ -2039,7 +2039,7 @@
       {
         "LifecyclePhaseId": "project-update",
         "SortOrder": 12,
-        "Description": "Persist install/replace results and the soft pin (LastVersionUsed/LastUrl), honor -latest."
+        "Description": "Persist install/replace results and version history (LastVersionUsed/LastUrl). Ordinary installs remain unpinned; explicitly versioned installs and -pin create hard pins."
       },
       {
         "LifecyclePhaseId": "build-loop",
@@ -3716,7 +3716,7 @@
         "Phase": "project-update",
         "SortOrder": 1,
         "Condition": "updateProject && isBuildOperation",
-        "Action": "UpdateRuntimeOnly; soft pin (LastVersionUsed/LastUrl) saved only when changed.",
+        "Action": "UpdateRuntimeOnly; version history (LastVersionUsed/LastUrl) is saved only when changed.",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
         "ExitCode": "flow",
@@ -3728,7 +3728,7 @@
         "Phase": "project-update",
         "SortOrder": 2,
         "Condition": "updateProject && !isBuildOperation",
-        "Action": "install ? project.Install(...) : project.Update(pt,...); soft pin; -latest clears the hard pin and prints \"Now using ...\".",
+        "Action": "install ? project.Install(...) : project.Update(pt,...); ordinary installs leave PinnedVersion unset, explicitly versioned installs retain that version, and successful runs update version history.",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
         "ExitCode": "flow",
@@ -4898,7 +4898,7 @@
         "Format": "json",
         "Purpose": "The project: Name, SSoTmeProjectId, ProjectSettings, ProjectTranspilers (see ProjectFileFields).",
         "ReadBy": "every command that needs a project (walks up from cwd)",
-        "WrittenBy": "init, install, uninstall, enable, disable, addSetting, removeSetting, build (soft pin / version sync), pin, upgrade, upgradeAll, Load (when SSoTmeProjectId was missing)",
+        "WrittenBy": "init, install, uninstall, enable, disable, addSetting, removeSetting, build (version history / version sync), pin, upgrade, upgradeAll, Load (when SSoTmeProjectId was missing)",
         "IsSecret": false,
         "UnixMode": "",
         "Disposition": "keep",
@@ -5651,7 +5651,7 @@
         "ClrType": "string",
         "SerializationRule": "IgnoreAndPopulate",
         "IsModelOwned": true,
-        "WrittenWhen": "install (ResolvedVersionKey) or pin (explicit version/URL); cleared by upgrade/upgradeAll",
+        "WrittenWhen": "install with an explicit /v... suffix, or pin (explicit version/URL); cleared by upgrade/upgradeAll",
         "Disposition": "keep",
         "Description": "HARD pin: resolution uses this version. Save() must not resurrect it (modelOwnedProps skip)."
       },
@@ -5664,7 +5664,7 @@
         "IsModelOwned": true,
         "WrittenWhen": "after every successful run/build; upgrade sets it to head",
         "Disposition": "keep",
-        "Description": "Informational soft pin; never used for resolution in a8f0f32."
+        "Description": "Informational version history recording the last successful version; it is never used for resolution."
       },
       {
         "ProjectFileFieldId": "t-lasturl",
@@ -8777,12 +8777,26 @@
         "Title": "install registers and runs a tool",
         "Given": "project; mock tool to-uppercase; in.txt",
         "When": "effortless -install to-uppercase -i in.txt -o out.txt",
-        "Then": "project gains the installed step with a hard PinnedVersion; LastVersionUsed and LastUrl remain null; output is written and the Installed/COMMAND LINE block is printed; exit 0",
+        "Then": "project gains an unpinned installed step; LastVersionUsed and LastUrl remain null; output is written and the Installed/COMMAND LINE block is printed; exit 0",
         "Priority": "P0",
         "Interactive": false,
         "Slow": false,
         "Status": "green",
-        "Description": ""
+        "Description": "Installing the catalog HEAD without an explicit version must not silently convert that resolution into a hard pin."
+      },
+      {
+        "TestCaseId": "inst-explicit-version",
+        "Suite": "e2e-install",
+        "PrimaryOption": "install",
+        "Title": "explicitly versioned install creates a pin",
+        "Given": "project; mock tool to-uppercase with an older catalog version",
+        "When": "effortless -install to-uppercase/v2025.12.31.2359",
+        "Then": "the installed step retains that explicit version in both CommandLine and PinnedVersion, and the requested version runs",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "green",
+        "Description": "An explicit version suffix is affirmative user intent to pin and remains supported."
       },
       {
         "TestCaseId": "inst-bareword",
@@ -9275,7 +9289,7 @@
         "Description": "Exercises suffix stripping on an unpinned step. A pinned step is now left alone by the gate , so the fixture no longer carries a PinnedVersion."
       },
       {
-        "TestCaseId": "build-soft-pin-updates",
+        "TestCaseId": "build-version-history-updates",
         "Suite": "e2e-build",
         "PrimaryOption": "build",
         "Title": "LastVersionUsed/LastUrl track the run",

@@ -36,13 +36,43 @@ public sealed class InstallTests
             "to-uppercase -i in.txt -o out.txt",
             WorkflowTestSupport.RequiredString(step, "CommandLine"));
         Assert.False(step["IsDisabled"]!.GetValue<bool>());
-        Assert.Equal(WorkflowTestSupport.HeadVersion, step["PinnedVersion"]!.GetValue<string>());
+        Assert.False(step.ContainsKey("PinnedVersion"));
         Assert.Null(step["LastVersionUsed"]);
         Assert.Null(step["LastUrl"]);
         Assert.Equal(
             WorkflowTestSupport.SanitizeUrl(server.ToolUri("to-uppercase").ToString()),
             Path.GetFileNameWithoutExtension(
                 Assert.Single(WorkflowTestSupport.ZfsFiles(sandbox))));
+        server.ThrowIfFaulted();
+    }
+
+    [Fact(DisplayName = "inst-explicit-version: an explicitly versioned install creates a pin")]
+    public async Task ExplicitlyVersionedInstallCreatesPin()
+    {
+        var cli = new CliUnderTest();
+        await using var server = new MockToolServer();
+        using var sandbox = WorkflowTestSupport.CreateProjectSandbox(cli, server);
+        server.Enqueue("to-uppercase", ToolBehavior.Files());
+
+        var result = await cli.Run(
+            [
+                "-install",
+                $"to-uppercase/{WorkflowTestSupport.OldVersion}",
+            ],
+            sandbox.ProjectPath,
+            sandbox);
+
+        Assert.Equal(0, result.ExitCode);
+        var step = WorkflowTestSupport.SingleStep(sandbox);
+        Assert.Equal(
+            WorkflowTestSupport.OldVersion,
+            step["PinnedVersion"]!.GetValue<string>());
+        Assert.Equal(
+            $"to-uppercase/{WorkflowTestSupport.OldVersion}",
+            WorkflowTestSupport.RequiredString(step, "CommandLine"));
+        Assert.Equal(
+            WorkflowTestSupport.OldVersion,
+            Assert.Single(server.Requests).Version);
         server.ThrowIfFaulted();
     }
 

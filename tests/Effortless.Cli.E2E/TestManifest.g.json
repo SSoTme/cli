@@ -312,6 +312,14 @@
     "interactive": false
   },
   {
+    "id": "inst-explicit-version",
+    "suite": "e2e-install",
+    "priority": "P0",
+    "status": "green",
+    "slow": false,
+    "interactive": false
+  },
+  {
     "id": "inst-bareword",
     "suite": "e2e-install",
     "priority": "P0",
@@ -592,7 +600,7 @@
     "interactive": false
   },
   {
-    "id": "build-soft-pin-updates",
+    "id": "build-version-history-updates",
     "suite": "e2e-build",
     "priority": "P1",
     "status": "green",

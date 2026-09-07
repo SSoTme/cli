@@ -746,7 +746,7 @@ public sealed class CommandDispatcher
                     },
                 },
                 options.transpilerGroup,
-                invocation.ResolvedVersionKey);
+                pinnedVersion: null);
             return 0;
         }
 
@@ -945,7 +945,7 @@ public sealed class CommandDispatcher
             invocation.Project.UpdateRuntimeOnly(
                 activeStep,
                 payload);
-            SaveSoftPinIfChanged(invocation, activeStep);
+            SaveVersionHistoryIfChanged(invocation, activeStep);
             return;
         }
 
@@ -954,16 +954,41 @@ public sealed class CommandDispatcher
             invocation.Project.Install(
                 payload,
                 invocation.Options.transpilerGroup,
-                invocation.ResolvedVersionKey);
+                ExplicitlyRequestedInstallVersion(invocation));
         }
         else if (activeStep is not null)
         {
             invocation.Project.Update(activeStep, payload);
-            SaveSoftPinIfChanged(invocation, activeStep);
+            SaveVersionHistoryIfChanged(invocation, activeStep);
         }
     }
 
-    private static void SaveSoftPinIfChanged(
+    private static string ExplicitlyRequestedInstallVersion(
+        CliInvocation invocation)
+    {
+        var requestedTool = invocation.RawTranspilerArg;
+        if (string.IsNullOrWhiteSpace(requestedTool)
+            || string.IsNullOrWhiteSpace(
+                invocation.ResolvedVersionKey))
+        {
+            return null;
+        }
+
+        var slash = requestedTool.LastIndexOf('/');
+        if (slash < 0 || slash == requestedTool.Length - 1)
+        {
+            return null;
+        }
+
+        var suffix = requestedTool[(slash + 1)..];
+        return suffix.Length > 1
+            && suffix[0] is 'v' or 'V'
+            && char.IsDigit(suffix[1])
+                ? invocation.ResolvedVersionKey
+                : null;
+    }
+
+    private static void SaveVersionHistoryIfChanged(
         CliInvocation invocation,
         ProjectTranspiler step)
     {
