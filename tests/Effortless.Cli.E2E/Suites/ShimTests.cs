@@ -104,6 +104,57 @@ public sealed class ShimTests
         }
     }
 
+    [Fact(DisplayName = "shim-stale-dll-rebuild: a synced-but-unstamped tree rebuilds once, then stays built")]
+    public async Task CliJsRebuildsAStaleDllEvenWhenVersionSourcesAreAlreadySynced()
+    {
+        // Reproduces the real incident: a `git pull` lands a release commit
+        // whose .csproj/CliVersion.cs are already stamped to the new version
+        // (release.sh commits them pre-synced), sitting next to a DLL that
+        // was compiled for an older version. syncVersionFromPackageJson()'s
+        // own "did I have to edit a file" signal sees nothing to change and
+        // must not be the only rebuild trigger, or the stale DLL runs
+        // forever with no error and no visible change in -version.
+        var cli = new CliUnderTest();
+        using var sandbox = Sandbox.Create(cli);
+        var shim = ShimUnderTest.CreateFullSource(cli, sandbox);
+        var outputDestination = Path.Combine(
+            shim.RootPath,
+            "src",
+            "Effortless.Cli",
+            "bin",
+            "Release",
+            "net8.0");
+        Directory.CreateDirectory(outputDestination);
+        var outputSource = Path.GetDirectoryName(cli.DllPath)
+            ?? throw new InvalidOperationException("The CLI DLL has no containing directory.");
+        foreach (var file in Directory.GetFiles(outputSource))
+        {
+            File.Copy(file, Path.Combine(outputDestination, Path.GetFileName(file)), overwrite: true);
+        }
+
+        var stampPath = Path.Combine(outputDestination, ".built-version");
+        File.Delete(stampPath);
+
+        var firstRun = await shim.RunNode(
+            ["-version"],
+            sandbox.ProjectPath,
+            timeoutMs: 300_000);
+
+        Assert.Equal(0, firstRun.ExitCode);
+        Assert.Contains("Building Effortless CLI...", firstRun.Stdout, StringComparison.Ordinal);
+        Assert.Contains(CliUnderTest.PackageVersion + Environment.NewLine, firstRun.Stdout, StringComparison.Ordinal);
+        Assert.True(File.Exists(stampPath));
+        Assert.Equal(CliUnderTest.PackageVersion, File.ReadAllText(stampPath).Trim());
+
+        var secondRun = await shim.RunNode(["-version"], sandbox.ProjectPath);
+
+        Assert.Equal(0, secondRun.ExitCode);
+        Assert.DoesNotContain("Building Effortless CLI...", secondRun.Stdout, StringComparison.Ordinal);
+        Assert.Equal(
+            CliUnderTest.PackageVersion + Environment.NewLine,
+            secondRun.Stdout);
+    }
+
     [Fact(DisplayName = "shim-package-identity: scoped package owns every alias")]
     public void ScopedPackageOwnsEveryAlias()
     {

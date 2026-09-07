@@ -9,6 +9,7 @@ const fs = require('fs');
 const appDir = path.dirname(require.main.filename);
 const rebuildProjectPath = path.join(appDir, 'src', 'Effortless.Cli', 'Effortless.Cli.csproj');
 const outputPath = path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 'net8.0', 'Effortless.Cli.dll');
+const buildStampPath = path.join(appDir, 'src', 'Effortless.Cli', 'bin', 'Release', 'net8.0', '.built-version');
 
 // Sync version from package.json into .csproj <Version> and CLI_VERSION constant.
 // Mirrors installers/windows/Scripts/build.ps1 so dev builds and installers match.
@@ -58,16 +59,29 @@ function syncVersionFromPackageJson() {
     return changed;
 }
 
-const versionChanged = syncVersionFromPackageJson();
+syncVersionFromPackageJson();
 
-// Check if we need to build
-if (versionChanged || !fs.existsSync(outputPath)) {
+// Rebuild whenever the compiled DLL wasn't built for the current
+// package.json version. syncVersionFromPackageJson()'s own "did I have to
+// edit a file" signal is not enough: a fresh git pull/clone of a released
+// commit already has the .csproj/CliVersion.cs pre-stamped to that release's
+// version (release.sh commits them already synced), so no edit happens and
+// the stale, previously-compiled DLL would otherwise run forever with no
+// error and no visible change in -version.
+const pkgVersion = require(path.join(appDir, 'package.json')).version;
+const builtVersion = fs.existsSync(buildStampPath)
+    ? fs.readFileSync(buildStampPath, 'utf8').trim()
+    : null;
+
+if (builtVersion !== pkgVersion || !fs.existsSync(outputPath)) {
     console.log('Building Effortless CLI...');
     try {
         execSync(`dotnet build "${rebuildProjectPath}" --configuration Release`, {
             stdio: 'inherit',
             cwd: appDir
         });
+        fs.mkdirSync(path.dirname(buildStampPath), { recursive: true });
+        fs.writeFileSync(buildStampPath, pkgVersion);
     } catch (error) {
         console.error('Failed to build .NET solution:', error);
         process.exit(1);
