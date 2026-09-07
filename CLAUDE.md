@@ -123,11 +123,31 @@ best-effort without ever triggering a catalog refresh. Normal tool execution and
 
 Every tool, cloud or local, controls overwriting **per file** through the FileSet
 entry it returns: `AlwaysOverwrite` / `OverwriteMode=Always` rewrites the file on
-every build; `OverwriteMode=Never` (or no node at all) writes it once and never
-touches it again. `FileSetWriter` is the only place that interprets these, and
-it must treat every transpiler identically. Never special-case a tool, a shape,
-or a path here, and never let a tool shape lose the ability to declare a mode:
-a local-tool runtime that cannot express `Never` per file is a defect.
+every build; `OverwriteMode=Never` (or no node at all) writes it once, then only
+touches it again if its on-disk content still exactly matches what the ledger
+last generated (i.e. it was never hand-edited). `FileSetWriter` is the only place
+that interprets these, and it must treat every transpiler identically. Never
+special-case a tool, a shape, or a path here, and never let a tool shape lose the
+ability to declare a mode: a local-tool runtime that cannot express `Never` per
+file is a defect.
+
+**This content-match cleanup on `Never` files is intentional, not a bug** —
+without it, a `Never` file that the transpiler relocates (renamed, moved to a
+different relative path) would leave a stale orphaned copy behind at the old
+path forever ("leaking"), since nothing would ever be allowed to remove it. The
+clean pass deletes an untouched `Never` file precisely so it can follow a move;
+it only refuses to touch a `Never` file whose content has diverged from the
+ledger (a real hand-edit).
+
+**Known consequence: this delete+recreate silently drops OS file-mode bits**
+(e.g. the executable bit on a generated `.sh` file), on every build, even when
+nobody touched the file — because "unchanged content" says nothing about
+permissions, and a fresh `File.Create` on a deleted path never inherits the old
+mode. Do not try to fix this by skipping the clean/recreate for unmodified
+`Never` files — that reintroduces the orphan-leak problem above. The correct
+fix lives at the consumer: `-exec` must ensure its target is executable
+(`chmod`-equivalent) immediately before running it, rather than assuming a
+generated script kept whatever mode it had last time.
 
 ## Project save and upgrade invariants
 

@@ -17,6 +17,8 @@ public sealed class ExecuteCommand
             var executable = commandLine[..separator];
             var arguments = commandLine[(separator + 1)..];
 
+            EnsureExecutable(executable);
+
             try
             {
                 using var process = Process.Start(
@@ -52,5 +54,29 @@ public sealed class ExecuteCommand
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// A rulebook-generated script can lose its executable bit on every build
+    /// (FileSetCleaner deletes-then-recreates an unmodified FileSet entry so it
+    /// can follow a relative-path move; the fresh file carries default, non-
+    /// executable permissions). -execute targets are the one place the CLI
+    /// itself runs such a file directly, so it restores the bit here rather
+    /// than relying on the file having kept it.
+    /// </summary>
+    private static void EnsureExecutable(string executable)
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists(executable))
+        {
+            return;
+        }
+
+        var mode = File.GetUnixFileMode(executable);
+        const UnixFileMode executeBits =
+            UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+        if ((mode & UnixFileMode.UserExecute) == 0)
+        {
+            File.SetUnixFileMode(executable, mode | executeBits);
+        }
     }
 }
