@@ -170,6 +170,22 @@ generated script kept whatever mode it had last time.
 
 ## Releases
 
+**"Release it" means run `scripts/release.sh` to completion. Nothing else
+counts.** Committing to `main`, saying a fix "is in," tagging a commit by hand,
+or talking about rebuilding installers is NOT a release and does not change
+`package.json`'s version. `package.json`'s version is a frozen literal from the
+v2 rebuild commit until `scripts/release.sh` actually runs — every commit
+merged to `main` without running it leaves that version exactly where it was,
+with no warning.
+
+This matters beyond bookkeeping: `cli.js`'s dev-install path (`node cli.js` /
+`npm install -g .` from a git checkout) only rebuilds the compiled .NET DLL
+when `package.json`'s version string changes, or the DLL doesn't exist yet.
+If the version never bumps, `git pull`-ing new commits into an existing
+install **silently keeps running the old compiled DLL forever** — no error,
+no stale-version warning, `-version` prints the same string either way. The
+only fix is an actual version bump, which only `scripts/release.sh` produces.
+
 Commit source changes first, then use the guarded release flow:
 
 ```bash
@@ -178,3 +194,22 @@ scripts/release.sh
 
 The release script owns version stamping, pushing, and release creation. Do not
 hand-edit release versions or invent a publish procedure.
+
+**If npm auth is unavailable** (e.g. account recovery in progress), do not
+skip the release — run `scripts/release.sh --skip-npm` instead. It still
+bumps the version, runs the test suite, commits, tags, pushes, and creates the
+GitHub release; it only skips the npm registry publish, and prints the
+`npm publish --access public` command to run later to finish the release once
+auth is back. A release done this way is installed with:
+
+```bash
+git clone https://github.com/EffortlessAPI/cli.git && cd cli && npm install -g .
+```
+
+**Verify a release actually happened** — don't trust a claim that it did:
+```bash
+git log -1 --format="%H %ci %s"          # HEAD should be the "Release vYYYY.M.D.HHMM" commit
+node -p "require('./package.json').version"   # should match that tag, not a stale prior value
+```
+If the latest commit on `main` is not a `Release v...` commit, no release has
+happened yet, no matter what was said in conversation.
