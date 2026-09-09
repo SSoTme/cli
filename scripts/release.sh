@@ -50,7 +50,7 @@ if [ "$DRY_RUN" = true ]; then
     else
         echo "Would verify npm authentication."
     fi
-    echo "Would stamp package.json, Effortless.Cli.csproj, and CliVersion.cs."
+    echo "Would stamp package.json, Effortless.Cli.csproj, and CliVersion.cs (Value, DisplayVersion, CommitSha)."
     echo "Would run the full .NET and packaged-alias test suites."
     echo "Would commit and push ${TAG} from main."
     echo "Would create GitHub release ${TAG}."
@@ -74,6 +74,12 @@ npm pkg set "version=${VERSION}"
 
 echo "Synchronizing and building CLI version sources..."
 node cli.js -version
+
+COMMIT_SHA="$(git rev-parse HEAD)"
+echo "Stamping CommitSha (${COMMIT_SHA})..."
+CLI_VERSION_FILE="src/Effortless.Cli.Core/CliVersion.cs"
+sed -i.bak -E "s/public const string CommitSha = \".*\";/public const string CommitSha = \"${COMMIT_SHA}\";/" "$CLI_VERSION_FILE"
+rm -f "${CLI_VERSION_FILE}.bak"
 
 echo "Running the full test suite..."
 dotnet test Effortless.Cli.sln --configuration Release

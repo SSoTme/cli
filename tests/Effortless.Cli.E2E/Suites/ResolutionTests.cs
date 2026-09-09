@@ -1464,7 +1464,7 @@ public sealed class ResolutionTests
         Assert.Equal(0, help.ExitCode);
         Assert.Contains("Effortless CLI", help.Stdout, StringComparison.Ordinal);
         Assert.Equal(0, version.ExitCode);
-        Assert.Equal(CliUnderTest.PackageVersion + Environment.NewLine, version.Stdout);
+        Assert.Equal(CliUnderTest.DisplayVersion + Environment.NewLine, version.Stdout);
         Assert.Empty(bridge.Requests);
         Assert.False(
             File.Exists(

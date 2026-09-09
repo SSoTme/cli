@@ -4,6 +4,7 @@ using Effortless.Cli.FileSets;
 using Effortless.Cli.LocalTools;
 using Effortless.Cli.Options;
 using Effortless.Cli.Project;
+using Effortless.Cli.Updates;
 
 namespace Effortless.Cli.Commands;
 
@@ -18,7 +19,7 @@ public sealed class CommandDispatcher
     private readonly VersionCommands _versionCommands;
     private readonly AuthCommands _authCommands;
     private readonly InfoCommand _infoCommand;
-    private readonly UpgradeCliCommand _upgradeCliCommand;
+    private readonly UpdateChecker _updateChecker;
     private readonly ExecuteCommand _executeCommand;
     private readonly SeedCommands _seedCommands;
     private readonly LocalToolResolver _localTools;
@@ -61,7 +62,7 @@ public sealed class CommandDispatcher
                 () => ResolveAuthToolUrl(offline: false),
                 () => ResolveAuthToolUrl(offline: true)));
         _infoCommand = new InfoCommand(_remoteTools);
-        _upgradeCliCommand = new UpgradeCliCommand();
+        _updateChecker = new UpdateChecker();
         _executeCommand = new ExecuteCommand();
         _seedCommands = new SeedCommands();
     }
@@ -189,7 +190,7 @@ public sealed class CommandDispatcher
 
             if (invocation.Options.version)
             {
-                Console.WriteLine(CliVersion.Value);
+                Console.WriteLine(CliVersion.DisplayVersion);
                 return 0;
             }
 
@@ -695,9 +696,9 @@ public sealed class CommandDispatcher
             return _versionCommands.Upgrade(invocation, all: true);
         }
 
-        if (options.upgradeCli)
+        if (options.checkVersion)
         {
-            return _upgradeCliCommand.Run();
+            return _updateChecker.RunExplicit();
         }
 
         if (options.listVersions)
@@ -1067,7 +1068,7 @@ public sealed class CommandDispatcher
         && string.IsNullOrEmpty(options.searchTools)
         && !options.upgrade
         && !options.upgradeAll
-        && !options.upgradeCli
+        && !options.checkVersion
         && !options.listSeeds
         && !options.cloneSeed
         && !options.listSeedSources
@@ -1126,7 +1127,7 @@ public sealed class CommandDispatcher
             || options.refreshTools
             || options.upgrade
             || options.upgradeAll
-            || options.upgradeCli
+            || options.checkVersion
             || !string.IsNullOrWhiteSpace(
                 options.targetUrl)
             || !string.IsNullOrWhiteSpace(
@@ -1214,7 +1215,7 @@ public sealed class CommandDispatcher
         || !string.IsNullOrEmpty(options.searchTools)
         || options.upgrade
         || options.upgradeAll
-        || options.upgradeCli
+        || options.checkVersion
         || options.listSeeds
         || options.cloneSeed
         || options.listSeedSources

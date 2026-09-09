@@ -19,10 +19,10 @@ public sealed class NetworkTests
     }
 
     [Fact(
-        DisplayName = "net-upgrade-cli-check: upgradeCli against GitHub",
-        Skip = "Requires a live internet connection to GitHub releases; excluded from deterministic CI.")]
+        DisplayName = "net-check-version-live: checkVersion against live GitHub",
+        Skip = "Requires a live internet connection to GitHub; excluded from deterministic CI.")]
     [Trait("Slow", "true")]
-    public void UpgradeCliCheckRequiresRealInternet()
+    public void CheckVersionRequiresRealInternet()
     {
     }
 }

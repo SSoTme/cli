@@ -440,7 +440,7 @@ public sealed class ToolResolver
             || options.info
             || options.help
             || options.upgrade
-            || options.upgradeCli
+            || options.checkVersion
             || options.upgradeAll
             || options.listSeeds
             || options.cloneSeed

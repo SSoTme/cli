@@ -172,8 +172,8 @@ public class CliOptions
     [CommandLineOption(Description = "Show the EffortlessAPI plan for this account (preview plan until subscriptions exist)", MinOccurs = 0, Aliases = "subscription")]
     public bool plan { get; set; }
 
-    [CommandLineOption(Description = "Upgrade the effortless CLI to the latest version", MinOccurs = 0, Aliases = "uc,update")]
-    public bool upgradeCli { get; set; }
+    [CommandLineOption(Description = "Check GitHub for a newer commit and offer to reinstall", MinOccurs = 0, Aliases = "cv,uc,update")]
+    public bool checkVersion { get; set; }
 
     [CommandLineOption(Description = "Upgrade all transpilers in the project to the latest version", MinOccurs = 0, Aliases = "ua")]
     public bool upgradeAll { get; set; }

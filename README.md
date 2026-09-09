@@ -1,5 +1,12 @@
 # Effortless CLI
 
+[![Your First Rulebook — the effortless CLI, from an empty folder to a generated document](docs/images/your-first-rulebook-thumb.jpg)](https://tinyurl.com/27dephkb "Your First Rulebook — watch on YouTube")
+
+**▶ [Watch: Your First Rulebook](https://tinyurl.com/27dephkb)** (7:48) — a real run in
+an empty folder. `-init` hands you a working rulebook, one command turns it into a
+plain-English rules document, and when the rule changes the document follows on its
+own, because nobody was maintaining it in the first place.
+
 `effortless` is the command-line client for EffortlessAPI transpilers. It reads an
 `effortless.json` project, resolves tools from the REST catalog, sends file sets to
 those tools over HTTP, and writes or cleans the generated outputs.
@@ -51,8 +58,10 @@ To upgrade an existing installation from the command line:
 npm install -g @effortlessapi/cli@latest
 ```
 
-`effortless -upgradeCli` also checks GitHub Releases and prints both supported
-upgrade locations.
+`effortless -checkVersion` also checks GitHub for the latest commit on `main`
+and, with your confirmation, reinstalls via npm. The CLI also runs this check
+at most once per day in the background; run `effortless -checkVersion` once to
+choose Always (auto-reinstall silently) or Never (skip until asked again).
 
 ## Quick start
 
@@ -97,7 +106,7 @@ The command summary below is generated from
 
 ### Project file
 
-- `-init` — Create effortless.json and an empty rulebook here
+- `-init` — Create effortless.json and a starter rulebook here
 - `-describe` — Describe steps in this folder and its children
 
 ### Install / uninstall tools

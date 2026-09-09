@@ -38,7 +38,7 @@ public sealed class ShimTests
 
         Assert.Equal(0, version.ExitCode);
         Assert.Equal(
-            CliUnderTest.PackageVersion + Environment.NewLine,
+            CliUnderTest.DisplayVersion + Environment.NewLine,
             version.Stdout);
         Assert.Equal(0, transpile.ExitCode);
         Assert.Contains("a=b c", request.CliParams);
@@ -75,6 +75,7 @@ public sealed class ShimTests
     {
         const string testVersion = "2099.1231.2359";
         const string expectedCsprojVersion = "2099.12.31.2359";
+        const string expectedDisplayVersion = "v2099-12-31-2359";
         var cli = new CliUnderTest();
         using var sandbox = Sandbox.Create(cli);
         var sourcePaths = VersionSourcePaths(cli);
@@ -89,13 +90,17 @@ public sealed class ShimTests
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("Building Effortless CLI...", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains(testVersion + Environment.NewLine, result.Stdout, StringComparison.Ordinal);
+        Assert.Contains(expectedDisplayVersion + Environment.NewLine, result.Stdout, StringComparison.Ordinal);
         Assert.Contains(
             $"<Version>{expectedCsprojVersion}</Version>",
             File.ReadAllText(shim.CsprojPath),
             StringComparison.Ordinal);
         Assert.Contains(
             $"public const string Value = \"{testVersion}\";",
+            File.ReadAllText(shim.VersionConstantPath),
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"public const string DisplayVersion = \"{expectedDisplayVersion}\";",
             File.ReadAllText(shim.VersionConstantPath),
             StringComparison.Ordinal);
         foreach (var path in sourcePaths)
@@ -142,7 +147,7 @@ public sealed class ShimTests
 
         Assert.Equal(0, firstRun.ExitCode);
         Assert.Contains("Building Effortless CLI...", firstRun.Stdout, StringComparison.Ordinal);
-        Assert.Contains(CliUnderTest.PackageVersion + Environment.NewLine, firstRun.Stdout, StringComparison.Ordinal);
+        Assert.Contains(CliUnderTest.DisplayVersion + Environment.NewLine, firstRun.Stdout, StringComparison.Ordinal);
         Assert.True(File.Exists(stampPath));
         Assert.Equal(CliUnderTest.PackageVersion, File.ReadAllText(stampPath).Trim());
 
@@ -151,7 +156,7 @@ public sealed class ShimTests
         Assert.Equal(0, secondRun.ExitCode);
         Assert.DoesNotContain("Building Effortless CLI...", secondRun.Stdout, StringComparison.Ordinal);
         Assert.Equal(
-            CliUnderTest.PackageVersion + Environment.NewLine,
+            CliUnderTest.DisplayVersion + Environment.NewLine,
             secondRun.Stdout);
     }
 
@@ -201,7 +206,7 @@ public sealed class ShimTests
 
         Assert.All(
             outputs,
-            output => Assert.Equal(CliUnderTest.PackageVersion + Environment.NewLine, output));
+            output => Assert.Equal(CliUnderTest.DisplayVersion + Environment.NewLine, output));
         Assert.Single(outputs.Distinct(StringComparer.Ordinal));
     }
 

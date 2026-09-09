@@ -43,10 +43,26 @@ internal sealed class MockGitHubServer : IAsyncDisposable
 
     public ConcurrentQueue<string> ApiAccountsQueried { get; } = new();
 
+    /// <summary>
+    /// The env var UpdateChecker reads to override its GitHub API base
+    /// (mirrors EFFORTLESS_SEED_GITHUB_API for SeedCatalogClient). Kept as a
+    /// literal here because this black-box harness deliberately has no
+    /// project reference to Effortless.Cli.Core.
+    /// </summary>
+    public const string UpdateCheckApiEnvironmentVariable = "EFFORTLESS_UPDATE_GITHUB_API";
+
+    /// <summary>
+    /// The sha served for GET /repos/EffortlessAPI/cli/commits/main (the
+    /// UpdateChecker route). Set to a value different from the CLI under
+    /// test's CliVersion.CommitSha to simulate a new commit on main.
+    /// </summary>
+    public string CommitsMainSha { get; set; } = string.Empty;
+
     public IReadOnlyDictionary<string, string> Environment => new Dictionary<string, string>
     {
         ["EFFORTLESS_SEED_GITHUB_API"] = ApiBase,
         ["EFFORTLESS_SEED_GITHUB_RAW"] = RawBase,
+        [UpdateCheckApiEnvironmentVariable] = ApiBase,
     };
 
     /// <summary>
@@ -162,6 +178,17 @@ internal sealed class MockGitHubServer : IAsyncDisposable
                     }).ToArray()
                     : [];
                 await WriteAsync(context.Response, 200, "application/json", JsonSerializer.SerializeToUtf8Bytes(body));
+                return;
+            }
+
+            // /api/repos/EffortlessAPI/cli/commits/main (UpdateChecker)
+            if (segments is ["api", "repos", "EffortlessAPI", "cli", "commits", "main"])
+            {
+                await WriteAsync(
+                    context.Response,
+                    200,
+                    "application/json",
+                    JsonSerializer.SerializeToUtf8Bytes(new { sha = CommitsMainSha }));
                 return;
             }
 

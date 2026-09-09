@@ -25,7 +25,7 @@ public sealed class MetaTests
         var result = await cli.Run([argument], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal(CliUnderTest.PackageVersion + Environment.NewLine, result.Stdout);
+        Assert.Equal(CliUnderTest.DisplayVersion + Environment.NewLine, result.Stdout);
         Assert.Empty(result.Stderr);
     }
 

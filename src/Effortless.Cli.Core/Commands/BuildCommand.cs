@@ -70,6 +70,23 @@ public sealed class BuildCommand
             command);
         try
         {
+            // A build that matches no steps otherwise prints nothing at all and
+            // exits zero, which reads as a broken CLI rather than an empty
+            // project. `-init` sets build itself, so only say this when the user
+            // actually asked for a build.
+            if (!invocation.Options.init
+                && (project.ProjectTranspilers is null
+                    || project.ProjectTranspilers.Count == 0))
+            {
+                CliLog.LogLine(
+                    "Nothing to build: no transpiler steps are registered in "
+                    + "effortless.json.",
+                    ConsoleColor.Yellow);
+                CliLog.LogLine(
+                    "Add one with: effortless -install <tool-name>",
+                    ConsoleColor.Yellow);
+            }
+
             var runner = new BuildRunner(
                 project,
                 _runCommandLine,

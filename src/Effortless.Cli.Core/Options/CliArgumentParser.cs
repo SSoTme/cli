@@ -24,9 +24,10 @@ public sealed class CliArgumentParser
             ["listVersions"] = "listVersions",
             ["lv"] = "listVersions",
             ["l"] = "listVersions",
-            ["upgradeCli"] = "upgradeCli",
-            ["uc"] = "upgradeCli",
-            ["update"] = "upgradeCli",
+            ["checkVersion"] = "checkVersion",
+            ["cv"] = "checkVersion",
+            ["uc"] = "checkVersion",
+            ["update"] = "checkVersion",
             ["pin"] = "pin",
         };
 
@@ -140,8 +141,8 @@ public sealed class CliArgumentParser
             case "listVersions":
                 options.listVersions = true;
                 break;
-            case "upgradeCli":
-                options.upgradeCli = true;
+            case "checkVersion":
+                options.checkVersion = true;
                 break;
         }
 

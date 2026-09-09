@@ -272,11 +272,48 @@ public sealed class ProjectCommands
             return;
         }
 
+        // A new project starts with a rulebook that already builds: one entity,
+        // one raw field, one calculated field, three rows. Every transpiler has
+        // something real to render, so the first `effortless build` produces
+        // output instead of an error about an empty rulebook.
         var root = new JObject
         {
-            ["project"] = new JObject
+            ["Name"] = projectName,
+            ["Description"] =
+                "A starter rulebook. Replace the Hello entity with your own.",
+            ["Hello"] = new JObject
             {
-                ["name"] = projectName,
+                ["Description"] =
+                    "The smallest complete rulebook: a fact, and a rule that "
+                    + "derives a result from it.",
+                ["schema"] = new JArray
+                {
+                    new JObject
+                    {
+                        ["name"] = "World",
+                        ["datatype"] = "string",
+                        ["type"] = "raw",
+                        ["nullable"] = false,
+                        ["Description"] = "Who is being greeted.",
+                    },
+                    new JObject
+                    {
+                        ["name"] = "Result",
+                        ["datatype"] = "string",
+                        ["type"] = "calculated",
+                        ["nullable"] = false,
+                        ["Description"] =
+                            "The greeting, derived from World. Never typed by "
+                            + "hand.",
+                        ["formula"] = "=\"Hello \" & {{World}} & \"!\"",
+                    },
+                },
+                ["data"] = new JArray
+                {
+                    new JObject { ["World"] = "world" },
+                    new JObject { ["World"] = "bob" },
+                    new JObject { ["World"] = "everyone" },
+                },
             },
         };
         File.WriteAllText(

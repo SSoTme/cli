@@ -512,11 +512,11 @@
         "ConsumesNextArgAsTool": true,
         "HandlerNotes": "ParseCommand: projectName defaults to cwd name; force = (args.Length==2 && args[1]==\"force\"); AICaptureProject.Init(force, name); then continueToLoad=true and build=true (init implies a build).",
         "DispositionReason": "Modified only in that \"force\" must work through the npm shim too (argv passthrough); output identical.",
-        "Description": "Create effortless.json, .gitignore, effortless.env and an empty rulebook in cwd.",
+        "Description": "Create effortless.json, .gitignore, effortless.env and a starter rulebook in cwd.",
         "Tier": "primary",
         "Rationale": "The first command any new project runs; creates the effortless.json/rulebook scaffold a build needs to exist at all.",
-        "HelpSummary": "Create effortless.json and an empty rulebook here",
-        "HelpDetail": "Initializes the current folder as an Effortless project root. Pass `force` as the next argument to create a nested sub-project instead of failing when a parent project already exists.",
+        "HelpSummary": "Create effortless.json and a starter rulebook here",
+        "HelpDetail": "Initializes the current folder as an Effortless project root. Writes effortless.json and a starter effortless-rulebook/effortless-rulebook.json containing one Hello entity with a raw World field, a calculated Result field (\"Hello \" & World & \"!\"), and three rows, so the project builds and produces real output before you have written any rules of your own. Pass `force` as the next argument to create a nested sub-project instead of failing when a parent project already exists.",
         "Example": "effortless -init"
       },
       {
@@ -1500,24 +1500,24 @@
         "Example": "effortless plan"
       },
       {
-        "CliOptionId": "upgradeCli",
-        "Flag": "-upgradeCli",
-        "Aliases": "uc,update",
+        "CliOptionId": "checkVersion",
+        "Flag": "-checkVersion",
+        "Aliases": "cv,uc,update",
         "BarewordForms": "",
         "ValueType": "bool",
-        "HelpText": "Upgrade the effortless CLI to the latest version",
+        "HelpText": "Check GitHub for a newer commit and offer to reinstall",
         "Category": "cli-meta",
-        "Disposition": "keep",
+        "Disposition": "keep-modified",
         "IsCommand": true,
         "ConsumesNextArgAsTool": false,
-        "HandlerNotes": "Checks GitHub releases/latest and compares the published version. Reports @effortlessapi/cli@latest and the GitHub release as explicit supported upgrade locations; it does not silently substitute another package or artifact.",
-        "DispositionReason": "Core.",
-        "Description": "Self-update from GitHub releases.",
+        "HandlerNotes": "UpdateChecker.RunExplicit: GET api.github.com/repos/EffortlessAPI/cli/commits/main, compares sha to CliVersion.CommitSha. Unchanged => \"Already on the latest version.\". Changed => always prompts \"Yes/No/Always/Never\" regardless of any stored preference (this explicit command always asks); Yes/Always run `npm install -g @effortlessapi/cli@latest` via Process.Start now; Always/Never persist UpdateCheckPreference to update-check-state; No leaves the stored preference untouched.",
+        "DispositionReason": "Same command as upgradeCli, renamed and upgraded in place: commit-hash comparison instead of release-tag comparison, and can act (reinstall) instead of only printing instructions. Existing uc/update aliases are kept so nothing that already invokes them breaks; cv is the new short form.",
+        "Description": "Check for and optionally install a newer CLI build.",
         "Tier": "secondary",
-        "Rationale": "Self-update is a real, if occasional, need distinct from tool/catalog upgrades.",
-        "HelpSummary": "Self-update the effortless CLI from GitHub releases",
-        "HelpDetail": "Checks the latest GitHub release for this CLI and reports whether a newer version is available, pointing at the supported upgrade paths (npm install -g @effortlessapi/cli@latest, or the GitHub release download) without silently substituting another source.",
-        "Example": "effortless -upgradeCli"
+        "Rationale": "Self-update is a real, if occasional, need distinct from tool/catalog upgrades. Commit-hash comparison lets a between-release main commit be detected, not just tagged releases.",
+        "HelpSummary": "Check GitHub for updates, offer to reinstall",
+        "HelpDetail": "Compares the commit this CLI was built from (CliVersion.CommitSha) against the latest commit on the GitHub main branch. When they differ, always asks Yes/No/Always/Never: Yes reinstalls once via npm install -g @effortlessapi/cli@latest; No skips this time; Always reinstalls now and remembers to auto-reinstall silently in the once-daily background check (see update-check-background); Never remembers to skip the background check until you run -checkVersion again.",
+        "Example": "effortless -checkVersion"
       },
       {
         "CliOptionId": "upgradeAll",
@@ -3172,6 +3172,30 @@
     ],
     "data": [
       {
+        "DispatchRuleId": "E00-update-check-background",
+        "Phase": "process-entry",
+        "SortOrder": 0,
+        "Condition": "!EFFORTLESS_CHILD_PROCESS && UpdateCheckPreference is always or never && last background check was not today (local date)",
+        "Action": "Fire-and-forget: Task.Run a background check against api.github.com/repos/EffortlessAPI/cli/commits/main. Never awaited by the foreground command; never blocks or delays it. Preference=never: record today's date as checked, take no other action. Preference=always: if the sha differs from CliVersion.CommitSha, run `npm install -g @effortlessapi/cli@latest` in the background and, on success, write a pending-notice marker; either way record today's date as checked.",
+        "ProjectRequired": false,
+        "SuppressesTranspile": false,
+        "ExitCode": "flow",
+        "Disposition": "keep",
+        "Description": "NEW. Once-per-calendar-day, async, best-effort; any exception or network failure is swallowed (never surfaces to the user, never affects the exit code). Unset preference (user has never answered checkVersion's prompt) takes no background action at all \u2014 nothing here can show a prompt, since it isn't attached to a terminal in general (bridge/child invocations). See E01 for surfacing a pending notice."
+      },
+      {
+        "DispatchRuleId": "E01-update-check-notice",
+        "Phase": "process-entry",
+        "SortOrder": 1,
+        "Condition": "!EFFORTLESS_CHILD_PROCESS && a pending-notice marker exists from E00",
+        "Action": "Print \"CLI auto-updated to the latest version.\" once, then clear the marker.",
+        "ProjectRequired": false,
+        "SuppressesTranspile": false,
+        "ExitCode": "flow",
+        "Disposition": "keep",
+        "Description": "NEW. Surfaces a background auto-reinstall (E00, Always) on the next command after it happened, since the reinstall itself runs detached from whatever command triggered the check."
+      },
+      {
         "DispatchRuleId": "P00-parse",
         "Phase": "arg-normalization",
         "SortOrder": 0,
@@ -3295,7 +3319,7 @@
         "DispatchRuleId": "P10-management-flags",
         "Phase": "management-dispatch",
         "SortOrder": 10,
-        "Condition": "listVersions|listTools|searchTools|refreshTools|login|projectLogin|discuss|listSeeds|cloneSeed|localGuide|upgrade|upgradeCli|upgradeAll|viewToolUrl|setToolUrl|listToolUrls|removeToolUrl|updateUrls",
+        "Condition": "listVersions|listTools|searchTools|refreshTools|login|projectLogin|discuss|listSeeds|cloneSeed|localGuide|upgrade|checkVersion|upgradeAll|viewToolUrl|setToolUrl|listToolUrls|removeToolUrl|updateUrls",
         "Action": "continueToLoad = false (no project load, no input load).",
         "ProjectRequired": false,
         "SuppressesTranspile": false,
@@ -3532,16 +3556,16 @@
         "Description": ""
       },
       {
-        "DispatchRuleId": "T20-upgrade-cli",
+        "DispatchRuleId": "T20-check-version",
         "Phase": "transpile-dispatch",
         "SortOrder": 20,
-        "Condition": "upgradeCli",
-        "Action": "HandleUpgradeCliCommand.",
+        "Condition": "checkVersion",
+        "Action": "HandleCheckVersionCommand: always prompts Yes/No/Always/Never on a detected change, regardless of stored preference.",
         "ProjectRequired": false,
         "SuppressesTranspile": true,
         "ExitCode": "0",
-        "Disposition": "keep",
-        "Description": ""
+        "Disposition": "keep-modified",
+        "Description": "Renamed from T20-upgrade-cli/upgradeCli; same command, commit-hash comparison and optional reinstall instead of release-tag comparison and print-only."
       },
       {
         "DispatchRuleId": "T21-list-versions",
@@ -4635,26 +4659,15 @@
         "Description": "Invoked through the normal transpile mechanism with cwd=~/.effortless/remote_tools."
       },
       {
-        "HttpEndpointId": "github-latest-release",
+        "HttpEndpointId": "github-latest-commit",
         "Method": "GET",
-        "UrlPattern": "https://api.github.com/repos/EffortlessAPI/cli/releases/latest",
-        "Purpose": "Latest CLI tag + installer asset URLs.",
-        "UsedByOption": "upgradeCli, CheckForGitHubUpdate",
+        "UrlPattern": "https://api.github.com/repos/EffortlessAPI/cli/commits/main",
+        "Purpose": "Latest commit sha on main, compared against CliVersion.CommitSha.",
+        "UsedByOption": "checkVersion (explicit prompt and the once-daily background check)",
         "LivenessOn20260830": "alive",
         "TimeoutMs": 10000,
-        "Disposition": "keep",
-        "Description": "User-Agent effortless-cli."
-      },
-      {
-        "HttpEndpointId": "github-release-asset",
-        "Method": "GET",
-        "UrlPattern": "https://github.com/EffortlessAPI/cli/releases/download/<tag>/<asset>",
-        "Purpose": "Download the platform installer to temp.",
-        "UsedByOption": "upgradeCli",
-        "LivenessOn20260830": "alive",
-        "TimeoutMs": 300000,
-        "Disposition": "keep",
-        "Description": "Progress percentages printed."
+        "Disposition": "keep-modified",
+        "Description": "NEW. Replaces github-latest-release (a release-tag comparison) with a commit-hash comparison so a between-release main commit is detected too. User-Agent effortless-cli."
       },
       {
         "HttpEndpointId": "github-seed-repos",
@@ -5048,6 +5061,19 @@
         "Description": "Indented JSON."
       },
       {
+        "ConfigFileId": "update-check-state",
+        "Path": "~/.effortless/update_check.json",
+        "Scope": "user-home",
+        "Format": "json",
+        "Purpose": "{ Preference: \"always\"|\"never\", LastCheckedDate: \"yyyy-MM-dd\", PendingNotice: string|null }. Preference is unset/absent until the checkVersion Yes/No/Always/Never prompt is answered Always or Never; No/Yes leave it unset.",
+        "ReadBy": "the once-daily background check (E00), the next command's startup (E01, PendingNotice only)",
+        "WrittenBy": "checkVersion prompt (Always/Never set Preference), the background check (E00 sets LastCheckedDate every run and PendingNotice after a background reinstall), E01 (clears PendingNotice)",
+        "IsSecret": false,
+        "UnixMode": "",
+        "Disposition": "keep",
+        "Description": "NEW. Best-effort like tool_urls.json: a missing or corrupt file is treated as no preference set and no action taken, never a hard error."
+      },
+      {
         "ConfigFileId": "remote-tools-index",
         "Path": "~/.effortless/remote_tools/effortless-tools.json",
         "Scope": "user-home",
@@ -5111,19 +5137,6 @@
         "UnixMode": "",
         "Disposition": "keep",
         "Description": "Still maintained; the banner that reads it is off by default."
-      },
-      {
-        "ConfigFileId": "github-version-check",
-        "Path": "~/.effortless/github_version_check.json",
-        "Scope": "user-home",
-        "Format": "json",
-        "Purpose": "{ lastCheck, latestVersion } 24h cache of the GitHub latest release tag.",
-        "ReadBy": "CheckForGitHubUpdate",
-        "WrittenBy": "CheckForGitHubUpdate",
-        "IsSecret": false,
-        "UnixMode": "",
-        "Disposition": "keep",
-        "Description": "Only reachable through the disabled CheckForUpdateNotice; kept because -upgradeCli shares the parsing."
       },
       {
         "ConfigFileId": "jwt-token",
@@ -5773,17 +5786,17 @@
     "data": [
       {
         "UserMessageId": "version-line",
-        "Template": "{CLI_VERSION}",
+        "Template": "{CLI_DISPLAY_VERSION}",
         "Color": "default",
         "Trigger": "-version",
         "Stream": "stdout",
         "IsGoldenForTests": true,
-        "Disposition": "keep",
-        "Description": "The ONLY line printed."
+        "Disposition": "keep-modified",
+        "Description": "The ONLY line printed. Now prints CliVersion.DisplayVersion (e.g. v2026-09-07-1531, zero-padded and hyphenated) instead of the raw npm-semver-compact CliVersion.Value (e.g. 2026.907.1531), which is ambiguous (month/day are multiplied into one unpadded field)."
       },
       {
         "UserMessageId": "help-header",
-        "Template": "Effortless CLI  version {CLI_VERSION}\\nCopyright 2026, EffortlessAPI.com",
+        "Template": "Effortless CLI  version {CLI_DISPLAY_VERSION}\\nCopyright 2026, EffortlessAPI.com",
         "Color": "default",
         "Trigger": "-help",
         "Stream": "stdout",
@@ -6462,6 +6475,26 @@
         "Description": ""
       },
       {
+        "UserMessageId": "check-version-flow",
+        "Template": "Checking GitHub for the latest commit on main... | Already on the latest version ({CLI_DISPLAY_VERSION}). | New commit available on main (you have {CLI_DISPLAY_VERSION}).\\nReinstall now? (Y)es / (N)o / (A)lways / n(E)ver: | Reinstalling via npm install -g @effortlessapi/cli@latest... | Reinstalled. Restart your shell or open a new terminal to use the new version. | Skipped. Run -checkVersion again any time. | Always: future background checks will auto-reinstall silently. | Never: future background checks will not act until you run -checkVersion again.",
+        "Color": "default",
+        "Trigger": "checkVersion",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep",
+        "Description": "NEW. Prompt letters accepted case-insensitively; only Y/N/A/E (and yes/no/always/never) are valid, anything else re-prompts."
+      },
+      {
+        "UserMessageId": "update-check-auto-notice",
+        "Template": "CLI auto-updated to the latest version.",
+        "Color": "default",
+        "Trigger": "process-entry (pending-notice marker present, see E01-update-check-notice)",
+        "Stream": "stdout",
+        "IsGoldenForTests": true,
+        "Disposition": "keep",
+        "Description": "NEW. Printed once, before the command's normal output, then the marker is cleared. Never printed inside a EFFORTLESS_CHILD_PROCESS."
+      },
+      {
         "UserMessageId": "auth-flow",
         "Template": "Email: | You are already authenticated as {email}.\\nDo you want to re-authenticate? (y/N): | Authentication cancelled. | Signed in (preview: the authentication service does not enforce accounts yet). Signed in as {email}.",
         "Color": "default",
@@ -6510,16 +6543,6 @@
         "IsGoldenForTests": true,
         "Disposition": "keep",
         "Description": "NoStackException => -1."
-      },
-      {
-        "UserMessageId": "upgrade-cli",
-        "Template": "Checking GitHub for the latest CLI version... | Already on the latest version ({v}). | New version available: {tag}  (you have {v}) | To upgrade: npm install -g @effortlessapi/cli@latest | Download from: https://github.com/EffortlessAPI/cli/releases/latest",
-        "Color": "default",
-        "Trigger": "-upgradeCli",
-        "Stream": "stdout",
-        "IsGoldenForTests": false,
-        "Disposition": "keep",
-        "Description": "Needs network; not golden."
       },
       {
         "UserMessageId": "home-migrated",
@@ -6903,9 +6926,9 @@
       {
         "EnvVariableId": "EFFORTLESS_CHILD_PROCESS",
         "Source": "process-env",
-        "Purpose": "Set to \"1\" by the CLI around spawned child \"effortless -buildLocal\" / \"-clean\" processes; read by CheckForUpdateNotice to skip update banners in children.",
+        "Purpose": "Set to \"1\" by the CLI around spawned child \"effortless -buildLocal\" / \"-clean\" processes; read by the once-daily background update check (E00-update-check-background) and its next-command notice (E01-update-check-notice) to skip both in children.",
         "Disposition": "keep-modified",
-        "Description": "Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards."
+        "Description": "Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards. The original CheckForUpdateNotice this once guarded was removed 2026-04-25 for making a blocking synchronous HTTP call on every invocation; E00/E01 are its async, non-blocking, once-per-day replacement."
       },
       {
         "EnvVariableId": "HOME / USERPROFILE",
@@ -6917,7 +6940,7 @@
       {
         "EnvVariableId": "PATH",
         "Source": "process-env",
-        "Purpose": "Used to locate npm (upgradeCli hint) and by spawned shells to find \"effortless\" for nested/sub-project builds.",
+        "Purpose": "Used to locate npm (checkVersion's reinstall step) and by spawned shells to find \"effortless\" for nested/sub-project builds.",
         "Disposition": "keep-modified",
         "Description": "New build: child builds spawn the SAME executable by absolute path (Environment.ProcessPath / dotnet + dll) instead of relying on a globally installed \"effortless\" being on PATH. Console output of the child is unchanged."
       },
@@ -7588,10 +7611,10 @@
       {
         "DevopsPipelineId": "release-script",
         "Trigger": "Manual: ./scripts/release.sh from repo root",
-        "Produces": "Stamps package.json with npm-semver-safe UTC yyyy.(M*100+d).(H*100+m), synchronizes version sources, commits \"Release vX\", pushes main, creates GitHub release vX, and publishes @effortlessapi/cli.",
+        "Produces": "Stamps package.json with npm-semver-safe UTC yyyy.(M*100+d).(H*100+m) (unpadded, e.g. 2026.907.1531 — semver rejects leading zeros); also stamps CliVersion.DisplayVersion with a zero-padded, hyphenated, unambiguous form of the same instant (e.g. v2026-09-07-1531) and CliVersion.CommitSha with `git rev-parse HEAD`; synchronizes version sources, commits \"Release vX\", pushes main, creates GitHub release vX, and publishes @effortlessapi/cli.",
         "Disposition": "keep-modified",
         "NewPath": "scripts/release.sh",
-        "Description": "Requires npm authentication and public scope access. Refuse to run on a dirty tree or off main, run the full test and package suites first, and fail the release if any publication step fails."
+        "Description": "Requires npm authentication and public scope access. Refuse to run on a dirty tree or off main, run the full test and package suites first, and fail the release if any publication step fails. DisplayVersion/CommitSha addition: the compact package.json field is npm's legal-but-ambiguous form; DisplayVersion is what humans and -checkVersion's messages should read, CommitSha is what -checkVersion compares against GitHub's main HEAD."
       },
       {
         "DevopsPipelineId": "build-mac",
@@ -7873,16 +7896,16 @@
         "Description": "The tool invoked (over the normal transpile mechanism) to fetch the tools index and to run auth modes."
       },
       {
-        "ProjectFactId": "github-releases-api",
-        "Value": "https://api.github.com/repos/EffortlessAPI/cli/releases/latest",
+        "ProjectFactId": "github-commits-api",
+        "Value": "https://api.github.com/repos/EffortlessAPI/cli/commits/main",
         "Category": "network",
-        "Description": "Used by -upgradeCli (and the 24h-cached update banner)."
+        "Description": "Used by -checkVersion, both the explicit prompt and the once-daily background check. Replaces the release-tag github-releases-api endpoint with a commit-hash comparison."
       },
       {
         "ProjectFactId": "installer-asset-names",
         "Value": "Effortless-Installer_win-x64.msi,Effortless-Installer_win-arm64.msi,Effortless-Installer-x86_64.pkg,Effortless-Installer-arm64.pkg",
         "Category": "naming",
-        "Description": "Release asset names per platform/arch; the Airtable CLIVersions row stores URLs to them. -upgradeCli only points at the releases page."
+        "Description": "Release asset names per platform/arch; the Airtable CLIVersions row stores URLs to them. Built by CI (build-mac/build-windows) for manual/direct download from the GitHub release page; -checkVersion itself always reinstalls via npm install -g, never downloads these."
       },
       {
         "ProjectFactId": "project-file-candidates",
@@ -10913,18 +10936,88 @@
         "Description": ""
       },
       {
-        "TestCaseId": "net-upgrade-cli-check",
+        "TestCaseId": "net-check-version-live",
         "Suite": "e2e-network",
-        "PrimaryOption": "upgradeCli",
-        "Title": "upgradeCli against GitHub",
+        "PrimaryOption": "checkVersion",
+        "Title": "checkVersion against live GitHub",
         "Given": "internet",
-        "When": "effortless -upgradeCli",
-        "Then": "either \"Already on the latest version\" or \"New version available\" with a download; no crash",
+        "When": "effortless -checkVersion <stdin: n>",
+        "Then": "either \"Already on the latest version\" or the changed-commit prompt; no crash",
         "Priority": "P2",
-        "Interactive": false,
+        "Interactive": true,
         "Slow": true,
         "Status": "skipped-external",
-        "Description": "Requires a live internet connection to GitHub releases; excluded from deterministic CI (mirrors res-dead-bridge-recovery)."
+        "Description": "Requires a live internet connection to GitHub; excluded from deterministic CI (mirrors res-dead-bridge-recovery). Deterministic coverage is in e2e-cli-meta (mocked GitHub API)."
+      },
+      {
+        "TestCaseId": "check-version-prompt-flow",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "checkVersion",
+        "Title": "checkVersion prompts Yes/No/Always/Never on a changed commit",
+        "Given": "mock GitHub commits/main returns a sha different from CliVersion.CommitSha; no stored update_check.json preference",
+        "When": "effortless -checkVersion <stdin: y> ; -checkVersion <stdin: n> ; -checkVersion <stdin: a> ; -checkVersion <stdin: e>",
+        "Then": "y: npm install -g @effortlessapi/cli@latest is invoked, \"Reinstalled.\" printed; n: \"Skipped.\" printed, no npm call, no preference written; a: npm install invoked AND update_check.json Preference=always; e: no npm call AND update_check.json Preference=never",
+        "Priority": "P0",
+        "Interactive": true,
+        "Slow": false,
+        "Status": "green",
+        "Description": "npm install is a fake/mocked process launcher in tests, never a real npm call."
+      },
+      {
+        "TestCaseId": "check-version-unchanged",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "checkVersion",
+        "Title": "checkVersion reports up to date without prompting",
+        "Given": "mock GitHub commits/main returns CliVersion.CommitSha itself",
+        "When": "effortless -checkVersion",
+        "Then": "\"Already on the latest version\"; no prompt; exit 0",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "green",
+        "Description": ""
+      },
+      {
+        "TestCaseId": "check-version-always-reprompts",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "checkVersion",
+        "Title": "explicit checkVersion always asks even when Always/Never is stored",
+        "Given": "update_check.json Preference=always (or never); mock GitHub commits/main returns a changed sha",
+        "When": "effortless -checkVersion",
+        "Then": "the Yes/No/Always/Never prompt is shown; the stored preference alone never causes a silent reinstall or silent skip on an explicit run",
+        "Priority": "P0",
+        "Interactive": true,
+        "Slow": false,
+        "Status": "green",
+        "Description": "Only the background check (update-check-background-daily) honors the stored preference silently."
+      },
+      {
+        "TestCaseId": "update-check-background-daily",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "checkVersion",
+        "Title": "background check runs at most once per calendar day and honors Always/Never without prompting",
+        "Given": "update_check.json Preference=always, LastCheckedDate=yesterday; mock GitHub returns a changed sha",
+        "When": "effortless -version (any ordinary command, not just checkVersion)",
+        "Then": "a background reinstall is triggered and LastCheckedDate advances to today; a second command run the same day triggers no further GitHub call; the command's own output/exit code is never delayed or altered by the background check",
+        "Priority": "P0",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "green",
+        "Description": "Preference=never: same once-per-day gate, but no npm call, ever, until -checkVersion is run again."
+      },
+      {
+        "TestCaseId": "update-check-background-notice",
+        "Suite": "e2e-meta",
+        "PrimaryOption": "checkVersion",
+        "Title": "a background auto-reinstall is announced on the next command",
+        "Given": "update_check.json has a pending notice left by a prior background reinstall",
+        "When": "effortless -version",
+        "Then": "prints \"CLI auto-updated to the latest version.\" once, before -version's own output; a second subsequent command prints nothing more; EFFORTLESS_CHILD_PROCESS=1 suppresses the notice entirely",
+        "Priority": "P1",
+        "Interactive": false,
+        "Slow": false,
+        "Status": "green",
+        "Description": ""
       },
       {
         "TestCaseId": "net-live-bridge-list",

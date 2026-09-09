@@ -33,6 +33,10 @@ function syncVersionFromPackageJson() {
         throw new Error(`Invalid UTC date/time in package version '${pkgVersion}'.`);
     }
     const csprojVersion = `${Number(m[1])}.${month}.${day}.${hourMinute}`;
+    // Zero-padded, hyphenated, human-unambiguous form of the same instant:
+    // "v{yyyy}-{MM}-{dd}-{HHmm}" (24h UTC).
+    const pad = (n, width) => String(n).padStart(width, '0');
+    const displayVersion = `v${m[1]}-${pad(month, 2)}-${pad(day, 2)}-${pad(hourMinute, 4)}`;
 
     let changed = false;
     const updates = [
@@ -45,6 +49,11 @@ function syncVersionFromPackageJson() {
             file: path.join(appDir, 'src', 'Effortless.Cli.Core', 'CliVersion.cs'),
             pattern: /public const string Value = ".*?";/,
             replacement: `public const string Value = "${pkgVersion}";`,
+        },
+        {
+            file: path.join(appDir, 'src', 'Effortless.Cli.Core', 'CliVersion.cs'),
+            pattern: /public const string DisplayVersion = ".*?";/,
+            replacement: `public const string DisplayVersion = "${displayVersion}";`,
         },
     ];
     for (const u of updates) {

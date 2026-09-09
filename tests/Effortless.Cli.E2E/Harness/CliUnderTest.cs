@@ -49,6 +49,31 @@ internal sealed class CliUnderTest
         }
     }
 
+    /// <summary>
+    /// The human-unambiguous form of <see cref="PackageVersion"/>, mirroring
+    /// cli.js's syncVersionFromPackageJson: "v{yyyy}-{MM}-{dd}-{HHmm}" (24h UTC).
+    /// </summary>
+    public static string DisplayVersion
+    {
+        get
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(
+                PackageVersion,
+                @"^(\d{4})\.(\d{3,4})\.(\d{1,4})$");
+            if (!match.Success)
+            {
+                throw new InvalidDataException($"package.json version '{PackageVersion}' is not npm-safe YYYY.MDD.HHMM.");
+            }
+
+            var year = match.Groups[1].Value;
+            var monthDay = int.Parse(match.Groups[2].Value);
+            var hourMinute = int.Parse(match.Groups[3].Value);
+            var month = monthDay / 100;
+            var day = monthDay % 100;
+            return $"v{year}-{month:D2}-{day:D2}-{hourMinute:D4}";
+        }
+    }
+
     public async Task<CliResult> Run(
         IReadOnlyList<string> args,
         string cwd,

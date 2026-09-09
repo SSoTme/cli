@@ -75,4 +75,4 @@ without adding a second automatic release trigger.
 
 A push to `main` runs `.github/workflows/update-airtable.yml`, which appends the
 version and installer URLs to `CLIVersions`. The cloud bridge reads that table,
-so `effortless -upgradeCli` can discover the release.
+so `effortless -checkVersion` can discover the release.

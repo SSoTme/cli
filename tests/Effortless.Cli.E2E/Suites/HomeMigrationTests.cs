@@ -35,7 +35,7 @@ public sealed class HomeMigrationTests
         var result = await cli.Run(["-version"], sandbox.ProjectPath, sandbox);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Equal(CliUnderTest.PackageVersion + Environment.NewLine, result.Stdout);
+        Assert.Equal(CliUnderTest.DisplayVersion + Environment.NewLine, result.Stdout);
         Assert.Contains(MigratedLine, result.Stderr, StringComparison.Ordinal);
         Assert.Equal("""{"a":"http://x"}""", ReadHome(sandbox, ".effortless/tool_urls.json"));
         Assert.Equal("""{"transpilerVersions":{}}""", ReadHome(sandbox, ".effortless/remote_tools/effortless-tools.json"));

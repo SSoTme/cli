@@ -1520,11 +1520,51 @@
     "interactive": false
   },
   {
-    "id": "net-upgrade-cli-check",
+    "id": "net-check-version-live",
     "suite": "e2e-network",
     "priority": "P2",
     "status": "skipped-external",
     "slow": true,
+    "interactive": true
+  },
+  {
+    "id": "check-version-prompt-flow",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "green",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "check-version-unchanged",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "check-version-always-reprompts",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "green",
+    "slow": false,
+    "interactive": true
+  },
+  {
+    "id": "update-check-background-daily",
+    "suite": "e2e-meta",
+    "priority": "P0",
+    "status": "green",
+    "slow": false,
+    "interactive": false
+  },
+  {
+    "id": "update-check-background-notice",
+    "suite": "e2e-meta",
+    "priority": "P1",
+    "status": "green",
+    "slow": false,
     "interactive": false
   },
   {

@@ -140,6 +140,37 @@ internal sealed class Sandbox : IDisposable
             """{"transpilerVersions":{}}""");
     }
 
+    /// <summary>
+    /// Puts a fake `npm` on the sandboxed PATH (ahead of any real npm) that
+    /// appends its arguments to <paramref name="logRelativePath"/> under the
+    /// project directory instead of installing anything, for tests that
+    /// assert whether UpdateChecker invoked "npm install -g ...@latest".
+    /// </summary>
+    public void WriteFakeNpm(string logRelativePath)
+    {
+        var logPath = ResolveUnder(ProjectPath, logRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+        if (OperatingSystem.IsWindows())
+        {
+            File.WriteAllText(
+                Path.Combine(BinPath, "npm.cmd"),
+                $"@echo %* >> \"{logPath}\"{Environment.NewLine}");
+            return;
+        }
+
+        var path = Path.Combine(BinPath, "npm");
+        File.WriteAllText(path, $"#!/bin/sh\necho \"$@\" >> \"{logPath}\"\n");
+        File.SetUnixFileMode(
+            path,
+            UnixFileMode.UserRead
+            | UnixFileMode.UserWrite
+            | UnixFileMode.UserExecute
+            | UnixFileMode.GroupRead
+            | UnixFileMode.GroupExecute
+            | UnixFileMode.OtherRead
+            | UnixFileMode.OtherExecute);
+    }
+
     public void SeedProject(string fixtureName)
     {
         if (string.IsNullOrWhiteSpace(fixtureName)

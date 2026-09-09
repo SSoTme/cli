@@ -43,13 +43,13 @@ Options about the CLI itself: help, version, info, debug, self-upgrade.
 - Help text: Show CLI version
 - Description: Print the version.
 
-### `-upgradeCli`
+### `-checkVersion`
 
-- Aliases: `uc`, `update`
+- Aliases: `cv`, `uc`, `update`
 - Bareword forms: None
 - Value type: `bool`
-- Help text: Upgrade the effortless CLI to the latest version
-- Description: Self-update from GitHub releases.
+- Help text: Check GitHub for a newer commit and offer to reinstall
+- Description: Check for and optionally install a newer CLI build.
 
 ## Project file
 
@@ -61,7 +61,7 @@ Creating, describing and configuring the effortless.json project.
 - Bareword forms: `init`
 - Value type: `bool`
 - Help text: Initialize the current folder as the root of an Effortless project. An Optional parameter of force will create a sub-project.
-- Description: Create effortless.json, .gitignore, effortless.env and an empty rulebook in cwd.
+- Description: Create effortless.json, .gitignore, effortless.env and a starter rulebook in cwd.
 
 ### `-describe`
 
@@ -632,12 +632,12 @@ Tools that live inside the project at effortless-tools/<name>/ and are hosted by
 - `<root>/.effortless/tempFileSet_<guid>.xml` — Transient copy of the output XML during SaveFileSet. Deleted immediately after extraction.
 - `~/.effortless/effortless.key (or effortless.<runAs>.key)` — { EmailAddress, Secret, APIKeys: { account: key } }. An empty key is returned when the file is missing. Migrated from ~/.ssotme/ssotme.key and ssotme.<runAs>.key by UserConfigMigration on first run.
 - `~/.effortless/tool_urls.json` — { "<tool>": "<url>" } overrides plus the managed cli-cloud-bridge entry. Indented JSON.
+- `~/.effortless/update_check.json` — { Preference: "always"|"never", LastCheckedDate: "yyyy-MM-dd", PendingNotice: string|null }. Preference is unset/absent until the checkVersion Yes/No/Always/Never prompt is answered Always or Never; No/Yes leave it unset. NEW. Best-effort like tool_urls.json: a missing or corrupt file is treated as no preference set and no action taken, never a hard error.
 - `~/.effortless/remote_tools/effortless-tools.json` — Cached cli-cloud-bridge list output: transpilerVersions{ "<acct>/<pkg>/<tool>": { "vX": { urls.post, metaData.isHeadVersion, ... } } }, cliUpdateAvailable, latestBridgeVersion, latestCliVersion, fetchedAt, totalCount. fetchedAt is a CLI-stamped UTC instant proving when a valid response last replaced the cache. Both "transpilerVersions" and "transpilers" keys are accepted. fetchedAt advances only after parse and structural validation succeed; refresh failure never makes stale data look current. Migrated from remote_tools/ssotme-tools.json on first run.
 - `~/.effortless/remote_tools/cli_version` — CLI_VERSION at the time of the last refresh. Not by itself a refresh trigger.
 - `~/.effortless/remote_tools/effortless.json` — Minimal project so the internal bridge run has a project context. Name "remote_tools". Only effortless.json is written here; an older remote_tools/ssotme.json is not migrated.
 - `~/.effortless/bridge_version_index` — Highest latestBridgeVersion.versionIndex applied so far.
 - `~/.effortless/update_available.json` — cliUpdateAvailable object from the last refresh (name, version, installLinks{windows,windowsArm,mac,macArm}). Still maintained; the banner that reads it is off by default.
-- `~/.effortless/github_version_check.json` — { lastCheck, latestVersion } 24h cache of the GitHub latest release tag. Only reachable through the disabled CheckForUpdateNotice; kept because -upgradeCli shares the parsing.
 - `~/.effortless/effortlessapi_token.txt` — Global JWT.
 - `~/.effortless/effortlessapi_token_info.json` — { Token, Email, CreatedAt, ExpiresAt(+24h) }.
 - `~/.effortless/seed_cache/<seed>/cache/**` — Files copied into a cloned seed. v2 does NOT apply it restored discovery, cloning and $key$ replacement only); the directory is still migrated by Open item recorded in ; implement or drop with an owner decision.
@@ -652,9 +652,9 @@ Tools that live inside the project at effortless-tools/<name>/ and are hosted by
 
 ## Environment variables and keys
 
-- `EFFORTLESS_CHILD_PROCESS` (process-env) — Set to "1" by the CLI around spawned child "effortless -buildLocal" / "-clean" processes; read by CheckForUpdateNotice to skip update banners in children. Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards.
+- `EFFORTLESS_CHILD_PROCESS` (process-env) — Set to "1" by the CLI around spawned child "effortless -buildLocal" / "-clean" processes; read by the once-daily background update check (E00-update-check-background) and its next-command notice (E01-update-check-notice) to skip both in children. Set via Environment.SetEnvironmentVariable on the PARENT process (inherited by the child) and cleared afterwards. The original CheckForUpdateNotice this once guarded was removed 2026-04-25 for making a blocking synchronous HTTP call on every invocation; E00/E01 are its async, non-blocking, once-per-day replacement.
 - `HOME / USERPROFILE` (process-env) — Resolves ~/.effortless through Environment.GetFolderPath(SpecialFolder.UserProfile). Black-box tests override both to sandbox all user-home state.
-- `PATH` (process-env) — Used to locate npm (upgradeCli hint) and by spawned shells to find "effortless" for nested/sub-project builds. New build: child builds spawn the SAME executable by absolute path (Environment.ProcessPath / dotnet + dll) instead of relying on a globally installed "effortless" being on PATH. Console output of the child is unchanged.
+- `PATH` (process-env) — Used to locate npm (checkVersion's reinstall step) and by spawned shells to find "effortless" for nested/sub-project builds. New build: child builds spawn the SAME executable by absolute path (Environment.ProcessPath / dotnet + dll) instead of relying on a globally installed "effortless" being on PATH. Console output of the child is unchanged.
 - `EFFORTLESS_JWT` (effortless.env) — Project-scoped JWT written by "effortless projectLogin"; takes precedence over the global token and is sent as cliJwt. Read via EnvFile.TryLoadFromNearestProject; quotes stripped; comments (#) ignored.
 - `{ACCOUNT}_PAT | _API_KEY | _APIKEY | _KEY` (effortless.env) — With -account X, the first matching X_{suffix} value is injected as apiKey=... (case-insensitive key lookup). Precedence: effortless.env beats ~/.effortless/effortless.key APIKeys[X]; both beat a same-named ProjectSetting.
 - `{ACCOUNT}_BASEID | _BASE_ID` (effortless.env) — With -account X, injected as baseId=... Same rules as the apiKey mapping.
