@@ -72,14 +72,14 @@ fi
 echo "Updating package.json version to ${VERSION}..."
 npm pkg set "version=${VERSION}"
 
-echo "Synchronizing and building CLI version sources..."
-node cli.js -version
-
 COMMIT_SHA="$(git rev-parse HEAD)"
 echo "Stamping CommitSha (${COMMIT_SHA})..."
 CLI_VERSION_FILE="src/Effortless.Cli.Core/CliVersion.cs"
 sed -i.bak -E "s/public const string CommitSha = \".*\";/public const string CommitSha = \"${COMMIT_SHA}\";/" "$CLI_VERSION_FILE"
 rm -f "${CLI_VERSION_FILE}.bak"
+
+echo "Synchronizing and building CLI version sources..."
+node cli.js -version
 
 echo "Running the full test suite..."
 dotnet test Effortless.Cli.sln --configuration Release
