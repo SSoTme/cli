@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using Effortless.Cli.FileSets;
+using Effortless.Cli.Project;
 
 namespace Effortless.Cli.Tests;
 
@@ -176,5 +177,87 @@ public sealed class FileSetTests
         Assert.False(Directory.Exists(directory.File("delete")));
         Assert.Equal("edited", File.ReadAllText(directory.File("keep/never.txt")));
         Assert.Equal("generated", File.ReadAllText(directory.File("skip/skip.txt")));
+    }
+
+    [Fact(DisplayName = "unit-self-source-overwrite-guard: blocks an Always overwrite when the input file changed on disk mid-run")]
+    public void ValidateSelfSourceOverwritesBlocksStaleAlwaysOverwrite()
+    {
+        using var directory = new TestDirectory();
+        File.WriteAllText(directory.File("input.txt"), "original");
+
+        var project = new EffortlessProject { RootPath = directory.Path };
+        var inputXml = FileSetXml.ToXml(
+            new FileSet
+            {
+                FileSetFiles = new BindingList<FileSetFile>
+                {
+                    new()
+                    {
+                        RelativePath = "input.txt",
+                        OriginalRelativePath = "input.txt",
+                        ZippedFileContents = GZip.Zip("original"),
+                    },
+                },
+            });
+        var outputXml = FileSetXml.ToXml(
+            new FileSet
+            {
+                FileSetFiles = new BindingList<FileSetFile>
+                {
+                    new() { RelativePath = "input.txt", FileContents = "transformed", OverwriteMode = "Always" },
+                },
+            });
+
+        ZfsLedger.ValidateSelfSourceOverwrites(project, inputXml, outputXml, directory.Path);
+
+        File.WriteAllText(directory.File("input.txt"), "concurrently edited");
+
+        var exception = Assert.Throws<Exception>(
+            () => ZfsLedger.ValidateSelfSourceOverwrites(project, inputXml, outputXml, directory.Path));
+        Assert.Contains("changed on disk", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact(DisplayName = "unit-self-source-overwrite-guard: ignores Never mode and paths unrelated to the input")]
+    public void ValidateSelfSourceOverwritesIgnoresNonAlwaysAndUnrelatedPaths()
+    {
+        using var directory = new TestDirectory();
+        File.WriteAllText(directory.File("input.txt"), "original");
+
+        var project = new EffortlessProject { RootPath = directory.Path };
+        var inputXml = FileSetXml.ToXml(
+            new FileSet
+            {
+                FileSetFiles = new BindingList<FileSetFile>
+                {
+                    new()
+                    {
+                        RelativePath = "input.txt",
+                        OriginalRelativePath = "input.txt",
+                        ZippedFileContents = GZip.Zip("original"),
+                    },
+                },
+            });
+
+        File.WriteAllText(directory.File("input.txt"), "concurrently edited");
+
+        var neverModeOutputXml = FileSetXml.ToXml(
+            new FileSet
+            {
+                FileSetFiles = new BindingList<FileSetFile>
+                {
+                    new() { RelativePath = "input.txt", FileContents = "transformed", OverwriteMode = "Never" },
+                },
+            });
+        var unrelatedOutputXml = FileSetXml.ToXml(
+            new FileSet
+            {
+                FileSetFiles = new BindingList<FileSetFile>
+                {
+                    new() { RelativePath = "output.txt", FileContents = "generated", OverwriteMode = "Always" },
+                },
+            });
+
+        ZfsLedger.ValidateSelfSourceOverwrites(project, inputXml, neverModeOutputXml, directory.Path);
+        ZfsLedger.ValidateSelfSourceOverwrites(project, inputXml, unrelatedOutputXml, directory.Path);
     }
 }

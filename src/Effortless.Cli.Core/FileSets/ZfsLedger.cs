@@ -88,48 +88,52 @@ public static class ZfsLedger
         return relPath;
     }
 
-    public static string RemoveSelfSourceEntries(
+    /// <summary>
+    /// Guards against a TOCTOU race: if a file was read as tool input and the tool's
+    /// response wants to overwrite that same path with OverwriteMode=Always, the file
+    /// must still match what was originally read, or the on-disk edit that happened
+    /// while the tool was running would be silently clobbered.
+    /// </summary>
+    public static void ValidateSelfSourceOverwrites(
         EffortlessProject project,
-        string transpilerKey,
-        string cwd,
-        string fileSetXml,
         string inputFileSetXml,
+        string fileSetXml,
         string extractToDir)
     {
         if (project is null || string.IsNullOrEmpty(inputFileSetXml))
         {
-            return fileSetXml;
+            return;
         }
 
         if (string.IsNullOrEmpty(fileSetXml) || !fileSetXml.Contains("<"))
         {
-            return fileSetXml;
+            return;
         }
 
-        HashSet<string> inputFullPaths;
+        Dictionary<string, FileSetFile> inputByFullPath;
         try
         {
-            inputFullPaths = inputFileSetXml
+            inputByFullPath = inputFileSetXml
                 .ToFileSet()
                 .FileSetFiles
-                .Select(fsf => fsf.OriginalRelativePath)
-                .Where(p => !string.IsNullOrEmpty(p))
-                .Select(
-                    p => new FileInfo(
+                .Where(fsf => !string.IsNullOrEmpty(fsf.OriginalRelativePath))
+                .GroupBy(
+                    fsf => new FileInfo(
                             Path.Combine(
                                 project.RootPath,
-                                p.Trim("\\/".ToCharArray())))
-                        .FullName)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                                fsf.OriginalRelativePath.Trim("\\/".ToCharArray())))
+                        .FullName,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         }
         catch (Exception)
         {
-            return fileSetXml;
+            return;
         }
 
-        if (!inputFullPaths.Any())
+        if (!inputByFullPath.Any())
         {
-            return fileSetXml;
+            return;
         }
 
         var doc = new XmlDocument();
@@ -138,13 +142,17 @@ public static class ZfsLedger
         if (doc.DocumentElement is null ||
             doc.DocumentElement.Name != "FileSet")
         {
-            return fileSetXml;
+            return;
         }
 
-        var toRemove = new List<XmlElement>();
         foreach (XmlElement fsfElem in
                  doc.DocumentElement.SelectNodes("//FileSetFile"))
         {
+            if (!IsAlwaysOverwriteElement(fsfElem))
+            {
+                continue;
+            }
+
             foreach (XmlElement relPathElem in
                      fsfElem.SelectNodes("RelativePath"))
             {
@@ -154,25 +162,63 @@ public static class ZfsLedger
                             relPathElem.InnerText.SafeToString()
                                 .Trim("\\/".ToCharArray())))
                     .FullName;
-                if (inputFullPaths.Contains(outputFullPath))
+
+                if (inputByFullPath.TryGetValue(outputFullPath, out var inputFsf))
                 {
-                    toRemove.Add(fsfElem);
-                    break;
+                    EnsureUnchangedSinceRead(inputFsf, outputFullPath);
                 }
             }
         }
+    }
 
-        if (!toRemove.Any())
+    private static bool IsAlwaysOverwriteElement(XmlElement elem)
+    {
+        bool alwaysOverwrite = false;
+
+        XmlNode aoNode = elem.SelectSingleNode("AlwaysOverwrite");
+        if (!ReferenceEquals(aoNode, null) && aoNode.InnerText == "true")
         {
-            return fileSetXml;
+            alwaysOverwrite = true;
         }
 
-        foreach (var fsfElem in toRemove)
+        XmlNode omNode = elem.SelectSingleNode("OverwriteMode");
+        if (!ReferenceEquals(omNode, null))
         {
-            fsfElem.ParentNode.RemoveChild(fsfElem);
+            if (string.Equals(omNode.InnerText, "Always", StringComparison.OrdinalIgnoreCase))
+            {
+                alwaysOverwrite = true;
+            }
+            else if (string.Equals(omNode.InnerText, "Never", StringComparison.OrdinalIgnoreCase))
+            {
+                alwaysOverwrite = false;
+            }
         }
 
-        return doc.OuterXml;
+        return alwaysOverwrite;
+    }
+
+    private static void EnsureUnchangedSinceRead(FileSetFile inputFsf, string fullPath)
+    {
+        if (!ReferenceEquals(inputFsf.ZippedBinaryFileContents, null))
+        {
+            var originalBytes = inputFsf.GetFileSetFileBinaryContents();
+            var currentBytes = File.Exists(fullPath) ? File.ReadAllBytes(fullPath) : null;
+            if (currentBytes is null || !originalBytes.SequenceEqual(currentBytes))
+            {
+                throw new Exception(
+                    $"Refusing to overwrite '{fullPath}': it was read as tool input and changed on disk while the tool was running.");
+            }
+
+            return;
+        }
+
+        var originalText = inputFsf.GetFileSetFileContents();
+        var currentText = File.Exists(fullPath) ? File.ReadAllText(fullPath) : null;
+        if (currentText is null || currentText != originalText)
+        {
+            throw new Exception(
+                $"Refusing to overwrite '{fullPath}': it was read as tool input and changed on disk while the tool was running.");
+        }
     }
 
     public static int SaveFileSet(
@@ -197,12 +243,6 @@ public static class ZfsLedger
         var fileSetXml = zippedOutputFileSet.UnzipToString();
         string workingDir = project.GetEffortlessDI().ToString();
 
-        var tempFI = new FileInfo(
-            Path.Combine(
-                workingDir,
-                string.Format("tempFileSet_{0}.xml", Guid.NewGuid())));
-        File.WriteAllText(tempFI.FullName, fileSetXml);
-
         string extractToDir = project?.RootPath ?? workingDir;
         if (project != null)
         {
@@ -215,6 +255,14 @@ public static class ZfsLedger
                 extractToDir = Path.Combine(project.RootPath, relPath);
             }
         }
+
+        ValidateSelfSourceOverwrites(project, inputFileSetXml, fileSetXml, extractToDir);
+
+        var tempFI = new FileInfo(
+            Path.Combine(
+                workingDir,
+                string.Format("tempFileSet_{0}.xml", Guid.NewGuid())));
+        File.WriteAllText(tempFI.FullName, fileSetXml);
 
         tempFI.FullName.SplitFileSetFile(extractToDir);
         tempFI.Delete();
