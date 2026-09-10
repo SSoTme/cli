@@ -1,11 +1,11 @@
 # Effortless CLI
 
-[![Your First Rulebook — the effortless CLI, from an empty folder to a generated document](docs/images/your-first-rulebook-thumb.jpg)](https://tinyurl.com/27dephkb "Your First Rulebook — watch on YouTube")
+[![Your First Rulebook — the effortless CLI, from an empty folder to a generated document](docs/images/your-first-rulebook-thumb.jpg)](https://tinyurl.com/25bt7bgs "Your First Rulebook — watch on YouTube")
 
-**▶ [Watch: Your First Rulebook](https://tinyurl.com/27dephkb)** (7:48) — a real run in
+**▶ [Watch: Your First Rulebook](https://tinyurl.com/25bt7bgs)** (9:04) — a real run in
 an empty folder. `-init` hands you a working rulebook, one command turns it into a
-plain-English rules document, and when the rule changes the document follows on its
-own, because nobody was maintaining it in the first place.
+plain-English rules document, and the document carries the answers too. Change the
+rule, run it again, and every sentence and every answer follows on its own.
 
 `effortless` is the command-line client for EffortlessAPI transpilers. It reads an
 `effortless.json` project, resolves tools from the REST catalog, sends file sets to
