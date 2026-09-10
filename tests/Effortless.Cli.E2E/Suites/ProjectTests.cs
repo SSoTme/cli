@@ -34,14 +34,14 @@ public sealed class ProjectTests
         var rulebook = ReadObject(
             Path.Combine(projectPath, "effortless-rulebook", "effortless-rulebook.json"));
         Assert.Equal("demo", rulebook["Name"]?.GetValue<string>());
-        var hello = rulebook["Hello"]!.AsObject();
+        var hello = rulebook["HelloWho"]!.AsObject();
         var schema = hello["schema"]!.AsArray();
-        Assert.Equal("World", schema[0]!["name"]!.GetValue<string>());
+        Assert.Equal("Who", schema[0]!["name"]!.GetValue<string>());
         Assert.Equal("raw", schema[0]!["type"]!.GetValue<string>());
         Assert.Equal("Result", schema[1]!["name"]!.GetValue<string>());
         Assert.Equal("calculated", schema[1]!["type"]!.GetValue<string>());
         Assert.Equal(
-            "=\"Hello \" & {{World}} & \"!\"",
+            "=\"Hello \" & {{Who}} & \"!\"",
             schema[1]!["formula"]!.GetValue<string>());
         Assert.Equal(3, hello["data"]!.AsArray().Count);
     }

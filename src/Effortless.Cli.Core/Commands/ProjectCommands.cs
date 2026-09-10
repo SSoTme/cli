@@ -280,8 +280,8 @@ public sealed class ProjectCommands
         {
             ["Name"] = projectName,
             ["Description"] =
-                "A starter rulebook. Replace the Hello entity with your own.",
-            ["Hello"] = new JObject
+                "A starter rulebook. Replace the HelloWho entity with your own.",
+            ["HelloWho"] = new JObject
             {
                 ["Description"] =
                     "The smallest complete rulebook: a fact, and a rule that "
@@ -290,7 +290,7 @@ public sealed class ProjectCommands
                 {
                     new JObject
                     {
-                        ["name"] = "World",
+                        ["name"] = "Who",
                         ["datatype"] = "string",
                         ["type"] = "raw",
                         ["nullable"] = false,
@@ -303,16 +303,16 @@ public sealed class ProjectCommands
                         ["type"] = "calculated",
                         ["nullable"] = false,
                         ["Description"] =
-                            "The greeting, derived from World. Never typed by "
+                            "The greeting, derived from Who. Never typed by "
                             + "hand.",
-                        ["formula"] = "=\"Hello \" & {{World}} & \"!\"",
+                        ["formula"] = "=\"Hello \" & {{Who}} & \"!\"",
                     },
                 },
                 ["data"] = new JArray
                 {
-                    new JObject { ["World"] = "world" },
-                    new JObject { ["World"] = "bob" },
-                    new JObject { ["World"] = "everyone" },
+                    new JObject { ["Who"] = "world" },
+                    new JObject { ["Who"] = "bob" },
+                    new JObject { ["Who"] = "everyone" },
                 },
             },
         };
